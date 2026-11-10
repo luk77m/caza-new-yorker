@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.4, 2D)
+# Caza en el New Yorker · versión Godot (v0.5, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -11,9 +11,30 @@ sabotajes (apagón, alarma de incendios, ascensores), policía, carteles de busc
 2. En el gestor de proyectos: **Importar** y elige `godot/project.godot`.
 3. Pulsa **F5** (Ejecutar proyecto).
 
-Controles: WASD/flechas, Shift correr, E mantener para interactuar (E junto al ascensor: elegir planta con 1-7),
-Tab mapa y encargos, clic derecho sacar el arma (cazador), clic izquierdo disparar/golpear, rueda zoom,
-Esc pausa, F11 pantalla completa, Espacio cambiar de personaje como espectador.
+Controles: WASD/flechas, Shift correr, E mantener para interactuar o hablar con un PNJ, E junto al ascensor
+(elegir planta con 1-7) o junto a tu contacto (tienda), Tab mapa y encargos, clic derecho apuntar (cazador),
+clic izquierdo disparar / cuchillo / llave inglesa, rueda zoom, Esc pausa, F11 pantalla completa,
+Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.5
+
+- **Economía:** los corredores cobran $40 por encargo y encuentran carteras; los cazadores cobran por objetivo
+  eliminado y por cada denuncia contra un corredor.
+- **Tiendas:** el contacto del bar (Planta 2) vende a los corredores ganzúa, soborno, chivatazo y llave inglesa,
+  y les compra chatarra y **soplos** (la descripción de un cazador que conozcan, que pasa a la policía).
+  El conserje de recepción vende a los cazadores munición, traje limpio, rastro e insignia.
+- **Cazador:** 8 balas (12 con la ventaja de munición) y cuchillo sin límite (clic izquierdo sin apuntar).
+  Ventaja inicial a elegir: silenciador mejorado, copia de la llave maestra, munición extra o fondos reservados.
+- **Disparos visibles:** fogonazo y trazada; los de la policía se oyen en toda la planta y asustan a los PNJ.
+  Un disparo con silenciador se oye de cerca.
+- **Ascensor:** tarda 2 s en llegar y hay que esperar 5 s entre viajes. Hay una **cizalla** (una por partida) con la
+  que un corredor puede romper los ascensores 70 s, con chispas.
+- **PNJ:** se puede hablar con ellos (mantén E). A veces dan rumores: a los corredores, el aspecto de un cazador que ha
+  llamado la atención; a los cazadores, la planta de un objetivo.
+- **Sonido** generado por código: pasos muy bajos, disparos, cuchillo, alarma, apagón, ascensor, chispas, dinero.
+- **Gráficos:** luces de lámparas con mezcla aditiva, niebla con borde suave, muros art déco con sombras de contacto,
+  manchas de sangre, chispas, sacudida de cámara, viñeta roja cuando sube la sospecha, flechas hacia tus encargos,
+  anillo sobre lo que puedes usar y una partida entre bots de fondo en el menú principal.
 
 ## Estructura
 

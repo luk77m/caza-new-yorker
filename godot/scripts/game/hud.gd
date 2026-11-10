@@ -6,6 +6,9 @@ signal start_requested(opt: Dictionary)
 signal elev_chosen(fl: int)
 signal resume_requested
 signal menu_requested
+signal shop_buy(id: String)
+signal elev_cut
+signal settings_changed
 
 const FL_SHORT := ["Sót.", "PB", "P2", "P10", "P20", "P30", "Azotea"]
 const C_BG := Color(0.03, 0.05, 0.07, 0.86)
@@ -16,7 +19,7 @@ const C_MUT := Color("#a9b2b8")
 const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
-const CONTROLS := "WASD / flechas: moverse · Shift: correr · E (mantener): interactuar · E junto al ascensor: elegir planta\nTab: mapa y encargos · Clic derecho: sacar el arma (cazador) · Clic izquierdo: disparar / golpear\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
+const CONTROLS := "WASD / flechas: moverse · Shift: correr · E (mantener): interactuar, hablar · E: ascensor y tienda\nTab: mapa y encargos · Clic derecho: apuntar (cazador) · Clic izquierdo: disparar / cuchillo / llave inglesa\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
 
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4}
 var root: Control
@@ -52,6 +55,15 @@ var fade: ColorRect
 var last_log := 0
 var log_list: Array = []
 var role_buttons := {}
+var shop_panel: PanelContainer
+var shop_title: Label
+var shop_money: Label
+var shop_list: VBoxContainer
+var settings_panel: PanelContainer
+var cut_btn: Button
+var status_lbl: Label
+var vignette: TextureRect
+var perk_row: HBoxContainer
 
 func _ready() -> void:
 	layer = 10
@@ -59,12 +71,15 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+	_build_vignette()
 	_build_play()
 	_build_tab()
 	_build_elev()
+	_build_shop()
 	_build_pause()
 	_build_end()
 	_build_title()
+	_build_settings()
 	fade = ColorRect.new()
 	fade.color = Color(0, 0, 0, 0)
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -147,6 +162,9 @@ func _build_play() -> void:
 	_chip("own", C_BLUE)
 	_chip("rep", C_RED, C_RED)
 	_chip("sab", C_WARN, C_WARN)
+	_chip("money", C_GOLD)
+	_chip("gear", C_TEXT)
+	_chip("intel", C_RED, C_RED)
 	_chip("follow", C_MUT)
 	sus_box = VBoxContainer.new()
 	sus_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -205,6 +223,9 @@ func _build_play() -> void:
 	toasts.add_theme_constant_override("separation", 5)
 	toasts.custom_minimum_size = Vector2(380, 0)
 	play_root.add_child(toasts)
+	status_lbl = _lbl("", 15, C_GOLD)
+	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	play_root.add_child(status_lbl)
 	minimap = Minimap.new()
 	minimap.custom_minimum_size = Vector2(236, 161)
 	minimap.size = Vector2(236, 161)
@@ -259,6 +280,9 @@ func _build_elev() -> void:
 		var b := _btn(str(i + 1) + " · " + f.label + " — " + f.sub, func(): elev_chosen.emit(fi), 15)
 		v.add_child(b)
 		elev_buttons.append([fi, b])
+	cut_btn = _btn("Romper el ascensor con la cizalla (quieto " + str(Cfg.HOLD_CUT) + " s)", func(): elev_cut.emit(), 14)
+	cut_btn.add_theme_color_override("font_color", C_WARN)
+	v.add_child(cut_btn)
 
 func _build_pause() -> void:
 	pause_panel = _panel(Color(0.04, 0.06, 0.09, 0.97), C_GOLD, 22)
@@ -270,6 +294,7 @@ func _build_pause() -> void:
 	v.add_child(_lbl("PAUSA", 26, C_GOLD))
 	v.add_child(_lbl(CONTROLS, 12, C_MUT))
 	v.add_child(_btn("Continuar", func(): resume_requested.emit()))
+	v.add_child(_btn("Ajustes", func(): open_settings()))
 	v.add_child(_btn("Menú principal", func(): menu_requested.emit()))
 
 func _build_end() -> void:
@@ -297,7 +322,7 @@ func _build_end() -> void:
 
 func _build_title() -> void:
 	title_panel = ColorRect.new()
-	title_panel.color = Color("#0a0f16")
+	title_panel.color = Color(0.03, 0.05, 0.08, 0.78)
 	title_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(title_panel)
 	var cc := CenterContainer.new()
@@ -361,15 +386,33 @@ func _build_title() -> void:
 	rn.select(2)
 	rn.item_selected.connect(func(i): opt["runners"] = rn.get_item_id(i))
 	o.add_child(rn)
+	perk_row = HBoxContainer.new()
+	perk_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	perk_row.add_theme_constant_override("separation", 10)
+	perk_row.add_child(_lbl("Ventaja del cazador", 14, C_MUT))
+	var pk := OptionButton.new()
+	pk.focus_mode = Control.FOCUS_NONE
+	var perk_ids: Array = Sim.PERKS
+	for i in perk_ids.size():
+		pk.add_item(str(Sim.PERK_NAMES[perk_ids[i]]), i)
+	pk.select(0)
+	opt["perk"] = perk_ids[0]
+	pk.item_selected.connect(func(i): opt["perk"] = perk_ids[i])
+	perk_row.add_child(pk)
+	perk_row.add_child(_lbl("silenciador: menos testigos · llave: abre habitaciones · munición: 12 balas · fondos: +$" + str(Cfg.MONEY_RICH), 11, C_MUT))
+	v.add_child(perk_row)
 	var go := _btn("Empezar partida", func(): start_requested.emit(opt.duplicate()), 20)
 	go.custom_minimum_size = Vector2(260, 52)
 	var gc := CenterContainer.new()
 	gc.add_child(go)
 	v.add_child(gc)
+	var sc := CenterContainer.new()
+	sc.add_child(_btn("Ajustes", func(): open_settings(), 15))
+	v.add_child(sc)
 	var ctl := _lbl(CONTROLS, 12, C_MUT)
 	ctl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(ctl)
-	var ver := _lbl("Prototipo v0.4 · Godot · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	var ver := _lbl("Prototipo v0.5 · Godot · partida contra bots", 11, Color(0.5, 0.55, 0.6))
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(ver)
 	_pick_role("runner")
@@ -379,10 +422,12 @@ func _pick_role(key: String) -> void:
 	for k in role_buttons:
 		role_buttons[k].button_pressed = k == key
 	var txt := {
-		"runner": "Mafia contratada. Tienes 8-10 encargos propios por el hotel; el trato se cierra cuando todos los corredores terminan. Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra, pero si te ven te denuncian. Tus compañeros se ven con el nombre en azul.",
-		"hunter": "Policía secreta infiltrada. Tu cartel muestra a dos corredores: elimínalos sin testigos. Si te ven, llamarán a la policía; cámbiate de ropa para que no te reconozcan.",
+		"runner": "Mafia contratada. Tienes 8-10 encargos propios por el hotel; el trato se cierra cuando todos los corredores terminan. Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra, pero si te ven te denuncian. Cobras por encargo y tu contacto del bar te vende material. Tus compañeros se ven con el nombre en azul.",
+		"hunter": "Policía secreta infiltrada. Tu cartel muestra a dos corredores: elimínalos sin testigos. Tienes " + str(Cfg.AMMO) + " balas y un cuchillo. Si te ven, llamarán a la policía; cámbiate de ropa para que no te reconozcan. El conserje de recepción te vende material.",
 		"spectator": "Mira una partida completa entre bots, sin niebla. Espacio cambia el personaje al que sigues.",
 	}
+	if perk_row != null:
+		perk_row.visible = key == "hunter"
 	var rt := title_panel.find_child("RoleText", true, false) as Label
 	if rt != null:
 		rt.text = txt[key]
@@ -390,6 +435,10 @@ func _pick_role(key: String) -> void:
 # ---------------------------------------------------------------- estado de pantallas
 
 func show_title() -> void:
+	shop_panel.visible = false
+	settings_panel.visible = false
+	status_lbl.text = ""
+	vignette.modulate.a = 0.0
 	title_panel.visible = true
 	play_root.visible = false
 	tab_panel.visible = false
@@ -424,7 +473,8 @@ func toggle_tab(on: bool) -> void:
 	if on:
 		_center(tab_panel)
 
-func open_elev(cur_fl: int) -> void:
+func open_elev(cur_fl: int, has_cutter: bool = false) -> void:
+	cut_btn.visible = has_cutter
 	for eb in elev_buttons:
 		eb[1].disabled = eb[0] == cur_fl
 	elev_panel.visible = true
@@ -463,7 +513,7 @@ func _layout() -> void:
 	hint_box.position = Vector2((vs.x - hint_box.size.x) / 2.0, vs.y - 64)
 	toasts.reset_size()
 	toasts.position = Vector2(10, vs.y - toasts.size.y - 10)
-	for p in [tab_panel, elev_panel, pause_panel, end_panel]:
+	for p in [tab_panel, elev_panel, pause_panel, end_panel, shop_panel, settings_panel]:
 		if p.visible:
 			_center(p)
 
@@ -492,7 +542,8 @@ func _toast_color(kind: String) -> Color:
 			return Color("#aaaaaa")
 	return C_GOLD
 
-func pump_logs(w: World) -> void:
+func pump_logs(w: World) -> Array:
+	var kinds: Array = []
 	for l in w.logs:
 		if l.id <= last_log:
 			continue
@@ -500,6 +551,7 @@ func pump_logs(w: World) -> void:
 		if not log_visible(l, w.role, w.human):
 			continue
 		log_list.append(l)
+		kinds.append(l.kind)
 		if log_list.size() > 60:
 			log_list.remove_at(0)
 		var p := PanelContainer.new()
@@ -528,6 +580,7 @@ func pump_logs(w: World) -> void:
 	toasts.reset_size()
 	var vs := get_viewport().get_visible_rect().size
 	toasts.position = Vector2(10, vs.y - toasts.size.y - 10)
+	return kinds
 
 func task_state(w: World, hm: Ent, t: Task) -> Array:
 	if t.done:
@@ -556,6 +609,10 @@ func hold_label(h: Hold) -> String:
 			return "Lavando el traje…"
 		"force":
 			return "Forzando la cerradura…"
+		"talk":
+			return "Hablando…"
+		"cut":
+			return "Cortando los cables del ascensor…"
 		"task":
 			return h.ref.nm + "…"
 	return "…"
@@ -599,6 +656,31 @@ func update_hud(w: World, view: Ent) -> void:
 		_set_chip("own", "")
 		_set_chip("rep", "")
 		_set_chip("follow", "Sigues a " + view.nm + " · Espacio para cambiar")
+	if hm != null and role != "spectator":
+		_set_chip("money", "$ " + str(hm.money))
+		var gear: Array = []
+		if role == "hunter":
+			gear.append("Balas " + str(hm.ammo) + "/" + str(hm.ammo_max) + " · cuchillo")
+		if hm.masterkey:
+			gear.append("llave maestra")
+		if hm.lockpick:
+			gear.append("ganzúa")
+		if hm.cutter:
+			gear.append("cizalla")
+		if role == "runner":
+			gear.append("llave inglesa" if hm.melee else "piezas " + str(mini(hm.scrap, Cfg.SCRAP_NEEDED)) + "/" + str(Cfg.SCRAP_NEEDED))
+		_set_chip("gear", " · ".join(PackedStringArray(gear)))
+		if hm.intel_until > w.time:
+			if role == "runner":
+				_set_chip("intel", "Chivatazo " + _fmt(hm.intel_until - w.time) + " · cazadores en " + Sim.floor_list(w, "hunter"))
+			else:
+				_set_chip("intel", "Rastro " + _fmt(hm.intel_until - w.time) + " · objetivos en " + Sim.floor_list(w, w.targets))
+		else:
+			_set_chip("intel", "")
+	else:
+		_set_chip("money", "")
+		_set_chip("gear", "")
+		_set_chip("intel", "")
 	var sb: Array = []
 	if w.sab_blackout > w.time:
 		sb.append("Apagón " + _fmt(w.sab_blackout - w.time))
@@ -674,6 +756,16 @@ func update_hud(w: World, view: Ent) -> void:
 	hint_lbl.text = ht
 	hint_bar.visible = hv >= 0
 	hint_bar.value = maxf(hv, 0.0)
+	var vgt := 0.0
+	if hm != null and hm.alive and (role == "hunter" or role == "runner") and hm.sus > Cfg.WARN_AT:
+		vgt = clampf((hm.sus - Cfg.WARN_AT) / (100.0 - Cfg.WARN_AT), 0.0, 1.0) * 0.75
+	if hm != null and hm.alive and hm.arrest > 0:
+		vgt = 0.8
+	vignette.modulate.a = lerpf(vignette.modulate.a, vgt, 0.1)
+	if status_lbl.text != "":
+		var vs3 := get_viewport().get_visible_rect().size
+		status_lbl.reset_size()
+		status_lbl.position = Vector2((vs3.x - status_lbl.size.x) / 2.0, vs3.y - 110)
 	if hint_box.visible:
 		hint_box.reset_size()
 		var vs := get_viewport().get_visible_rect().size
@@ -718,6 +810,7 @@ func _update_tab(w: World, view: Ent) -> void:
 				s += "\n      [color=" + ("#f0b04a" if st[0] == "rlock" else "#a9b2b8") + "][font_size=12]" + st[1] + "[/font_size][/color]"
 			s += "\n"
 		s += "\n[color=#ebd08a][b]ESTADO[/b][/color]\n"
+		s += "Dinero $" + str(hm.money) + " · Ganzúa " + ("✓" if hm.lockpick else "—") + " · Cizalla " + ("✓" if hm.cutter else "—") + "\n"
 		s += "Llave maestra " + ("✓" if hm.masterkey else "—") + " · Llave inglesa " + ("✓" if hm.melee else str(mini(hm.scrap, Cfg.SCRAP_NEEDED)) + "/" + str(Cfg.SCRAP_NEEDED)) + " · Encargo " + ("en mano" if hm.carry != "" else "—") + " · Denuncias " + str(hm.reports) + "/" + str(Cfg.STRIKES) + "\n"
 	elif w.role == "hunter":
 		s += "[color=#ebd08a][b]CARTEL[/b][/color]\n"
@@ -725,6 +818,7 @@ func _update_tab(w: World, view: Ent) -> void:
 			var t := w.ent_by_id(w.targets[i])
 			s += "Objetivo " + str(i + 1) + ": " + ("vivo" if t != null and t.alive else "[color=#ff6a78]eliminado[/color]") + "\n"
 		s += "\n[color=#ebd08a][b]TU ASPECTO[/b][/color]\n" + hm.outfit.describe() + ("  [color=#ff6a78](manchado de sangre)[/color]" if hm.outfit.blood else "") + "\n"
+		s += "\n[color=#ebd08a][b]EQUIPO[/b][/color]\nDinero $" + str(hm.money) + " · Balas " + str(hm.ammo) + "/" + str(hm.ammo_max) + " · Ventaja: " + str(Sim.PERK_NAMES.get(hm.perk, "—")) + "\n"
 		s += "\n[color=#ebd08a][b]ACCESOS[/b][/color]\nLlave maestra " + ("✓" if hm.masterkey else "—") + " · Insignia " + ("✓" if hm.badge else "—") + (" · Uniforme de personal ✓" if hm.outfit.staff_role != "" else "") + "\n"
 	else:
 		s += "[color=#ebd08a][b]CORREDORES[/b][/color]\n"
@@ -746,3 +840,134 @@ func _update_tab(w: World, view: Ent) -> void:
 		n += 1
 	if tab_text.text != s:
 		tab_text.text = s
+
+# ---------------------------------------------------------------- viñeta, tienda y ajustes
+
+func _build_vignette() -> void:
+	var g := Gradient.new()
+	g.set_color(0, Color(0.6, 0.02, 0.05, 0.0))
+	g.set_color(1, Color(0.6, 0.02, 0.05, 0.85))
+	g.add_point(0.55, Color(0.6, 0.02, 0.05, 0.0))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.05, 0.5)
+	gt.width = 256
+	gt.height = 256
+	vignette = TextureRect.new()
+	vignette.texture = gt
+	vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vignette.modulate.a = 0.0
+	root.add_child(vignette)
+
+func set_status(t: String) -> void:
+	status_lbl.text = t
+
+func _build_shop() -> void:
+	shop_panel = _panel(Color(0.04, 0.06, 0.09, 0.97), C_GOLD, 18)
+	shop_panel.visible = false
+	root.add_child(shop_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	shop_panel.add_child(v)
+	shop_title = _lbl("", 22, C_GOLD)
+	v.add_child(shop_title)
+	shop_money = _lbl("", 15, C_TEXT)
+	v.add_child(shop_money)
+	shop_list = VBoxContainer.new()
+	shop_list.add_theme_constant_override("separation", 6)
+	v.add_child(shop_list)
+	v.add_child(_lbl("Esc o E para cerrar", 12, C_MUT))
+
+func open_shop(w: World, e: Ent) -> void:
+	shop_title.text = "EL CONTACTO DEL BAR" if e.role == "runner" else "EL CONSERJE DE RECEPCIÓN"
+	refresh_shop(w, e)
+	shop_panel.visible = true
+	_center(shop_panel)
+
+func refresh_shop(w: World, e: Ent) -> void:
+	shop_money.text = "Tienes $" + str(e.money)
+	for c in shop_list.get_children():
+		shop_list.remove_child(c)
+		c.queue_free()
+	for it in Sim.shop_items(w, e):
+		var id: String = it["id"]
+		var price: int = it["price"]
+		var ptxt := ("$" + str(price)) if price > 0 else ("te pagan $" + str(-price))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var b := _btn(str(it["name"]) + "  ·  " + ptxt, func(): shop_buy.emit(id), 15)
+		b.custom_minimum_size = Vector2(300, 0)
+		b.disabled = not it["ok"] or (price > 0 and e.money < price)
+		row.add_child(b)
+		var d := _lbl(str(it["desc"]) if it["ok"] else str(it["why"]), 12, C_MUT if it["ok"] else Color(0.55, 0.58, 0.6))
+		d.custom_minimum_size = Vector2(330, 0)
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD
+		row.add_child(d)
+		shop_list.add_child(row)
+	shop_panel.reset_size()
+	_center(shop_panel)
+
+func close_shop() -> void:
+	shop_panel.visible = false
+
+func _build_settings() -> void:
+	settings_panel = _panel(Color(0.04, 0.06, 0.09, 0.98), C_GOLD, 20)
+	settings_panel.visible = false
+	root.add_child(settings_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	settings_panel.add_child(v)
+	v.add_child(_lbl("AJUSTES", 24, C_GOLD))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 8)
+	v.add_child(grid)
+	_slider(grid, "Volumen general", 0.0, 1.0, Settings.volume, func(x): Settings.volume = x)
+	_slider(grid, "Volumen de los pasos", 0.0, 1.0, Settings.steps, func(x): Settings.steps = x)
+	_slider(grid, "Zoom de la cámara", 1.0, 3.5, Settings.zoom, func(x): Settings.zoom = x)
+	_slider(grid, "Opacidad de la niebla", 0.6, 1.0, Settings.fog, func(x): Settings.fog = x)
+	_check(grid, "Flechas hacia los encargos", Settings.arrows, func(x): Settings.arrows = x)
+	_check(grid, "Sacudida de cámara", Settings.shake, func(x): Settings.shake = x)
+	_check(grid, "Pantalla completa (F11)", Settings.fullscreen, func(x): Settings.fullscreen = x)
+	v.add_child(_btn("Guardar y cerrar", func(): close_settings(), 16))
+
+func _slider(grid: GridContainer, label: String, lo: float, hi: float, val: float, cb: Callable) -> void:
+	grid.add_child(_lbl(label, 14))
+	var s := HSlider.new()
+	s.min_value = lo
+	s.max_value = hi
+	s.step = 0.05
+	s.value = val
+	s.custom_minimum_size = Vector2(240, 20)
+	s.focus_mode = Control.FOCUS_NONE
+	var on_change := func(x: float) -> void:
+		cb.call(x)
+		settings_changed.emit()
+	s.value_changed.connect(on_change)
+	grid.add_child(s)
+
+func _check(grid: GridContainer, label: String, val: bool, cb: Callable) -> void:
+	grid.add_child(_lbl(label, 14))
+	var c := CheckBox.new()
+	c.button_pressed = val
+	c.focus_mode = Control.FOCUS_NONE
+	var on_toggle := func(x: bool) -> void:
+		cb.call(x)
+		settings_changed.emit()
+	c.toggled.connect(on_toggle)
+	grid.add_child(c)
+
+func open_settings() -> void:
+	settings_panel.visible = true
+	_center(settings_panel)
+
+func close_settings() -> void:
+	settings_panel.visible = false
+	Settings.save_cfg()
+	settings_changed.emit()

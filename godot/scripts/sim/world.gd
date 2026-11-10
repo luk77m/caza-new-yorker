@@ -28,6 +28,8 @@ var acc := 0.0
 var acc2 := 0.0
 var hint := {}
 var targets: Array = []     # ids de los dos retratados
+var events: Array = []      # {type, fl, x, y} para sonidos y efectos; la escena los vacía
+var snitched := {}          # trajes de cazador ya delatados
 var stats := {"kills": 0, "civ_kills": 0, "calls": 0, "tasks": 0, "reports": 0, "arrests": 0, "forced": 0}
 
 func is_over() -> bool:

@@ -59,6 +59,15 @@ func _draw() -> void:
 			draw_circle(c, 2.2, col)
 		elif me != null and e.role == me.role and (e.role == "runner" or e.role == "hunter"):
 			draw_circle(c, 2.6, Color("#5aa8ff") if e.role == "runner" else Color("#ff9a9a"))
+	var hm := w.human
+	if hm != null and hm.alive and hm.intel_until > w.time:
+		for e in w.ents:
+			if not e.alive or e.fl != fl:
+				continue
+			var show: bool = (hm.role == "runner" and e.role == "hunter") or (hm.role == "hunter" and e.id in w.targets)
+			if show:
+				var c := off + Vector2(e.x / Cfg.TS * s, e.y / Cfg.TS * s)
+				draw_arc(c, 5.0, 0, TAU, 16, Color("#ff5a64"), 2.0)
 	for c in w.corpses:
 		if c.fl == fl and (role == "spectator" or c.found):
 			draw_rect(Rect2(off + Vector2(c.x / Cfg.TS * s - 2, c.y / Cfg.TS * s - 2), Vector2(4, 4)), Color("#c0392b"))

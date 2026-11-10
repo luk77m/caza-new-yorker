@@ -54,6 +54,17 @@ var marked := false
 var arrest := 0.0
 var rep_lock := 0.0
 var target_ids: Array = []
+# tanda 2
+var money := 0
+var ammo := 0
+var ammo_max := 0
+var perk := ""            # silencer, master, ammo, rich (solo cazadores)
+var lockpick := false     # ganzúa: fuerza cerraduras en la mitad de tiempo
+var cutter := false       # cizalla: rompe el ascensor
+var intel_until := 0.0    # chivatazo (corredor) o rastro (cazador) activo hasta
+var talk_cd := -99.0      # PNJ: cuándo vuelve a dar información
+var shop := ""            # PNJ: "runner" o "hunter" si vende material a ese bando
+var elev_ready := 0.0     # jugador: cuándo puede volver a usar el ascensor
 # PNJ
 var staff := false
 var tiles: Array = []

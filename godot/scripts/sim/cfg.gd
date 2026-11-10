@@ -84,6 +84,30 @@ const BOT_AIM_TIME := 1.3       # s apuntando antes de disparar
 
 const SIGHT_PX := 330.0         # radio de visión del jugador en píxeles
 
+# Tanda 2: economía, munición, ascensor y conversaciones
+const AMMO := 8                 # balas del cazador
+const AMMO_PERK := 12           # con la ventaja "munición extra"
+const KNIFE_RANGE := 34.0       # alcance del cuchillo del cazador
+const KNIFE_CD := 1.4
+const SILENCER_PERK := 0.7      # radio de testigos de tus disparos con "silenciador mejorado"
+const MONEY_RUNNER := 30        # dinero inicial
+const MONEY_HUNTER := 120
+const MONEY_RICH := 150         # extra con la ventaja "fondos reservados"
+const MONEY_TASK := 40          # por encargo terminado
+const MONEY_TARGET := 100       # por objetivo eliminado
+const MONEY_REPORT := 20        # a los cazadores, por cada denuncia contra un corredor
+const MONEY_SNITCH := 60        # por dar la descripción de un cazador a la policía
+const SCRAP_PRICE := 15         # por pieza vendida (una vez hecha la llave inglesa)
+const CASH_SPOTS := 6           # carteras sueltas por el hotel
+const INTEL_DUR := 25.0         # s que dura un chivatazo o un rastro
+const ELEV_WAIT := 2.0          # s hasta que llega el ascensor
+const ELEV_CD := 5.0            # s de espera entre viajes
+const SAB_ELEV_CUT := 70.0      # s de avería si rompes el ascensor con la cizalla
+const HOLD_CUT := 3.5
+const HOLD_TALK := 1.0
+const TALK_CD := 25.0           # s antes de que un PNJ vuelva a darte información
+const RUMOR_CHANCE := 0.4
+
 static func is_solid(t: int) -> bool:
 	return t == T_VOID or t == T_WALL or t == T_RAIL or t == T_ELEV
 

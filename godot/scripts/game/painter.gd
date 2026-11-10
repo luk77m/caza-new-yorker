@@ -101,10 +101,16 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 			var c := tile_color(t)
 			if t == Cfg.T_WALL:
 				r(ci, px, py, TS, TS, c)
-				# cara superior iluminada si debajo hay suelo
-				if f.at(tx, ty + 1) != Cfg.T_WALL and f.at(tx, ty + 1) != Cfg.T_VOID:
-					r(ci, px, py + TS - 10, TS, 10, c.lightened(0.18))
-					r(ci, px, py + TS - 2, TS, 2, GOLD2.darkened(0.3))
+				r(ci, px, py, TS, 2, c.lightened(0.08))
+				# cara del muro (art déco) si debajo hay suelo
+				var below := f.at(tx, ty + 1)
+				if below != Cfg.T_WALL and below != Cfg.T_VOID:
+					r(ci, px, py + TS - 16, TS, 16, Color("#3b2b22"))
+					r(ci, px, py + TS - 16, TS, 2, GOLD2.darkened(0.15))
+					r(ci, px, py + TS - 9, TS, 1, GOLD2.darkened(0.45))
+					if tx % 2 == 0:
+						poly(ci, [Vector2(px + 16, py + TS - 14), Vector2(px + 21, py + TS - 9), Vector2(px + 16, py + TS - 4), Vector2(px + 11, py + TS - 9)], GOLD2.darkened(0.35))
+					r(ci, px, py + TS - 2, TS, 2, Color(0, 0, 0, 0.45))
 				continue
 			r(ci, px, py, TS, TS, c)
 			match t:
@@ -132,6 +138,14 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 					else:
 						poly(ci, [Vector2(px + 9, py + 11), Vector2(px + 23, py + 11), Vector2(px + 16, py + 23)], GOLD)
 			r(ci, px, py, TS, 1, Color(0, 0, 0, 0.08))
+			# sombra de contacto junto a las paredes
+			if f.at(tx, ty - 1) == Cfg.T_WALL:
+				r(ci, px, py, TS, 8, Color(0, 0, 0, 0.3))
+				r(ci, px, py + 8, TS, 5, Color(0, 0, 0, 0.12))
+			if f.at(tx - 1, ty) == Cfg.T_WALL:
+				r(ci, px, py, 5, TS, Color(0, 0, 0, 0.18))
+			if f.at(tx + 1, ty) == Cfg.T_WALL:
+				r(ci, px + TS - 5, py, 5, TS, Color(0, 0, 0, 0.18))
 
 static func draw_furn(ci: CanvasItem, o: Dictionary) -> void:
 	var k: String = o["k"]
@@ -184,6 +198,14 @@ static func draw_pick(ci: CanvasItem, p: Items.Pick, time: float) -> void:
 	elif p.kind == "badge":
 		poly(ci, [Vector2(x, y - 7), Vector2(x + 6, y - 2), Vector2(x + 4, y + 6), Vector2(x - 4, y + 6), Vector2(x - 6, y - 2)], GOLD2)
 		r(ci, x - 2, y - 2, 4, 5, Color("#8c2f39"))
+	elif p.kind == "cash":
+		r(ci, x - 7, y - 4, 14, 8, Color("#5b7a4a"))
+		r(ci, x - 5, y - 2, 10, 4, Color("#8fb07a"))
+		ci.draw_circle(Vector2(x, y), 1.6, Color("#5b7a4a"))
+	elif p.kind == "cutter":
+		ci.draw_line(Vector2(x - 7, y + 6), Vector2(x + 2, y - 3), Color("#b8392f"), 3.0)
+		ci.draw_line(Vector2(x + 7, y + 6), Vector2(x - 2, y - 3), Color("#b8392f"), 3.0)
+		poly(ci, [Vector2(x - 3, y - 2), Vector2(x, y - 9), Vector2(x + 3, y - 2)], Color("#9aa3ab"))
 	else:
 		r(ci, x - 5, y - 2, 10, 4, Color("#9aa3ab"))
 		r(ci, x - 3, y + 2, 8, 2, Color("#6a7279"))
