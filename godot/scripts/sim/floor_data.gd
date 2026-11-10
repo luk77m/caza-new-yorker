@@ -1,0 +1,47 @@
+## Datos de una planta (cargados desde data/hotel.json).
+class_name FloorData
+extends RefCounted
+
+var fi := 0
+var label := ""
+var sub := ""
+var dark := 0.3
+var sky := false
+var roof := false
+var g := PackedByteArray()     # tipo de casilla
+var blk := PackedByteArray()   # muebles sólidos
+var zone := PackedByteArray()
+var pass := PackedByteArray()  # casillas transitables
+var rooms: Array = []          # Room
+var furn: Array = []           # Dictionary {k, x, y, w, h, solid}
+var lamps: Array = []          # Dictionary {x, y, r, tint}
+var wards: Array = []          # Fixture
+var sinks: Array = []
+var washers: Array = []
+var up := Vector2i.ZERO
+var down := Vector2i.ZERO
+var spawn := Vector2i.ZERO
+var phone := Vector2i.ZERO
+var tiles_pub: Array = []      # Vector2i
+var room_tiles := {}           # nombre -> Array[Vector2i]
+var lock_at := {}              # índice de casilla de puerta -> Room
+
+func at(tx: int, ty: int) -> int:
+	if tx < 0 or ty < 0 or tx >= Cfg.W or ty >= Cfg.H:
+		return Cfg.T_VOID
+	return g[ty * Cfg.W + tx]
+
+func room_at(tx: int, ty: int) -> Room:
+	var best: Room = null
+	var ba := 1 << 30
+	for r in rooms:
+		if r.contains(tx, ty) and r.w * r.h < ba:
+			ba = r.w * r.h
+			best = r
+	return best
+
+func room_by(nm: String) -> Room:
+	for r in rooms:
+		if r.nm == nm:
+			return r
+	return null

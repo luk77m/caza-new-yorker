@@ -1,0 +1,91 @@
+## Constantes del juego. Todos los números de equilibrio están aquí.
+class_name Cfg
+extends RefCounted
+
+const TS := 32
+const W := 44
+const H := 30
+
+# Tipos de casilla (iguales que en src/core.js)
+const T_VOID := 0
+const T_WALL := 1
+const T_MARBLE := 2
+const T_CARPET := 3
+const T_CONC := 4
+const T_DOOR := 5
+const T_ELEV := 6
+const T_UP := 7
+const T_DOWN := 8
+const T_ROOF := 10
+const T_WOOD := 11
+const T_TERR := 12
+const T_RAIL := 13
+const T_HALL := 14
+
+# Zonas
+const ZONE_PUB := 0
+const ZONE_ROOM := 1
+const ZONE_STAFF := 2
+
+const FIRE_CD := 0.9            # s entre disparos del cazador
+const KILL_RANGE := 7.5         # casillas de alcance del arma con silenciador
+const WITNESS_RADIUS := 9.0     # casillas: un PNJ con visión dentro de este radio es testigo
+const SIGHT_TILES := 8.0        # casillas de visión de los PNJ para la sospecha
+const AIM_NOTICE_RADIUS := 7.0  # casillas: un PNJ dentro percibe poco a poco el arma
+const AIM_RATE := 2.2           # sospecha/s por PNJ que ve el arma (a distancia máxima)
+const AIM_NEAR := 12.0          # sospecha/s extra cuando el PNJ está pegado al arma
+const BLOOD_RADIUS := 7.0
+const BLOOD_RATE := 9.0         # sospecha/s por PNJ que ve un traje manchado
+const RESTRICTED_STAFF := 14.0  # sospecha/s si te ve un trabajador en zona prohibida
+const RESTRICTED_GUEST := 4.0   # sospecha/s si te ve un huésped en zona prohibida
+const SUS_DECAY := 3.0          # sospecha/s que baja cuando nadie te ve
+const WARN_AT := 35.0           # los trabajadores te avisan
+const CALL_AT := 80.0           # si sigues, llaman a la policía
+const POLICE_DELAY := 9.0       # s entre la llamada y la llegada
+const POLICE_COUNT := 2
+const POLICE_STAY := 80.0       # s que se quedan buscando
+const POLICE_SIGHT := 9.0       # casillas
+const POLICE_REACT := 0.7       # s entre que ve al cazador y dispara
+
+const SPEED_WALK := 118.0
+const SPEED_RUN := 180.0
+const SPEED_AIM := 66.0
+const SPEED_NPC := 62.0
+const SPEED_BOT := 108.0
+const SPEED_BOT_RUN := 160.0
+const SPEED_POLICE := 125.0
+
+const HOLD_STRIP := 3.0
+const HOLD_WARD := 3.0
+const HOLD_WASH := 6.0
+const HOLD_SINK := 5.0
+
+const SCRAP_NEEDED := 4
+const TASKS_MIN := 8            # encargos personales de cada corredor
+const TASKS_MAX := 10
+const FORCE_DUR := 5.5          # s para forzar una cerradura
+const UNLOCK_FOR := 75.0        # s que una puerta forzada queda abierta para todos
+const STRIKES := 3              # denuncias a partir de las cuales el corredor queda fichado
+const CLIENT_DELAY := 30.0      # s que se retrasa el cliente por cada denuncia desde la tercera
+const ARREST_DUR := 9.0         # s que la policía retiene a un corredor fichado
+const SAB_BLACKOUT := 40.0      # s de duración de cada sabotaje
+const SAB_ALARM := 45.0
+const SAB_ELEV := 50.0
+const BLACKOUT_SIGHT := 0.5     # multiplicador de la visión durante el apagón
+const MELEE_RANGE := 40.0
+const MELEE_CD := 1.1
+
+const BOT_IDLE_MIN := 34        # s que un bot corredor se mezcla antes de la siguiente tarea
+const BOT_IDLE_MAX := 80
+const BOT_PATIENCE := 22.0      # s que un bot cazador espera a que no haya testigos
+const BOT_SIGHT := 5.5          # casillas a las que un bot cazador reconoce un objetivo
+const BOT_RECOGNIZE := 1.9      # s mirando a un objetivo antes de reconocerlo
+const BOT_AIM_TIME := 1.3       # s apuntando antes de disparar
+
+const SIGHT_PX := 330.0         # radio de visión del jugador en píxeles
+
+static func is_solid(t: int) -> bool:
+	return t == T_VOID or t == T_WALL or t == T_RAIL or t == T_ELEV
+
+static func blocks_sight(t: int) -> bool:
+	return t == T_VOID or t == T_WALL or t == T_ELEV

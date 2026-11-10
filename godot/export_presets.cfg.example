@@ -1,0 +1,2 @@
+; Al exportar, incluye los .json: en Proyecto > Exportar > Recursos,
+; "Filtros para exportar archivos que no son recursos": *.json

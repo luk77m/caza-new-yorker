@@ -7,7 +7,8 @@ Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asim�
 
 ## Jugar
 
-Abre `index.html` en el navegador. No necesita servidor ni dependencias.
+- **Versión Godot (v0.4, la principal a partir de ahora):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
+- **Versión web (v0.3):** abre `index.html` en el navegador. No necesita servidor ni dependencias.
 
 ## Estructura
 
@@ -28,6 +29,8 @@ src/            código fuente por módulos
 build.py        concatena src/ en index.html (+ bundle.js)
 mktest.py       genera index_test.html, que expone window.__T para las pruebas
 test/           pruebas (Node y Playwright)
+tools/          exportador de datos para Godot y comprobación estática del GDScript
+godot/          versión Godot 4 (ver godot/README.md)
 ```
 
 `core`, `map`, `outfits`, `nav` y `sim` no tocan el DOM, así que las pruebas de reglas se ejecutan directamente en Node.
@@ -52,6 +55,7 @@ Flujo recomendado: editar `src/`, `npm run build`, `npm test`, commit. Etiquetar
 | Versión | Qué trae |
 |---|---|
 | v0.2 | Mapa de 7 plantas, bots, policía, testigos, carteles de busca, disfraces, menú principal |
+| v0.4 | Port a Godot 4 (GDScript, 2D) con las reglas de la v0.3; datos del mapa exportados a JSON |
 | v0.3 | Pantalla completa por defecto, 8-10 encargos por corredor, puertas con llave (forzar o llave maestra), denuncias y fichado, sabotajes (apagón, alarma de incendios, ascensores), nombres azules para aliados |
 
 ## Siguiente (tanda 2)
@@ -62,4 +66,5 @@ Flujo recomendado: editar `src/`, `npm run build`, `npm test`, commit. Etiquetar
 - Ascensor con 5 s de espera y un objeto raro que lo rompe, con animación.
 - Sonidos de pasos y de arma.
 - Más interacción con los PNJ.
-- Más adelante, valorar pasar a un motor 3D.
+- Sprites y `TileMapLayer` en la versión Godot.
+- Multijugador en red con servidor dedicado (la simulación de `godot/scripts/sim` no depende de nodos).
