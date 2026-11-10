@@ -646,10 +646,10 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 			wlog(w, "Objetivo eliminado: +$" + str(Cfg.MONEY_TARGET) + ".")
 	if how == "gun":
 		# un disparo con silenciador se oye de cerca aunque no se vea
-		for c in w.ents:
-			if c.role == "civil" and c.alive and c != victim and c.fl == killer.fl and c.state == "idle" and dist(c.x, c.y, killer.x, killer.y) < 4.5 * TS and Rng.rnd() < 0.6:
-				c.dir = dir_of(killer.x - c.x, killer.y - c.y)
-				c.say("¿Ha oído eso?", 2.0)
+		for npc in w.ents:
+			if npc.role == "civil" and npc.alive and npc != victim and npc.fl == killer.fl and npc.state == "idle" and dist(npc.x, npc.y, killer.x, killer.y) < 4.5 * TS and Rng.rnd() < 0.6:
+				npc.dir = dir_of(killer.x - npc.x, killer.y - npc.y)
+				npc.say("¿Ha oído eso?", 2.0)
 	if how == "gun" or how == "knife":
 		var wr := Cfg.WITNESS_RADIUS * TS * sight_scale(w) * (Cfg.SILENCER_PERK if (how == "gun" and killer.perk == "silencer") else 1.0) * (0.75 if how == "knife" else 1.0)
 		var wit: Array = civils_seeing(w, killer, victim, wr).filter(func(x): return x != victim)
@@ -666,12 +666,12 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 		w.fx.append({"type": "tracer", "fl": killer.fl, "x": killer.x, "y": killer.y - 14, "x2": victim.x, "y2": victim.y - 10, "t": 0.22, "loud": true})
 		ev(w, "shot_police", killer.fl, killer.x, killer.y)
 		# los disparos de la policía asustan a todo el que esté cerca
-		for c in w.ents:
-			if c.role == "civil" and c.alive and c.fl == killer.fl and (c.state == "idle" or c.state == "evac") and dist(c.x, c.y, killer.x, killer.y) < 10 * TS:
-				c.state = "scared"; c.ai_t = Rng.ri(4, 8); c.goal = null; c.moving = false
-				c.dir = dir_of(killer.x - c.x, killer.y - c.y)
+		for npc in w.ents:
+			if npc.role == "civil" and npc.alive and npc.fl == killer.fl and (npc.state == "idle" or npc.state == "evac") and dist(npc.x, npc.y, killer.x, killer.y) < 10 * TS:
+				npc.state = "scared"; npc.ai_t = Rng.ri(4, 8); npc.goal = null; npc.moving = false
+				npc.dir = dir_of(killer.x - npc.x, killer.y - npc.y)
 				if Rng.rnd() < 0.4:
-					c.say(Rng.pick(["¡Disparos!", "¡Al suelo!", "¡Dios mío!"]), 2.0)
+					npc.say(Rng.pick(["¡Disparos!", "¡Al suelo!", "¡Dios mío!"]), 2.0)
 		wlog(w, "La policía abate a un sospechoso." if victim.role == "hunter" else "La policía abate a " + victim.nm + ".", "alarm")
 	elif victim.role == "hunter":
 		wlog(w, victim.nm + " ha caído.", "hunt")

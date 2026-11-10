@@ -52,3 +52,31 @@ for f in files:
             if kw in KW: problems.append(f'{f}:{i}: palabra reservada usada como nombre: {kw}')
 print('\n'.join(problems) or 'sin problemas')
 print(len(files), 'ficheros:', ', '.join(sorted(classes)))
+
+# variables locales que se vuelven a declarar dentro de su propio ámbito (error en GDScript)
+import re as _re
+shadow = []
+for f in files:
+    vis = []      # (indent, name, kind)
+    for i, L in enumerate(open(f, encoding='utf-8').read().split('\n'), 1):
+        code = L.split('#')[0].rstrip()
+        if not code.strip():
+            continue
+        ind = len(code) - len(code.lstrip('\t'))
+        m = _re.match(r'(?:static )?func \w+\((.*?)\)', code)
+        if ind == 0:
+            vis = []
+            if m:
+                for p in _re.findall(r'(?:^|,)\s*(\w+)', m.group(1)):
+                    vis.append((0, p, 'param'))
+            continue
+        vis = [(d, n, k) for (d, n, k) in vis if (k == 'param') or (k == 'var' and ind >= d) or (k == 'for' and ind > d)]
+        for n in _re.findall(r'^\s*var (\w+)', code):
+            if any(x[1] == n for x in vis):
+                shadow.append(f'{f}:{i}: "{n}" ya está declarada en este ámbito')
+            vis.append((ind, n, 'var'))
+        for n in _re.findall(r'^\s*for (\w+) in', code):
+            if any(x[1] == n for x in vis):
+                shadow.append(f'{f}:{i}: "{n}" ya está declarada en este ámbito')
+            vis.append((ind, n, 'for'))
+print('\n'.join(shadow) or 'sin redeclaraciones')
