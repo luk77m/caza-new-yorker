@@ -893,8 +893,8 @@ func _build_boxes(f: FloorData) -> void:
 	for p in w.picks:
 		if p.fl != e.fl:
 			continue
-		var px := (p.x + 0.5) * TS
-		var py := (p.y + 0.5) * TS
+		var px: float = (p.x + 0.5) * TS
+		var py: float = (p.y + 0.5) * TS
 		var pc := Color("#d9b862") if p.kind == "cash" or p.kind == "money" else Color("#9aa3ab")
 		_box(raw, px - 5, py - 4, px + 5, py + 4, 0, 4 + 1.5 * sin(anim * 4.0 + p.id), pc, pc.lightened(0.3), {"emit": true})
 	for b in raw:
@@ -1069,7 +1069,7 @@ func _build_sprites(f: FloorData) -> void:
 			continue
 		var sc := proj / c.x
 		var sx := cx + c.y * sc
-		var hw := 12.0 * sc * o.outfit.build
+		var hw: float = 12.0 * sc * o.outfit.build
 		if sx + hw < -PAD or sx - hw > vs.x + PAD:
 			continue
 		var tv := (eye - p).normalized()
