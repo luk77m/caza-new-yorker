@@ -1,6 +1,6 @@
 /* ===== navegación y visión ===== */
 var _q = new Int32Array(W * H), _prev = new Int32Array(W * H), _seen = new Uint8Array(W * H);
-function bfs(f, sx, sy, tx, ty) {
+function bfs(f, sx, sy, tx, ty, avoid) {
   if (sx < 0 || sy < 0 || sx >= W || sy >= H) return null;
   var target = ty * W + tx, start = sy * W + sx;
   if (!f.pass[target]) {
@@ -20,7 +20,7 @@ function bfs(f, sx, sy, tx, ty) {
       var ax = cxn + DX[d], ay = cyn + DY[d];
       if (ax < 0 || ay < 0 || ax >= W || ay >= H) continue;
       var ni = ay * W + ax;
-      if (_seen[ni] || !f.pass[ni]) continue;
+      if (_seen[ni] || !f.pass[ni] || (avoid && avoid[ni])) continue;
       if (d >= 4 && (!f.pass[cyn * W + ax] || !f.pass[ay * W + cxn])) continue;
       _seen[ni] = 1; _prev[ni] = cur; _q[tail++] = ni;
       if (ni === target) { found = true; break; }

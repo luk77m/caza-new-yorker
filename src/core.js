@@ -28,13 +28,19 @@ var CFG = {
   speed: { walk: 118, run: 180, aim: 66, npc: 62, bot: 108, botRun: 160, police: 125 },
   hold: { strip: 3, ward: 3, wash: 6, sink: 5 },
   scrapNeeded: 4,
-  taskCooldown: 150,       // s hasta que una tarea puede repetirse
-  quotaBase: 2, quotaPerRunner: 4,
+  tasksMin: 8, tasksMax: 10, // encargos personales de cada corredor
+  forceDur: 5.5,           // s para forzar una cerradura
+  unlockFor: 75,           // s que una puerta forzada queda abierta para todos
+  strikes: 3,              // denuncias a partir de las cuales el corredor queda fichado
+  clientDelay: 30,         // s que se retrasa el cliente por cada denuncia desde la tercera
+  arrestDur: 9,            // s que la policía retiene a un corredor fichado
+  sab: { blackout: 40, alarm: 45, elev: 50 },  // s de duración de cada sabotaje
+  blackoutSight: 0.5,      // multiplicador de la visión (de todos) durante el apagón
   meleeRange: 40, meleeCd: 1.1,
-  botIdle: [22, 55],       // s que un bot corredor se mezcla antes de la siguiente tarea
-  botPatience: 16,         // s que un bot cazador espera a que no haya testigos antes de arriesgarse
-  botSight: 6,             // tiles a los que un bot cazador reconoce un objetivo
-  botRecognize: 1.4,       // s mirando a un objetivo antes de reconocerlo
+  botIdle: [34, 80],       // s que un bot corredor se mezcla antes de la siguiente tarea
+  botPatience: 22,         // s que un bot cazador espera a que no haya testigos antes de arriesgarse
+  botSight: 5.5,             // tiles a los que un bot cazador reconoce un objetivo
+  botRecognize: 1.9,       // s mirando a un objetivo antes de reconocerlo
   botAimTime: 1.3          // s apuntando antes de disparar
 };
 

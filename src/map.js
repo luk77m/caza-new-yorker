@@ -33,7 +33,7 @@ function room(f, x, y, w, h, name, ft, side, o) {
     else if (side === 'E') { dx = x + w - 1; dy = pos + i; }
     else { dx = x; dy = pos + i; }
     f.doors.push({ x: dx, y: dy });
-    if (i === 0) r.door = { x: dx, y: dy };
+    if (i === 0) { r.door = { x: dx, y: dy }; r.out = { x: dx + (side === 'E' ? 1 : (side === 'W' ? -1 : 0)), y: dy + (side === 'S' ? 1 : (side === 'N' ? -1 : 0)) }; }
   }
   return r;
 }
@@ -95,6 +95,8 @@ function standTile(f, o) {
 }
 function finish(f) {
   f.doors.forEach(function (d) { set(f, d.x, d.y, T.DOOR); });
+  f.lockAt = {};
+  f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM && r.door) f.lockAt[r.door.y * W + r.door.x] = r; });
   f.furn.forEach(function (o) { if (!o.solid) return; for (var j = o.y; j < o.y + o.h; j++) for (var i = o.x; i < o.x + o.w; i++) if (i >= 0 && j >= 0 && i < W && j < H) f.blk[j * W + i] = 1; });
   f.rooms.forEach(function (r) {
     if (!r.zone) return;
@@ -240,30 +242,59 @@ var FLOORS = [];
   F(f, 'sign', 15, 20, 14, 2); F(f, 'antenna', 22, 15); F(f, 'vent', 15, 14, 2, 1); F(f, 'vent', 27, 14, 2, 1); F(f, 'scope', 28, 17); F(f, 'vent', 15, 17, 2, 1);
   FLOORS[6] = finish(f);
 })();
-FLOORS.forEach(function (f, i) { f.wards.forEach(function (w) { w.floorIdx = i; }); });
+FLOORS.forEach(function (f, i) { f.wards.forEach(function (w) { w.floorIdx = i; }); f.rooms.forEach(function (r) { r.fi = i; }); });
+function roomAt(f, tx, ty) {
+  var best = null, ba = 1e9;
+  f.rooms.forEach(function (r) { if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h && r.w * r.h < ba) { ba = r.w * r.h; best = r; } });
+  return best;
+}
+function roomLabel(r) { var m = /^Hab\.\s+(\d+)/.exec(r.name); return m ? 'habitación ' + m[1] : (/^Suite/.test(r.name) ? r.name.replace('Suite', 'suite') : r.name.charAt(0).toLowerCase() + r.name.slice(1)); }
+function roomSpot(r) {
+  var tiles = FLOORS[r.fi].roomTiles[r.name], best = null, bd = 1e9, cxr = r.x + r.w / 2, cyr = r.y + r.h / 2;
+  tiles.forEach(function (t) { var d = Math.hypot(t.x + .5 - cxr, t.y + .5 - cyr); if (d < bd) { bd = d; best = t; } });
+  return best;
+}
 
 function roomBy(fi, name) { var rs = FLOORS[fi].rooms; for (var i = 0; i < rs.length; i++) if (rs[i].name === name) return rs[i]; return null; }
-var _hab = roomBy(3, 'Hab. 1005'), _suite = roomBy(4, 'Suite 2001');
+/* Catálogo de encargos con sitio fijo. Cada corredor recibe 8-10 propios (ver assignTasks en sim.js). */
 var TASK_DEFS = [
-  { id: 'fusible', name: 'Cortar el fusible principal', floor: 0, x: 35, y: 22, dur: 6 },
+  { id: 'fusible', name: 'Cortar el fusible principal', floor: 0, x: 35, y: 22, dur: 6, sab: 'blackout' },
+  { id: 'alarma', name: 'Activar la alarma de incendios', floor: 1, x: 15, y: 11, dur: 4, sab: 'alarm' },
+  { id: 'ascensor', name: 'Bloquear los ascensores en la sala de máquinas', floor: 6, x: 24, y: 10, dur: 6, sab: 'elev' },
   { id: 'sobres', name: 'Recoger el sobre de pagos', floor: 0, x: 24, y: 21, dur: 4 },
   { id: 'sabanas', name: 'Esconder el paquete entre las sábanas', floor: 0, x: 30, y: 10, dur: 4 },
+  { id: 'caldera', name: 'Aflojar la válvula de la caldera', floor: 0, x: 11, y: 11, dur: 5 },
+  { id: 'cocina', name: 'Cambiar la comanda en la cocina', floor: 0, x: 20, y: 21, dur: 4 },
   { id: 'registro', name: 'Falsificar el libro de registro', floor: 1, x: 20, y: 12, dur: 5 },
+  { id: 'telegrama', name: 'Enviar un telegrama cifrado', floor: 1, x: 35, y: 6, dur: 4 },
+  { id: 'whisky', name: 'Cambiar la botella del mostrador', floor: 1, x: 36, y: 23, dur: 4 },
+  { id: 'tienda', name: 'Dejar una nota en la tienda de regalos', floor: 1, x: 7, y: 22, dur: 3 },
   { id: 'barman', name: 'Hablar con el contacto del bar', floor: 2, x: 32, y: 9, dur: 4 },
   { id: 'piano', name: 'Dejar el sobre bajo el piano', floor: 2, x: 9, y: 21, dur: 4 },
-  { id: 'hab', name: 'Registrar la habitación 1005', floor: 3, x: cx(_hab), y: cy(_hab), dur: 6 },
-  { id: 'caja', name: 'Abrir la caja fuerte de la 2001', floor: 4, x: cx(_suite), y: cy(_suite), dur: 7 },
+  { id: 'escenario', name: 'Pasar el aviso al director de orquesta', floor: 2, x: 20, y: 22, dur: 3 },
   { id: 'espejo', name: 'Hacer señales desde el mirador', floor: 5, x: 20, y: 22, dur: 5 },
+  { id: 'biblio', name: 'Esconder un mensaje entre los libros', floor: 5, x: 29, y: 7, dur: 4 },
+  { id: 'mirador', name: 'Vigilar la entrada desde el salón mirador', floor: 5, x: 15, y: 11, dur: 5 },
   { id: 'antena', name: 'Reorientar la antena', floor: 6, x: 22, y: 16, dur: 6 },
   { id: 'maletin_a', kind: 'pick', pair: 'maletin_b', name: 'Recoger el maletín del almacén', floor: 0, x: 8, y: 20, dur: 3 },
-  { id: 'maletin_b', kind: 'drop', name: 'Entregar el maletín en el despacho', floor: 1, x: 8, y: 9, dur: 3 },
+  { id: 'maletin_b', kind: 'drop', name: 'Entregar el maletín en el despacho del gerente', floor: 1, x: 8, y: 9, dur: 3, roomName: 'Despacho del gerente' },
   { id: 'planos_a', kind: 'pick', pair: 'planos_b', name: 'Recoger los planos en Correos', floor: 1, x: 37, y: 9, dur: 3 },
   { id: 'planos_b', kind: 'drop', name: 'Entregar los planos en la terraza', floor: 5, x: 21, y: 19, dur: 3 }
 ];
 var TASK_UNITS = TASK_DEFS.filter(function (t) { return t.kind !== 'pick'; }).length;
+/* Encargos dentro de habitaciones: se generan por corredor (la suya es gratis, las demás están cerradas). */
+var ROOM_TASKS = [
+  { id: 'busca', name: 'Registrar la {r}', dur: 6 },
+  { id: 'paquete', name: 'Esconder un paquete en la {r}', dur: 5 },
+  { id: 'caja', name: 'Abrir la caja fuerte de la {r}', dur: 7 },
+  { id: 'micro', name: 'Instalar un micrófono en la {r}', dur: 6 },
+  { id: 'equipaje', name: 'Cambiar el equipaje de la {r}', dur: 5 }
+];
+var ROOM_POOL = [];
+FLOORS.forEach(function (f, fi) { if (fi !== 3 && fi !== 4) return; f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM && r.door) ROOM_POOL.push(r); }); });
 
 var KEY_SPOTS = {
-  masterkey: [{ f: 1, x: 8, y: 7 }, { f: 3, x: cx(roomBy(3, 'Cuarto de servicio')), y: cy(roomBy(3, 'Cuarto de servicio')) }, { f: 4, x: cx(roomBy(4, 'Suite 2002')), y: cy(roomBy(4, 'Suite 2002')) }],
+  masterkey: [{ f: 1, x: 24, y: 12 }, { f: 3, x: cx(roomBy(3, 'Cuarto de servicio')), y: cy(roomBy(3, 'Cuarto de servicio')) }, { f: 4, x: cx(roomBy(4, 'Suite 2002')), y: cy(roomBy(4, 'Suite 2002')) }],
   badge: [{ f: 1, x: 8, y: 21 }, { f: 1, x: 36, y: 19 }]
 };
 var SCRAP_SPOTS = [

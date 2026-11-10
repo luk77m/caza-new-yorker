@@ -8,7 +8,7 @@
   color-scheme: dark;
   --bg: #080c11; --bg2: #0d131a; --panel: #111922; --panel2: #16212c; --line: #263340; --line2: #34465a;
   --gold: #c9a24b; --gold2: #ebd08a; --ivory: #efe8d4; --mut: #93a0ae; --dim: #5d6b79;
-  --red: #c0384a; --red2: #ff6a78; --teal: #47a0a6; --ok: #6fcf97; --warn: #e8a53a;
+  --red: #c0384a; --red2: #ff6a78; --teal: #47a0a6; --ok: #6fcf97; --warn: #e8a53a; --blue: #5aa8ff; --blue2: #8cc4ff;
   --disp: "Poiret One", "Josefin Sans", system-ui, sans-serif;
   --body: "Josefin Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -77,6 +77,12 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 .chip { background: rgba(8,12,17,.78); border: 1px solid var(--line2); padding: 5px 10px; font-size: .84rem; letter-spacing: .06em; text-transform: uppercase; backdrop-filter: blur(3px); }
 #hudTop { left: 10px; top: 10px; display: flex; gap: 6px; flex-direction: column; align-items: flex-start; }
 #hudTop b { color: var(--gold2); font-weight: 600; }
+#hudTop .chip.bad { border-color: var(--red); color: var(--red2); } #hudTop .chip.bad b { color: var(--red2); }
+#hudTop .chip { max-width: min(92vw, 560px); }
+#hudTop .chip.warn { border-color: var(--warn); color: var(--warn); } #hudTop #hOwn b { color: var(--blue2); }
+#hudMap { right: 10px; bottom: 54px; width: min(236px, 26vw); display: none; opacity: .93; }
+body.lay-full #hudMap { display: block; }
+#mini2 { display: block; width: 100%; height: auto; background: #070b10; border: 1px solid var(--line2); aspect-ratio: 220 / 150; image-rendering: pixelated; }
 #susWrap { right: 10px; top: 10px; width: min(270px, 44%); }
 .susbar { height: 12px; border: 1px solid var(--line2); background: rgba(8,12,17,.85); position: relative; overflow: hidden; }
 #susFill { height: 100%; width: 0; background: linear-gradient(90deg, #6fcf97, #e8a53a 55%, #ff4a5a); transition: width .12s linear; }
@@ -101,8 +107,17 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 #hintFill { height: 100%; width: 0; background: var(--gold2); }
 #toasts { left: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 5px; max-width: min(380px, 40%); }
 .toast { background: rgba(8,12,17,.86); border-left: 3px solid var(--gold); padding: 5px 10px; font-size: .82rem; animation: slide .25s ease-out; }
-.toast.alarm { border-color: var(--red); } .toast.call { border-color: var(--warn); } .toast.task { border-color: var(--teal); } .toast.poster { border-color: #aaa; }
+.toast.alarm { border-color: var(--red); } .toast.call, .toast.report { border-color: var(--warn); } .toast.task, .toast.team { border-color: var(--blue); } .toast.poster { border-color: #aaa; }
 .toast.out { opacity: 0; transition: opacity .6s; }
+@media (max-width: 640px) {
+  .chip { font-size: .66rem; padding: 3px 7px; letter-spacing: .04em; }
+  #hudTop { gap: 3px; left: 6px; top: 6px; }
+  #hudTop .chip { max-width: 94vw; }
+  #toasts { max-width: 58%; left: 6px; bottom: 56px; }
+  .toast { font-size: .7rem; padding: 4px 8px; }
+  #hudMap { width: 34vw; bottom: 50px; right: 6px; }
+  #stbtns { right: 6px; bottom: 6px; }
+}
 @keyframes slide { from { transform: translateX(-16px); opacity: 0; } }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; }
 #fade.on { opacity: 1; }
@@ -174,6 +189,10 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 .ftabs button.on.cur { color: #1a1408; }
 #tabside h3 { margin: 0 0 6px; font-family: var(--disp); font-weight: 400; font-size: 1rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
 #tabside .blk { margin-bottom: 12px; }
+.ev { font-size: .76rem; color: var(--mut); border-left: 2px solid var(--line2); padding-left: 6px; margin-bottom: 3px; line-height: 1.3; }
+.ev time { color: var(--dim); margin-right: 3px; font-variant-numeric: tabular-nums; }
+.ev.alarm { border-color: var(--red); color: var(--ivory); } .ev.call, .ev.report { border-color: var(--warn); } .ev.task, .ev.team { border-color: var(--blue); }
+#tabside .ctrl { font-size: .74rem; }
 .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: .72rem; color: var(--mut); margin-top: 6px; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
 
@@ -239,10 +258,12 @@ aside { display: grid; gap: 10px; min-width: 0; }
 #taskList li em, .tl li em { font-style: normal; color: var(--gold); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; padding-top: 1px; }
 #taskList li small, .tl li small { display: block; color: var(--dim); font-size: .7rem; }
 #taskList li.here, .tl li.here { border-color: var(--gold2); background: rgba(201,162,75,.07); }
-#taskList li.cool, .tl li.cool { opacity: .45; } #taskList li.lock, .tl li.lock { opacity: .6; }
+#taskList li.cool, .tl li.cool { opacity: .4; text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); } #taskList li.lock, .tl li.lock { opacity: .6; }
+#taskList li.rlock, .tl li.rlock { border-color: var(--warn); } #taskList li.rlock small, .tl li.rlock small { color: var(--warn); }
+.tl .tlab, #taskList .tlab { font-size: .72rem; color: var(--blue2); letter-spacing: .06em; text-transform: uppercase; margin: 6px 0 2px; }
 #log { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: .78rem; color: var(--mut); max-height: 190px; overflow: auto; }
 #log li { border-left: 2px solid var(--line2); padding-left: 6px; }
-#log li.alarm { border-color: var(--red); color: var(--ivory); } #log li.call { border-color: var(--warn); } #log li.task { border-color: var(--teal); }
+#log li.alarm { border-color: var(--red); color: var(--ivory); } #log li.call, #log li.report { border-color: var(--warn); } #log li.task, #log li.team { border-color: var(--blue); }
 #log time { color: var(--dim); margin-right: 4px; font-variant-numeric: tabular-nums; }
 .ctrl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: .78rem; color: var(--mut); margin: 0; }
 .ctrl dt { color: var(--gold2); white-space: nowrap; } .ctrl dd { margin: 0; }
@@ -264,7 +285,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
       <button class="tb" data-act="settings"><span>Ajustes</span><small>Imagen, sonido y teclas</small></button>
       <button class="tb" data-act="credits"><span>Créditos</span><small>Versión y próximos pasos</small></button>
     </nav>
-    <div class="tfoot">Prototipo v0.2 · partidas contra bots · ↑ ↓ y Intro</div>
+    <div class="tfoot">Prototipo v0.3 · partidas contra bots · ↑ ↓ y Intro</div>
   </div>
 </div>
 
@@ -285,9 +306,9 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
         <canvas id="cv"></canvas>
 
         <div id="hud" hidden>
-          <div class="ov" id="hudTop"><span class="chip" id="hFloor"></span><span class="chip" id="hTime"></span><span class="chip" id="hDeal" hidden></span></div>
+          <div class="ov" id="hudTop"><span class="chip" id="hFloor"></span><span class="chip" id="hTime"></span><span class="chip" id="hDeal" hidden></span><span class="chip" id="hOwn" hidden></span><span class="chip bad" id="hRep" hidden></span><span class="chip warn" id="hSab" hidden></span></div>
           <div class="ov" id="susWrap" hidden>
-            <div id="susLabel"><span>Sospecha</span><span id="susNum">0</span></div>
+            <div id="susLabel"><span id="susLbl">Sospecha</span><span id="susNum">0</span></div>
             <div class="susbar"><div id="susFill"></div><i style="left:35%"></i><i style="left:80%"></i></div>
             <div id="susFlags"></div>
           </div>
@@ -299,7 +320,9 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
             <button id="btnPrev" title="Anterior (←)">◀</button><button id="btnNext" title="Siguiente (→)">▶</button>
             <button data-speed="1" class="on">×1</button><button data-speed="4">×4</button><button data-speed="10">×10</button>
           </div>
+          <div class="ov" id="hudMap"><canvas id="mini2" width="220" height="150"></canvas></div>
           <div class="ov" id="stbtns">
+            <button id="btnPauseHud" title="Pausa (P)">❚❚</button>
             <button id="btnTab" title="Mapa y encargos (Tab)">▤</button>
             <button id="btnSet" title="Ajustes">⚙</button>
             <button id="btnFull" title="Pantalla completa (F)">⤢</button>
@@ -313,7 +336,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
             <div class="thead"><h2 id="tabTitle">Mapa y encargos</h2><small>Tab o Esc para cerrar · la partida sigue en marcha</small></div>
             <div class="tgrid">
               <div><div class="ftabs" id="ftabs"></div><canvas id="bigmap" width="616" height="420"></canvas>
-                <div class="legend"><span><i style="background:#ebd08a"></i>Encargo</span><span><i style="background:#fff"></i>Tú</span><span><i style="background:#4fd8c8"></i>Aliado</span><span><i style="background:#c0384a"></i>Cadáver</span></div></div>
+                <div class="legend"><span><i style="background:#ebd08a"></i>Encargo</span><span><i style="background:#fff"></i>Tú</span><span><i style="background:#5aa8ff"></i>Compañero</span><span><i style="background:#c0384a"></i>Cadáver</span></div></div>
               <div id="tabside"></div>
             </div>
           </div>
@@ -360,7 +383,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
               <div class="row"><button class="btn ghost" id="btnBack">← Portada</button><button class="btn" id="btnStart">Empezar</button></div>
               <ul class="rules">
                 <li><b>Cazador:</b> mata a los dos retratados. Entrar donde no debes, apuntar cerca de testigos o ir manchado de sangre sube tu sospecha.</li>
-                <li><b>Corredor:</b> cierra el trato completando tareas, fabrica una herramienta con 4 piezas y vigila los carteles de busca y captura.</li>
+                <li><b>Corredor:</b> tienes tu propia lista de 8-10 encargos. Solo tu habitación está abierta: fuerza las demás o busca la llave maestra, pero si te ven te denuncian. Tus compañeros se ven con el nombre en azul.</li>
               </ul>
             </div>
           </div>

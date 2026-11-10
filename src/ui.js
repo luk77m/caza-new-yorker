@@ -8,7 +8,7 @@ var UI = {
   hudT: 0, exT: 0, last: 0, endShown: false, ac: null, demoT: 0, taskEls: null, tgCache: {}, tabOpen: false, tabFloor: 0, tabT: 0, tabSide: '', prevLayout: 'normal', logDirty: false
 };
 var MODAL = { kind: null, tab: null, capture: null };
-var cv, g, mini, mg, bigc, bg;
+var cv, g, mini, mg, mini2, mg2, bigc, bg;
 
 function fmt(t) { t = Math.max(0, Math.ceil(t)); var m = Math.floor(t / 60), s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
 function showErr(err) { var el = $('err'); el.hidden = false; el.textContent = String(err && err.stack || err).slice(0, 600); }
@@ -82,7 +82,7 @@ function startGame() {
   setMode('play');
   var hm = w.human;
   $('pnHunter').hidden = !(hm && hm.role === 'hunter'); $('pnRunner').hidden = !(hm && hm.role === 'runner');
-  $('susWrap').hidden = !(hm && hm.role === 'hunter');
+  $('susWrap').hidden = true;
   $('sbRole').textContent = hm ? (hm.role === 'hunter' ? 'Cazador' : 'Corredor') : 'Observador';
   $('sbSub').textContent = hm ? hm.name : 'solo bots';
   $('sbTimerLbl').textContent = hm && hm.role === 'hunter' ? 'Tiempo de ronda' : 'Llega el cliente en';
@@ -190,7 +190,8 @@ function buildTargets(w) {
 var FL_SHORT = ['Sót.', 'PB', 'P2', 'P10', 'P20', 'P30', 'Azotea'];
 function buildTasks(w) {
   var ul = $('taskList'); ul.innerHTML = ''; UI.taskEls = [];
-  var tasks = w.tasks.slice().sort(function (a, b) { return a.floor - b.floor; });
+  var hm = w.human; if (!(hm && hm.role === 'runner')) return;
+  var tasks = hm.tasks.filter(function (t) { return t.kind !== 'drop' || true; }).slice().sort(function (a, b) { return a.floor - b.floor; });
   tasks.forEach(function (t) {
     var li = el('li', '', '<em>' + FL_SHORT[t.floor] + '</em><span>' + t.name + '<small></small></span>');
     ul.appendChild(li); UI.taskEls.push({ li: li, t: t, sm: li.querySelector('small') });
@@ -201,50 +202,54 @@ function buildFloors() {
   for (var i = FLOORS.length - 1; i >= 0; i--) { var li = el('li', '', '<span>' + FLOORS[i].label + '</span><span>' + FLOORS[i].sub + '</span>'); li.dataset.f = i; ul.appendChild(li); }
 }
 function taskState(w, hm, t) {
-  if (t.cool > w.time) return { cls: 'cool', msg: 'Hecho · otra vez en ' + fmt(t.cool - w.time) };
+  if (t.done) return { cls: 'cool', msg: 'Hecho' };
   if (t.kind === 'drop' && hm.inv.carry !== t.id) return { cls: 'lock', msg: 'Necesitas recoger el encargo antes' };
   if (t.kind === 'pick' && hm.inv.carry) return { cls: 'lock', msg: 'Ya llevas un encargo' };
+  if (t.roomName) { var rm = roomBy(t.floor, t.roomName); if (rm && !canPass(w, hm, rm)) return { cls: 'rlock', msg: 'Puerta cerrada: fuerza la cerradura o busca la llave maestra' }; }
   if (t.kind === 'drop') return { cls: '', msg: 'Llevas el encargo: entrégalo' };
+  if (t.own) return { cls: '', msg: 'En tu habitación' };
   return { cls: '', msg: '' };
 }
 function taskMarks(w, hm, fl) {
-  if (!(hm && hm.role === 'runner')) return [];
-  var out = []; w.tasks.forEach(function (t) { if (t.floor === fl) out.push({ x: t.x, y: t.y, dim: taskState(w, hm, t).cls !== '' }); });
+  if (!(hm && hm.role === 'runner' && hm.tasks)) return [];
+  var out = []; hm.tasks.forEach(function (t) { if (t.floor === fl && !t.done) out.push({ x: t.x, y: t.y, dim: taskState(w, hm, t).cls !== '' }); });
   return out;
 }
 function worldMarkers(w, hm, view) {
-  if (!SET.arrows || !(hm && hm.alive && hm.role === 'runner')) return null;
+  if (!SET.arrows || !(hm && hm.alive && hm.role === 'runner' && hm.tasks)) return null;
   var out = [];
-  w.tasks.forEach(function (t) {
-    if (t.floor !== view.floor || taskState(w, hm, t).cls) return;
+  hm.tasks.forEach(function (t) {
+    if (t.floor !== view.floor) return;
+    var c = taskState(w, hm, t).cls; if (c === 'cool' || c === 'lock') return;
     var x = (t.x + 0.5) * TS, y = (t.y + 0.5) * TS, d = dist(x, y, view.x, view.y);
     if (d <= 17 * TS && d > 26) out.push({ x: x, y: y, d: d });
   });
   out.sort(function (a, b) { return a.d - b.d; });
   return out.slice(0, 3);
 }
-function logVisible(l, role) {
-  if (role === 'runner') return l.kind !== 'call' && l.kind !== 'hunt';
-  if (role === 'hunter') return l.kind !== 'task' && l.kind !== 'poster';
+function logVisible(l, role, hm) {
+  if (role === 'runner') return l.kind !== 'call' && l.kind !== 'hunt' && (l.kind !== 'report' || (hm && l.who === hm.id));
+  if (role === 'hunter') return l.kind !== 'task' && l.kind !== 'poster' && l.kind !== 'report' && l.kind !== 'team';
   return true;
 }
 function pumpLogs(w) {
   var role = w.human ? w.human.role : null, tb = $('toasts');
   w.logs.forEach(function (l) {
     if (l.id <= UI.lastLog) return; UI.lastLog = l.id;
-    if (UI.mode !== 'play' || !logVisible(l, role)) return;
+    if (UI.mode !== 'play' || !logVisible(l, role, w.human)) return;
     UI.logList.push(l); if (UI.logList.length > 60) UI.logList.shift();
     var e = el('div', 'toast ' + l.kind); e.textContent = l.msg; tb.appendChild(e);
-    while (tb.children.length > 4) tb.removeChild(tb.firstChild);
+    while (tb.children.length > (window.innerWidth < 640 ? 2 : 4)) tb.removeChild(tb.firstChild);
     setTimeout(function () { e.classList.add('out'); setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 700); }, 6000);
     UI.logDirty = true;
-    if (l.kind === 'task') sfx('task'); else if (l.kind === 'alarm') sfx('alarm'); else if (l.kind === 'call') sfx('call');
+    if (l.kind === 'task') sfx('task'); else if (l.kind === 'alarm') sfx('alarm'); else if (l.kind === 'call' || l.kind === 'report') sfx('call');
   });
 }
 function holdLabel(h) {
   if (h.type === 'strip') return 'Cogiendo su ropa…';
   if (h.type === 'ward') return 'Registrando el armario…';
   if (h.type === 'wash') return 'Lavando el traje…';
+  if (h.type === 'force') return 'Forzando la cerradura…';
   return h.ref.name + '…';
 }
 function hunterFlags(w, hm) {
@@ -263,8 +268,25 @@ function updateHud(force) {
   $('hTime').innerHTML = (role === 'hunter' ? 'Tiempo ' : 'Cliente ') + '<b>' + fmt(rem) + '</b>';
   $('sbTimer').textContent = fmt(rem);
   $('dealTxt').textContent = w.tasksDone + ' / ' + w.quota;
-  $('dealBar').style.width = Math.min(100, w.tasksDone / w.quota * 100) + '%';
-  if (role === 'runner') $('hDeal').innerHTML = 'Trato <b>' + w.tasksDone + '/' + w.quota + '</b>';
+  $('dealBar').style.width = (w.quota ? Math.min(100, w.tasksDone / w.quota * 100) : 0) + '%';
+  var own = $('hOwn'), rep = $('hRep');
+  if (role === 'runner') {
+    var mu = taskUnits(hm); $('hDeal').innerHTML = 'Encargos <b>' + mu.done + '/' + mu.total + '</b> · equipo <b>' + w.tasksDone + '/' + w.quota + '</b>';
+    own.hidden = false; own.innerHTML = 'Tu habitación <b>' + hm.room.replace(/^\D+/, '') + '</b> · ' + FLOORS[hm.roomFloor].label.replace('Planta ', 'P');
+    if (hm.arrest > 0) { rep.hidden = false; rep.innerHTML = 'DETENIDO <b>' + Math.ceil(hm.arrest) + ' s</b>'; }
+    else if (hm.marked) { rep.hidden = false; rep.innerHTML = 'FICHADO · la policía te detiene si te ve'; }
+    else if (hm.reports > 0) { rep.hidden = false; rep.innerHTML = 'Denuncias <b>' + hm.reports + '/' + CFG.strikes + '</b>'; }
+    else rep.hidden = true;
+  } else { own.hidden = true; rep.hidden = true; }
+  var sbl = [], sb1 = w.sab.blackout - w.time, sb2 = w.sab.alarm - w.time, sb3 = w.sab.elev - w.time;
+  if (sb1 > 0) sbl.push('Apagón <b>' + fmt(sb1) + '</b>'); if (sb2 > 0) sbl.push('Alarma de incendios <b>' + fmt(sb2) + '</b>'); if (sb3 > 0) sbl.push('Ascensores averiados <b>' + fmt(sb3) + '</b>');
+  $('hSab').hidden = !sbl.length; if (sbl.length) $('hSab').innerHTML = sbl.join(' · ');
+  var sw = $('susWrap');
+  if (hm && hm.alive && hm.role === 'runner') {
+    sw.hidden = !(hm.sus > 2);
+    if (!sw.hidden) { $('susLbl').textContent = 'Te vigilan'; $('susFill').style.width = hm.sus + '%'; $('susNum').textContent = Math.round(hm.sus); var rf = hm.restricted ? '<span class="flag warn">Habitación ajena</span>' : ''; if ($('susFlags').innerHTML !== rf) $('susFlags').innerHTML = rf; }
+  } else if (hm && hm.role === 'hunter') { sw.hidden = false; $('susLbl').textContent = 'Sospecha'; } else sw.hidden = true;
+  if (false) $('hDeal').innerHTML = '';
   else if (role === 'hunter') { var tl = 0; w.targets.forEach(function (id) { w.ents.forEach(function (e) { if (e.id === id && e.alive) tl++; }); }); $('hDeal').innerHTML = 'Objetivos vivos <b>' + tl + '/' + w.targets.length + '</b>'; }
   $('mapFloor').textContent = f.label;
   Array.prototype.forEach.call($('floors').children, function (li) { li.className = (+li.dataset.f === view.floor) ? 'cur' : ''; });
@@ -278,7 +300,7 @@ function updateHud(force) {
     for (var id in UI.tgCache) { var tg = UI.tgCache[id]; if (!tg.ent.alive && !tg.dead) { tg.dead = true; tg.el.classList.add('dead'); drawPortrait(tg.el.firstChild, tg.ent.outfit, 'dead'); tg.el.children[1].textContent += ' ✕'; } }
   }
   if (hm && hm.role === 'runner') {
-    $('rInv').textContent = hm.inv.melee ? 'llave inglesa ✓' : 'piezas ' + Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded;
+    $('rInv').textContent = (hm.inv.masterkey ? 'llave maestra ✓ · ' : '') + (hm.inv.melee ? 'llave inglesa ✓' : 'piezas ' + Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded);
     UI.taskEls.forEach(function (te) {
       var st = taskState(w, hm, te.t), cls = st.cls;
       if (te.t.floor === view.floor && !cls) cls = 'here';
@@ -332,13 +354,14 @@ function renderTab() {
   $('tabTitle').textContent = FLOORS[fl].label + ' · ' + FLOORS[fl].sub;
   var h = '';
   if (hm && hm.role === 'runner') {
-    h += '<div class="blk"><h3>Trato ' + w.tasksDone + ' / ' + w.quota + '</h3><div class="bar"><i style="width:' + Math.min(100, w.tasksDone / w.quota * 100) + '%"></i></div></div>';
-    h += '<div class="blk"><h3>Encargos</h3><ul class="tl">';
-    w.tasks.slice().sort(function (a, b) { return (a.floor === fl ? -1 : 0) - (b.floor === fl ? -1 : 0) || a.floor - b.floor; }).forEach(function (t) {
+    var mu2 = taskUnits(hm), ownRm = roomBy(hm.roomFloor, hm.room);
+    h += '<div class="blk"><h3>Tus encargos ' + mu2.done + ' / ' + mu2.total + '</h3><div class="bar"><i style="width:' + (mu2.total ? mu2.done / mu2.total * 100 : 0) + '%"></i></div><div class="meta" style="margin-top:6px">Equipo ' + w.tasksDone + ' / ' + w.quota + ' · tu habitación: ' + roomLabel(ownRm) + ' (' + FLOORS[ownRm.fi].label + ')</div></div>';
+    h += '<div class="blk"><ul class="tl">';
+    hm.tasks.slice().sort(function (a, b) { return (a.floor === fl ? -1 : 0) - (b.floor === fl ? -1 : 0) || a.floor - b.floor; }).forEach(function (t) {
       var st = taskState(w, hm, t), cls = st.cls || (t.floor === fl ? 'here' : '');
       h += '<li class="' + cls + '"><em>' + FL_SHORT[t.floor] + '</em><span>' + t.name + (st.msg ? '<small>' + st.msg + '</small>' : '') + '</span></li>';
     });
-    h += '</ul></div><div class="blk"><h3>Inventario</h3><div class="kv"><span class="flag ' + (hm.inv.melee ? 'on' : '') + '">Llave inglesa ' + (hm.inv.melee ? '✓' : Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded) + '</span><span class="flag ' + (hm.inv.carry ? 'on' : '') + '">Encargo ' + (hm.inv.carry ? 'en mano' : '—') + '</span></div></div>';
+    h += '</ul></div><div class="blk"><h3>Estado</h3><div class="kv"><span class="flag ' + (hm.inv.masterkey ? 'on' : '') + '">Llave maestra ' + (hm.inv.masterkey ? '✓' : '—') + '</span><span class="flag ' + (hm.inv.melee ? 'on' : '') + '">Llave inglesa ' + (hm.inv.melee ? '✓' : Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded) + '</span><span class="flag ' + (hm.inv.carry ? 'on' : '') + '">Encargo ' + (hm.inv.carry ? 'en mano' : '—') + '</span><span class="flag ' + (hm.reports ? 'warn' : '') + '">Denuncias ' + hm.reports + '/' + CFG.strikes + '</span></div></div>';
   } else if (hm && hm.role === 'hunter') {
     h += '<div class="blk"><h3>Sospecha ' + (isHot(w, hm) ? '· buscado' : Math.round(hm.alive ? hm.sus : 0)) + '</h3><div class="bar"><i style="width:' + (hm.alive ? hm.sus : 0) + '%;background:var(--warn)"></i></div><div class="kv">' + hunterFlags(w, hm) + '</div></div>';
     h += '<div class="blk"><h3>Llevas puesto</h3><div id="outfitDesc">' + describeOutfit(hm.outfit) + (hm.outfit.blood ? ' · manchado de sangre' : '') + '</div></div>';
@@ -347,6 +370,8 @@ function renderTab() {
     var nh = 0, nr = 0; w.ents.forEach(function (e) { if (e.alive && e.role === 'hunter') nh++; if (e.alive && e.role === 'runner') nr++; });
     h += '<div class="blk"><h3>Partida</h3><div class="kv"><span class="flag">Cazadores vivos ' + nh + '</span><span class="flag">Corredores vivos ' + nr + '</span><span class="flag">Trato ' + w.tasksDone + '/' + w.quota + '</span></div></div>';
   }
+  var evs = ''; for (var ei = UI.logList.length - 1, en = 0; ei >= 0 && en < 6; ei--, en++) { var le = UI.logList[ei]; evs += '<div class="ev ' + le.kind + '"><time>' + fmt(le.t) + '</time> ' + le.msg + '</div>'; }
+  h += '<div class="blk"><h3>Sucesos</h3>' + (evs || '<div class="ev">Nada todavía.</div>') + '</div><div class="blk"><h3>Controles</h3><dl class="ctrl">' + $('ctrlList').innerHTML + '</dl></div>';
   if (h !== UI.tabSide) { UI.tabSide = h; $('tabDyn').innerHTML = h; }
 }
 
@@ -354,7 +379,7 @@ function renderTab() {
 var pct = function (v) { return Math.round(v * 100) + '%'; };
 var SCHEMA = {
   image: [
-    { k: 'layout', t: 'seg', label: 'Tamaño del visor', note: 'Normal junto a los paneles · Ancho ocupa toda la página · Pantalla completa (tecla F)', opts: [['normal', 'Normal'], ['wide', 'Ancho'], ['full', 'Completa']] },
+    { k: 'layout', t: 'seg', label: 'Tamaño del visor', note: 'Completa (recomendada): todo dentro de la pantalla, con minimapa y Tab para el resto · Ancho y Con paneles añaden la barra lateral (tecla F alterna)', opts: [['full', 'Completa'], ['wide', 'Ancho'], ['normal', 'Con paneles']] },
     { k: 'zoom', t: 'range', min: 0.8, max: 1.9, step: 0.05, label: 'Zoom de cámara', note: 'Más zoom = personajes y detalles más grandes', fmt: pct },
     { k: 'bright', t: 'range', min: 0.7, max: 1.6, step: 0.05, label: 'Brillo', note: 'Aclara u oscurece las plantas', fmt: pct },
     { k: 'fog', t: 'range', min: 0.5, max: 0.97, step: 0.01, label: 'Oscuridad de la niebla', note: 'Lo que no ves ahora mismo', fmt: pct },
@@ -403,9 +428,9 @@ function settingRow(d) {
   row.appendChild(lab); row.appendChild(ctl); return row;
 }
 var HOW = {
-  goal: '<h4>Dos bandos</h4><ul><li><b>Cazadores</b> (máx. 2): policía secreta infiltrada en el hotel. Solo ganan eliminando a los <b>dos</b> retratados en su cartel.</li><li><b>Corredores</b> (máx. 4): mafia contratada. Ganan cerrando el trato (completando tareas), aguantando hasta que llegue el cliente (fin del tiempo) o abatiendo a los cazadores.</li></ul><h4>Los testigos</h4><ul><li>Huéspedes y trabajadores ven lo que ocurre. Si presencian un asesinato corren a un teléfono y llaman a la policía.</li><li>La policía tarda unos segundos en llegar y dispara solo al cazador descrito (o a cualquiera manchado de sangre) en cuanto lo ve.</li><li>Los corredores no saben nada de los cazadores hasta que la policía reparte un cartel con su aspecto.</li></ul>',
-  hunter: '<h4>Cartel y arma</h4><ul><li>Tu cartel muestra a los dos objetivos. Búscalos entre los huéspedes.</li><li><b>Clic derecho</b> saca la pistola con silenciador y aparece una mira. <b>Clic izquierdo</b> dispara. Con el arma fuera te mueves más despacio.</li></ul><h4>Sospecha</h4><ul><li>La barra sube si entras sin permiso en habitaciones o zonas de personal, si apuntas cerca de un PNJ (más rápido cuanto más cerca) o si llevas ropa manchada de sangre.</li><li>A partir de 35 los trabajadores te avisan; a partir de 80, si insistes, llaman a la policía. Matar con testigos la lleva al máximo.</li></ul><h4>Disfraz y accesos</h4><ul><li>Mantén la tecla de interactuar sobre un cadáver para coger su ropa (queda manchada: lávala en una pila o lavadora) o abre un armario para llevarte un traje limpio.</li><li>Cambiar de ropa anula el cartel que la policía repartió sobre ti.</li><li>Una llave maestra abre habitaciones, una insignia de botones abre zonas de personal, y el uniforme de trabajador sirve para ambas.</li></ul>',
-  runner: '<h4>Encargos</h4><ul><li>Hay 14 encargos repartidos por las 7 plantas. Mantén la tecla de interactuar sobre el punto marcado. Algunos son parejas: recoger en un sitio y entregar en otro.</li><li>Cada encargo suma al trato y se puede repetir pasado un tiempo. El ascensor (acércate y pulsa la tecla) te lleva a cualquier planta; las escaleras, a la contigua.</li><li>En el mapa (tecla Tab) y con flechas en pantalla ves dónde están los encargos cercanos.</li></ul><h4>Defensa</h4><ul><li>Recoge 4 objetos sueltos por el hotel y fabricarás una <b>llave inglesa</b>: clic izquierdo para golpear. Un golpe mata a un cazador.</li><li>No puedes cambiar de ropa. Cuando la policía reparta un cartel de busca y captura, verás el aspecto del cazador; si se cambia, el cartel se pone gris y desaparece.</li></ul>'
+  goal: '<h4>Dos bandos</h4><ul><li><b>Cazadores</b> (máx. 2): policía secreta infiltrada en el hotel. Solo ganan eliminando a los <b>dos</b> retratados en su cartel.</li><li><b>Corredores</b> (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente (fin del tiempo) o si abaten a los cazadores.</li></ul><h4>Los testigos</h4><ul><li>Huéspedes y trabajadores ven lo que ocurre. Si presencian un asesinato corren a un teléfono y llaman a la policía.</li><li>La policía tarda unos segundos en llegar y dispara solo al cazador descrito (o a cualquiera manchado de sangre) en cuanto lo ve.</li><li>Los corredores no saben nada de los cazadores hasta que la policía reparte un cartel con su aspecto.</li></ul><h4>El hotel</h4><ul><li>Las habitaciones están cerradas. Solo abren a su dueño, al personal con llave y a quien fuerce la cerradura o tenga la llave maestra.</li><li>Un apagón, la alarma de incendios o los ascensores averiados cambian la partida para todos.</li></ul>',
+  hunter: '<h4>Cartel y arma</h4><ul><li>Tu cartel muestra a los dos objetivos. Búscalos entre los huéspedes.</li><li><b>Clic derecho</b> saca la pistola con silenciador y aparece una mira. <b>Clic izquierdo</b> dispara. Con el arma fuera te mueves más despacio.</li></ul><h4>Sospecha</h4><ul><li>La barra sube si entras sin permiso en habitaciones o zonas de personal, si apuntas cerca de un PNJ (más rápido cuanto más cerca) o si llevas ropa manchada de sangre.</li><li>A partir de 35 los trabajadores te avisan; a partir de 80, si insistes, llaman a la policía. Matar con testigos la lleva al máximo.</li><li>Las puertas de habitación también están cerradas para ti: forzarlas con testigos delante te delata.</li></ul><h4>Disfraz y accesos</h4><ul><li>Mantén la tecla de interactuar sobre un cadáver para coger su ropa (queda manchada: lávala en una pila o lavadora) o abre un armario para llevarte un traje limpio.</li><li>Cambiar de ropa anula el cartel que la policía repartió sobre ti.</li><li>La llave maestra abre habitaciones, la insignia de botones abre zonas de personal, y el uniforme de trabajador sirve para ambas.</li><li>Cuando alguien denuncia a un corredor, te enteras de en qué planta ha sido.</li></ul>',
+  runner: '<h4>Tus encargos</h4><ul><li>Tienes tu propia lista de 8 a 10 encargos (tecla Tab). El trato solo se cierra cuando todos los corredores terminan los suyos, así que hace falta tiempo y compañeros.</li><li>Mantén la tecla de interactuar sobre el punto marcado. Algunos son parejas: recoger en un sitio y entregar en otro.</li><li>Los compañeros se ven con el nombre en azul, también en el mapa. Los cazadores no se ven.</li></ul><h4>Habitaciones y denuncias</h4><ul><li>Solo tu habitación está abierta. Para los encargos en habitaciones ajenas, mantén la tecla frente a la puerta para forzar la cerradura (unos segundos) o busca la llave maestra, que es única.</li><li>Si un testigo te ve forzar la puerta, o te ve dentro de una habitación que no es tuya, te denuncia y la policía ronda la zona.</li><li>A la tercera denuncia quedas fichado: si la policía te ve, te detiene unos segundos (pierdes lo que lleves) y el cliente se retrasa 30 s por cada denuncia desde esa.</li></ul><h4>Sabotajes</h4><ul><li><b>Fusible:</b> apagón. Todos ven mucho menos y los testigos también.</li><li><b>Alarma de incendios:</b> los huéspedes evacúan al vestíbulo y los ascensores no funcionan.</li><li><b>Sala de máquinas:</b> ascensores fuera de servicio un buen rato.</li><li>Un testigo que te vea sabotear también te denuncia.</li></ul><h4>Defensa</h4><ul><li>Recoge 4 objetos sueltos por el hotel y fabricarás una <b>llave inglesa</b>: clic izquierdo para golpear. Un golpe mata a un cazador.</li><li>No puedes cambiar de ropa. Cuando la policía reparta un cartel de busca y captura, verás el aspecto del cazador; si se cambia, el cartel se pone gris y desaparece.</li></ul>'
 };
 function modalTabs(list) {
   var box = $('mTabs'); box.innerHTML = '';
@@ -433,11 +458,11 @@ function renderModal() {
     modalTabs([['goal', 'Objetivo'], ['hunter', 'Cazador'], ['runner', 'Corredor'], ['keys', 'Controles']]);
     if (MODAL.tab === 'keys') { body.innerHTML = '<div class="how"><h4>Teclado y ratón</h4><dl class="ctrl" style="font-size:.92rem;gap:6px 14px">' + $('ctrlList').innerHTML + '</dl><p>Puedes cambiar las teclas en Ajustes › Controles.</p></div>'; }
     else body.innerHTML = '<div class="how">' + HOW[MODAL.tab] + '</div>';
-    foot.appendChild(el('span', 'meta', 'Partida contra bots · v0.2')); foot.appendChild(close);
+    foot.appendChild(el('span', 'meta', 'Partida contra bots · v0.3')); foot.appendChild(close);
   } else if (MODAL.kind === 'credits') {
     $('mTitle').textContent = 'Créditos';
     $('mTabs').innerHTML = '';
-    body.innerHTML = '<div class="how"><h4>Caza en el New Yorker</h4><p>Prototipo jugable v0.2 de un juego asimétrico de cazadores y corredores ambientado en el hotel New Yorker de 1930.</p><h4>Equipo</h4><ul><li><b>Idea y diseño del juego:</b> Luca</li><li><b>Código, texturas procedurales y bots:</b> Claude</li></ul><h4>Qué hay hoy</h4><ul><li>Siete plantas con zonas públicas, de habitaciones y de personal.</li><li>Cazadores, corredores, PNJ con testigos, policía y carteles de busca y captura.</li><li>Bots para ambos bandos, así que se puede probar sin más jugadores.</li></ul><h4>Próximamente</h4><ul><li>Economía de los corredores, munición y ventajas del cazador.</li><li>Ascensor con enfriamiento y avería.</li><li>Disparos visibles y sonido de armas y pasos.</li><li>Multijugador con servidor y, más adelante, versión 3D.</li></ul></div>';
+    body.innerHTML = '<div class="how"><h4>Caza en el New Yorker</h4><p>Prototipo jugable v0.3 de un juego asimétrico de cazadores y corredores ambientado en el hotel New Yorker de 1930.</p><h4>Equipo</h4><ul><li><b>Idea y diseño del juego:</b> Luca</li><li><b>Código, texturas procedurales y bots:</b> Claude</li></ul><h4>Qué hay hoy</h4><ul><li>Siete plantas con zonas públicas, de habitaciones y de personal.</li><li>Cazadores, corredores, PNJ con testigos, policía y carteles de busca y captura.</li><li>Bots para ambos bandos, así que se puede probar sin más jugadores.</li></ul><h4>Próximamente</h4><ul><li>Dinero y objetos para los corredores, munición y ventajas del cazador.</li><li>Ascensor con enfriamiento y avería.</li><li>Disparos visibles y sonido de armas y pasos.</li><li>Multijugador con servidor y, más adelante, versión 3D.</li></ul></div>';
     foot.appendChild(el('span', 'meta', 'Hecho para probar ideas')); foot.appendChild(close);
   }
 }
@@ -525,6 +550,7 @@ function bindInput() {
   $('btnElevClose').onclick = closeElev;
   $('btnPrev').onclick = function () { cycleFollow(-1); }; $('btnNext').onclick = function () { cycleFollow(1); };
   Array.prototype.forEach.call(document.querySelectorAll('#specbar [data-speed]'), function (b) { b.onclick = function () { UI.speed = +b.dataset.speed; }; });
+  $('btnPauseHud').onclick = function () { togglePause(); };
   $('btnTab').onclick = function () { toggleTab(); }; $('btnSet').onclick = function () { openModal('settings'); }; $('btnFull').onclick = toggleFull;
   $('btnHome').onclick = function () { if (UI.mode === 'play' && !UI.w.over && !UI.endShown) togglePause(); else toTitle(); };
   $('mClose').onclick = closeModal;
@@ -588,16 +614,17 @@ function frame(now) {
       tick(dt);
       var w = UI.w, view = viewEnt(), play = UI.mode === 'play', hm = w.human, dbg = !play || !!w.opt.debug;
       UI.exT -= dt; if (UI.exT <= 0) { UI.exT = 0.12; updateExplored(view); }
+      if (play) { var hr = $('hudTop').getBoundingClientRect(), cr = cv.getBoundingClientRect(); REN.avoid = { x0: hr.left - cr.left, y0: hr.top - cr.top, x1: hr.right - cr.left, y1: hr.bottom - cr.top }; } else REN.avoid = null;
       drawWorld(g, w, view, UI.anim, play ? mouseState(view, w) : null, { debug: dbg, markers: play ? worldMarkers(w, hm, view) : null });
       UI.hudT -= dt;
-      if (play && UI.hudT <= 0) { UI.hudT = 0.12; updateHud(false); drawMini(mg, w, view, !!w.opt.debug, taskMarks(w, hm, view.floor)); }
+      if (play && UI.hudT <= 0) { UI.hudT = 0.12; updateHud(false); drawMini(SET.layout === 'full' ? mg2 : mg, w, view, !!w.opt.debug, taskMarks(w, hm, view.floor)); }
       if (UI.tabOpen) { UI.tabT -= dt; if (UI.tabT <= 0) { UI.tabT = 0.25; renderTab(); } }
     }
   } catch (err) { showErr(err); console.error(err); }
   requestAnimationFrame(frame);
 }
 function init() {
-  cv = $('cv'); g = cv.getContext('2d'); mini = $('mini'); mg = mini.getContext('2d'); bigc = $('bigmap'); bg = bigc.getContext('2d');
+  cv = $('cv'); g = cv.getContext('2d'); mini = $('mini'); mg = mini.getContext('2d'); mini2 = $('mini2'); mg2 = mini2.getContext('2d'); bigc = $('bigmap'); bg = bigc.getContext('2d');
   loadSettings();
   try { var sv = JSON.parse(localStorage.getItem('caza-cfg') || 'null'); if (sv) for (var k in UI.cfg) if (sv[k] !== undefined && typeof sv[k] === typeof UI.cfg[k]) UI.cfg[k] = sv[k]; } catch (e) { /* sin almacenamiento */ }
   $('optDebug').checked = UI.cfg.debug;

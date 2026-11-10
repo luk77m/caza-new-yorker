@@ -8,7 +8,7 @@
   color-scheme: dark;
   --bg: #080c11; --bg2: #0d131a; --panel: #111922; --panel2: #16212c; --line: #263340; --line2: #34465a;
   --gold: #c9a24b; --gold2: #ebd08a; --ivory: #efe8d4; --mut: #93a0ae; --dim: #5d6b79;
-  --red: #c0384a; --red2: #ff6a78; --teal: #47a0a6; --ok: #6fcf97; --warn: #e8a53a;
+  --red: #c0384a; --red2: #ff6a78; --teal: #47a0a6; --ok: #6fcf97; --warn: #e8a53a; --blue: #5aa8ff; --blue2: #8cc4ff;
   --disp: "Poiret One", "Josefin Sans", system-ui, sans-serif;
   --body: "Josefin Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -77,6 +77,12 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 .chip { background: rgba(8,12,17,.78); border: 1px solid var(--line2); padding: 5px 10px; font-size: .84rem; letter-spacing: .06em; text-transform: uppercase; backdrop-filter: blur(3px); }
 #hudTop { left: 10px; top: 10px; display: flex; gap: 6px; flex-direction: column; align-items: flex-start; }
 #hudTop b { color: var(--gold2); font-weight: 600; }
+#hudTop .chip.bad { border-color: var(--red); color: var(--red2); } #hudTop .chip.bad b { color: var(--red2); }
+#hudTop .chip { max-width: min(92vw, 560px); }
+#hudTop .chip.warn { border-color: var(--warn); color: var(--warn); } #hudTop #hOwn b { color: var(--blue2); }
+#hudMap { right: 10px; bottom: 54px; width: min(236px, 26vw); display: none; opacity: .93; }
+body.lay-full #hudMap { display: block; }
+#mini2 { display: block; width: 100%; height: auto; background: #070b10; border: 1px solid var(--line2); aspect-ratio: 220 / 150; image-rendering: pixelated; }
 #susWrap { right: 10px; top: 10px; width: min(270px, 44%); }
 .susbar { height: 12px; border: 1px solid var(--line2); background: rgba(8,12,17,.85); position: relative; overflow: hidden; }
 #susFill { height: 100%; width: 0; background: linear-gradient(90deg, #6fcf97, #e8a53a 55%, #ff4a5a); transition: width .12s linear; }
@@ -101,8 +107,17 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 #hintFill { height: 100%; width: 0; background: var(--gold2); }
 #toasts { left: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 5px; max-width: min(380px, 40%); }
 .toast { background: rgba(8,12,17,.86); border-left: 3px solid var(--gold); padding: 5px 10px; font-size: .82rem; animation: slide .25s ease-out; }
-.toast.alarm { border-color: var(--red); } .toast.call { border-color: var(--warn); } .toast.task { border-color: var(--teal); } .toast.poster { border-color: #aaa; }
+.toast.alarm { border-color: var(--red); } .toast.call, .toast.report { border-color: var(--warn); } .toast.task, .toast.team { border-color: var(--blue); } .toast.poster { border-color: #aaa; }
 .toast.out { opacity: 0; transition: opacity .6s; }
+@media (max-width: 640px) {
+  .chip { font-size: .66rem; padding: 3px 7px; letter-spacing: .04em; }
+  #hudTop { gap: 3px; left: 6px; top: 6px; }
+  #hudTop .chip { max-width: 94vw; }
+  #toasts { max-width: 58%; left: 6px; bottom: 56px; }
+  .toast { font-size: .7rem; padding: 4px 8px; }
+  #hudMap { width: 34vw; bottom: 50px; right: 6px; }
+  #stbtns { right: 6px; bottom: 6px; }
+}
 @keyframes slide { from { transform: translateX(-16px); opacity: 0; } }
 #fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; }
 #fade.on { opacity: 1; }
@@ -174,6 +189,10 @@ body.lay-full #stage { position: fixed; inset: 0; z-index: 30; aspect-ratio: aut
 .ftabs button.on.cur { color: #1a1408; }
 #tabside h3 { margin: 0 0 6px; font-family: var(--disp); font-weight: 400; font-size: 1rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
 #tabside .blk { margin-bottom: 12px; }
+.ev { font-size: .76rem; color: var(--mut); border-left: 2px solid var(--line2); padding-left: 6px; margin-bottom: 3px; line-height: 1.3; }
+.ev time { color: var(--dim); margin-right: 3px; font-variant-numeric: tabular-nums; }
+.ev.alarm { border-color: var(--red); color: var(--ivory); } .ev.call, .ev.report { border-color: var(--warn); } .ev.task, .ev.team { border-color: var(--blue); }
+#tabside .ctrl { font-size: .74rem; }
 .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: .72rem; color: var(--mut); margin-top: 6px; }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
 
@@ -239,10 +258,12 @@ aside { display: grid; gap: 10px; min-width: 0; }
 #taskList li em, .tl li em { font-style: normal; color: var(--gold); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; padding-top: 1px; }
 #taskList li small, .tl li small { display: block; color: var(--dim); font-size: .7rem; }
 #taskList li.here, .tl li.here { border-color: var(--gold2); background: rgba(201,162,75,.07); }
-#taskList li.cool, .tl li.cool { opacity: .45; } #taskList li.lock, .tl li.lock { opacity: .6; }
+#taskList li.cool, .tl li.cool { opacity: .4; text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); } #taskList li.lock, .tl li.lock { opacity: .6; }
+#taskList li.rlock, .tl li.rlock { border-color: var(--warn); } #taskList li.rlock small, .tl li.rlock small { color: var(--warn); }
+.tl .tlab, #taskList .tlab { font-size: .72rem; color: var(--blue2); letter-spacing: .06em; text-transform: uppercase; margin: 6px 0 2px; }
 #log { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: .78rem; color: var(--mut); max-height: 190px; overflow: auto; }
 #log li { border-left: 2px solid var(--line2); padding-left: 6px; }
-#log li.alarm { border-color: var(--red); color: var(--ivory); } #log li.call { border-color: var(--warn); } #log li.task { border-color: var(--teal); }
+#log li.alarm { border-color: var(--red); color: var(--ivory); } #log li.call, #log li.report { border-color: var(--warn); } #log li.task, #log li.team { border-color: var(--blue); }
 #log time { color: var(--dim); margin-right: 4px; font-variant-numeric: tabular-nums; }
 .ctrl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: .78rem; color: var(--mut); margin: 0; }
 .ctrl dt { color: var(--gold2); white-space: nowrap; } .ctrl dd { margin: 0; }
@@ -264,7 +285,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
       <button class="tb" data-act="settings"><span>Ajustes</span><small>Imagen, sonido y teclas</small></button>
       <button class="tb" data-act="credits"><span>Créditos</span><small>Versión y próximos pasos</small></button>
     </nav>
-    <div class="tfoot">Prototipo v0.2 · partidas contra bots · ↑ ↓ y Intro</div>
+    <div class="tfoot">Prototipo v0.3 · partidas contra bots · ↑ ↓ y Intro</div>
   </div>
 </div>
 
@@ -285,9 +306,9 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
         <canvas id="cv"></canvas>
 
         <div id="hud" hidden>
-          <div class="ov" id="hudTop"><span class="chip" id="hFloor"></span><span class="chip" id="hTime"></span><span class="chip" id="hDeal" hidden></span></div>
+          <div class="ov" id="hudTop"><span class="chip" id="hFloor"></span><span class="chip" id="hTime"></span><span class="chip" id="hDeal" hidden></span><span class="chip" id="hOwn" hidden></span><span class="chip bad" id="hRep" hidden></span><span class="chip warn" id="hSab" hidden></span></div>
           <div class="ov" id="susWrap" hidden>
-            <div id="susLabel"><span>Sospecha</span><span id="susNum">0</span></div>
+            <div id="susLabel"><span id="susLbl">Sospecha</span><span id="susNum">0</span></div>
             <div class="susbar"><div id="susFill"></div><i style="left:35%"></i><i style="left:80%"></i></div>
             <div id="susFlags"></div>
           </div>
@@ -299,7 +320,9 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
             <button id="btnPrev" title="Anterior (←)">◀</button><button id="btnNext" title="Siguiente (→)">▶</button>
             <button data-speed="1" class="on">×1</button><button data-speed="4">×4</button><button data-speed="10">×10</button>
           </div>
+          <div class="ov" id="hudMap"><canvas id="mini2" width="220" height="150"></canvas></div>
           <div class="ov" id="stbtns">
+            <button id="btnPauseHud" title="Pausa (P)">❚❚</button>
             <button id="btnTab" title="Mapa y encargos (Tab)">▤</button>
             <button id="btnSet" title="Ajustes">⚙</button>
             <button id="btnFull" title="Pantalla completa (F)">⤢</button>
@@ -313,7 +336,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
             <div class="thead"><h2 id="tabTitle">Mapa y encargos</h2><small>Tab o Esc para cerrar · la partida sigue en marcha</small></div>
             <div class="tgrid">
               <div><div class="ftabs" id="ftabs"></div><canvas id="bigmap" width="616" height="420"></canvas>
-                <div class="legend"><span><i style="background:#ebd08a"></i>Encargo</span><span><i style="background:#fff"></i>Tú</span><span><i style="background:#4fd8c8"></i>Aliado</span><span><i style="background:#c0384a"></i>Cadáver</span></div></div>
+                <div class="legend"><span><i style="background:#ebd08a"></i>Encargo</span><span><i style="background:#fff"></i>Tú</span><span><i style="background:#5aa8ff"></i>Compañero</span><span><i style="background:#c0384a"></i>Cadáver</span></div></div>
               <div id="tabside"></div>
             </div>
           </div>
@@ -360,7 +383,7 @@ kbd { font-family: var(--body); border: 1px solid var(--line2); padding: 0 5px; 
               <div class="row"><button class="btn ghost" id="btnBack">← Portada</button><button class="btn" id="btnStart">Empezar</button></div>
               <ul class="rules">
                 <li><b>Cazador:</b> mata a los dos retratados. Entrar donde no debes, apuntar cerca de testigos o ir manchado de sangre sube tu sospecha.</li>
-                <li><b>Corredor:</b> cierra el trato completando tareas, fabrica una herramienta con 4 piezas y vigila los carteles de busca y captura.</li>
+                <li><b>Corredor:</b> tienes tu propia lista de 8-10 encargos. Solo tu habitación está abierta: fuerza las demás o busca la llave maestra, pero si te ven te denuncian. Tus compañeros se ven con el nombre en azul.</li>
               </ul>
             </div>
           </div>
@@ -447,13 +470,19 @@ var CFG = {
   speed: { walk: 118, run: 180, aim: 66, npc: 62, bot: 108, botRun: 160, police: 125 },
   hold: { strip: 3, ward: 3, wash: 6, sink: 5 },
   scrapNeeded: 4,
-  taskCooldown: 150,       // s hasta que una tarea puede repetirse
-  quotaBase: 2, quotaPerRunner: 4,
+  tasksMin: 8, tasksMax: 10, // encargos personales de cada corredor
+  forceDur: 5.5,           // s para forzar una cerradura
+  unlockFor: 75,           // s que una puerta forzada queda abierta para todos
+  strikes: 3,              // denuncias a partir de las cuales el corredor queda fichado
+  clientDelay: 30,         // s que se retrasa el cliente por cada denuncia desde la tercera
+  arrestDur: 9,            // s que la policía retiene a un corredor fichado
+  sab: { blackout: 40, alarm: 45, elev: 50 },  // s de duración de cada sabotaje
+  blackoutSight: 0.5,      // multiplicador de la visión (de todos) durante el apagón
   meleeRange: 40, meleeCd: 1.1,
-  botIdle: [22, 55],       // s que un bot corredor se mezcla antes de la siguiente tarea
-  botPatience: 16,         // s que un bot cazador espera a que no haya testigos antes de arriesgarse
-  botSight: 6,             // tiles a los que un bot cazador reconoce un objetivo
-  botRecognize: 1.4,       // s mirando a un objetivo antes de reconocerlo
+  botIdle: [34, 80],       // s que un bot corredor se mezcla antes de la siguiente tarea
+  botPatience: 22,         // s que un bot cazador espera a que no haya testigos antes de arriesgarse
+  botSight: 5.5,             // tiles a los que un bot cazador reconoce un objetivo
+  botRecognize: 1.9,       // s mirando a un objetivo antes de reconocerlo
   botAimTime: 1.3          // s apuntando antes de disparar
 };
 
@@ -468,7 +497,8 @@ function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
 /* ===== ajustes del jugador (se guardan en el navegador si se puede) ===== */
 var SET_DEF = {
-  layout: 'normal',        // normal | wide | full
+  ver: 2,
+  layout: 'full',          // full (pantalla completa, por defecto) | wide | normal (con paneles)
   zoom: 1.25, bright: 1, fog: 0.9,
   lights: true, plates: true, arrows: true, hints: true,
   vol: { master: 0.7, weapons: 1, alerts: 0.9, ui: 0.6 }, muted: false,
@@ -482,7 +512,7 @@ function mergeInto(dst, src) {
     else if (typeof src[k] === typeof dst[k]) dst[k] = src[k];
   }
 }
-function loadSettings() { try { var s = JSON.parse(localStorage.getItem('caza-set') || 'null'); if (s) mergeInto(SET, s); } catch (e) { /* sin almacenamiento */ } }
+function loadSettings() { try { var s = JSON.parse(localStorage.getItem('caza-set') || 'null'); if (s) { if (s.ver !== SET_DEF.ver) delete s.layout; mergeInto(SET, s); } SET.ver = SET_DEF.ver; } catch (e) { /* sin almacenamiento */ } }
 function saveSettings() { try { localStorage.setItem('caza-set', JSON.stringify(SET)); } catch (e) { /* sin almacenamiento */ } }
 function resetSettings(group) {
   var def = JSON.parse(JSON.stringify(SET_DEF));
@@ -537,7 +567,7 @@ function room(f, x, y, w, h, name, ft, side, o) {
     else if (side === 'E') { dx = x + w - 1; dy = pos + i; }
     else { dx = x; dy = pos + i; }
     f.doors.push({ x: dx, y: dy });
-    if (i === 0) r.door = { x: dx, y: dy };
+    if (i === 0) { r.door = { x: dx, y: dy }; r.out = { x: dx + (side === 'E' ? 1 : (side === 'W' ? -1 : 0)), y: dy + (side === 'S' ? 1 : (side === 'N' ? -1 : 0)) }; }
   }
   return r;
 }
@@ -599,6 +629,8 @@ function standTile(f, o) {
 }
 function finish(f) {
   f.doors.forEach(function (d) { set(f, d.x, d.y, T.DOOR); });
+  f.lockAt = {};
+  f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM && r.door) f.lockAt[r.door.y * W + r.door.x] = r; });
   f.furn.forEach(function (o) { if (!o.solid) return; for (var j = o.y; j < o.y + o.h; j++) for (var i = o.x; i < o.x + o.w; i++) if (i >= 0 && j >= 0 && i < W && j < H) f.blk[j * W + i] = 1; });
   f.rooms.forEach(function (r) {
     if (!r.zone) return;
@@ -744,30 +776,59 @@ var FLOORS = [];
   F(f, 'sign', 15, 20, 14, 2); F(f, 'antenna', 22, 15); F(f, 'vent', 15, 14, 2, 1); F(f, 'vent', 27, 14, 2, 1); F(f, 'scope', 28, 17); F(f, 'vent', 15, 17, 2, 1);
   FLOORS[6] = finish(f);
 })();
-FLOORS.forEach(function (f, i) { f.wards.forEach(function (w) { w.floorIdx = i; }); });
+FLOORS.forEach(function (f, i) { f.wards.forEach(function (w) { w.floorIdx = i; }); f.rooms.forEach(function (r) { r.fi = i; }); });
+function roomAt(f, tx, ty) {
+  var best = null, ba = 1e9;
+  f.rooms.forEach(function (r) { if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h && r.w * r.h < ba) { ba = r.w * r.h; best = r; } });
+  return best;
+}
+function roomLabel(r) { var m = /^Hab\.\s+(\d+)/.exec(r.name); return m ? 'habitación ' + m[1] : (/^Suite/.test(r.name) ? r.name.replace('Suite', 'suite') : r.name.charAt(0).toLowerCase() + r.name.slice(1)); }
+function roomSpot(r) {
+  var tiles = FLOORS[r.fi].roomTiles[r.name], best = null, bd = 1e9, cxr = r.x + r.w / 2, cyr = r.y + r.h / 2;
+  tiles.forEach(function (t) { var d = Math.hypot(t.x + .5 - cxr, t.y + .5 - cyr); if (d < bd) { bd = d; best = t; } });
+  return best;
+}
 
 function roomBy(fi, name) { var rs = FLOORS[fi].rooms; for (var i = 0; i < rs.length; i++) if (rs[i].name === name) return rs[i]; return null; }
-var _hab = roomBy(3, 'Hab. 1005'), _suite = roomBy(4, 'Suite 2001');
+/* Catálogo de encargos con sitio fijo. Cada corredor recibe 8-10 propios (ver assignTasks en sim.js). */
 var TASK_DEFS = [
-  { id: 'fusible', name: 'Cortar el fusible principal', floor: 0, x: 35, y: 22, dur: 6 },
+  { id: 'fusible', name: 'Cortar el fusible principal', floor: 0, x: 35, y: 22, dur: 6, sab: 'blackout' },
+  { id: 'alarma', name: 'Activar la alarma de incendios', floor: 1, x: 15, y: 11, dur: 4, sab: 'alarm' },
+  { id: 'ascensor', name: 'Bloquear los ascensores en la sala de máquinas', floor: 6, x: 24, y: 10, dur: 6, sab: 'elev' },
   { id: 'sobres', name: 'Recoger el sobre de pagos', floor: 0, x: 24, y: 21, dur: 4 },
   { id: 'sabanas', name: 'Esconder el paquete entre las sábanas', floor: 0, x: 30, y: 10, dur: 4 },
+  { id: 'caldera', name: 'Aflojar la válvula de la caldera', floor: 0, x: 11, y: 11, dur: 5 },
+  { id: 'cocina', name: 'Cambiar la comanda en la cocina', floor: 0, x: 20, y: 21, dur: 4 },
   { id: 'registro', name: 'Falsificar el libro de registro', floor: 1, x: 20, y: 12, dur: 5 },
+  { id: 'telegrama', name: 'Enviar un telegrama cifrado', floor: 1, x: 35, y: 6, dur: 4 },
+  { id: 'whisky', name: 'Cambiar la botella del mostrador', floor: 1, x: 36, y: 23, dur: 4 },
+  { id: 'tienda', name: 'Dejar una nota en la tienda de regalos', floor: 1, x: 7, y: 22, dur: 3 },
   { id: 'barman', name: 'Hablar con el contacto del bar', floor: 2, x: 32, y: 9, dur: 4 },
   { id: 'piano', name: 'Dejar el sobre bajo el piano', floor: 2, x: 9, y: 21, dur: 4 },
-  { id: 'hab', name: 'Registrar la habitación 1005', floor: 3, x: cx(_hab), y: cy(_hab), dur: 6 },
-  { id: 'caja', name: 'Abrir la caja fuerte de la 2001', floor: 4, x: cx(_suite), y: cy(_suite), dur: 7 },
+  { id: 'escenario', name: 'Pasar el aviso al director de orquesta', floor: 2, x: 20, y: 22, dur: 3 },
   { id: 'espejo', name: 'Hacer señales desde el mirador', floor: 5, x: 20, y: 22, dur: 5 },
+  { id: 'biblio', name: 'Esconder un mensaje entre los libros', floor: 5, x: 29, y: 7, dur: 4 },
+  { id: 'mirador', name: 'Vigilar la entrada desde el salón mirador', floor: 5, x: 15, y: 11, dur: 5 },
   { id: 'antena', name: 'Reorientar la antena', floor: 6, x: 22, y: 16, dur: 6 },
   { id: 'maletin_a', kind: 'pick', pair: 'maletin_b', name: 'Recoger el maletín del almacén', floor: 0, x: 8, y: 20, dur: 3 },
-  { id: 'maletin_b', kind: 'drop', name: 'Entregar el maletín en el despacho', floor: 1, x: 8, y: 9, dur: 3 },
+  { id: 'maletin_b', kind: 'drop', name: 'Entregar el maletín en el despacho del gerente', floor: 1, x: 8, y: 9, dur: 3, roomName: 'Despacho del gerente' },
   { id: 'planos_a', kind: 'pick', pair: 'planos_b', name: 'Recoger los planos en Correos', floor: 1, x: 37, y: 9, dur: 3 },
   { id: 'planos_b', kind: 'drop', name: 'Entregar los planos en la terraza', floor: 5, x: 21, y: 19, dur: 3 }
 ];
 var TASK_UNITS = TASK_DEFS.filter(function (t) { return t.kind !== 'pick'; }).length;
+/* Encargos dentro de habitaciones: se generan por corredor (la suya es gratis, las demás están cerradas). */
+var ROOM_TASKS = [
+  { id: 'busca', name: 'Registrar la {r}', dur: 6 },
+  { id: 'paquete', name: 'Esconder un paquete en la {r}', dur: 5 },
+  { id: 'caja', name: 'Abrir la caja fuerte de la {r}', dur: 7 },
+  { id: 'micro', name: 'Instalar un micrófono en la {r}', dur: 6 },
+  { id: 'equipaje', name: 'Cambiar el equipaje de la {r}', dur: 5 }
+];
+var ROOM_POOL = [];
+FLOORS.forEach(function (f, fi) { if (fi !== 3 && fi !== 4) return; f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM && r.door) ROOM_POOL.push(r); }); });
 
 var KEY_SPOTS = {
-  masterkey: [{ f: 1, x: 8, y: 7 }, { f: 3, x: cx(roomBy(3, 'Cuarto de servicio')), y: cy(roomBy(3, 'Cuarto de servicio')) }, { f: 4, x: cx(roomBy(4, 'Suite 2002')), y: cy(roomBy(4, 'Suite 2002')) }],
+  masterkey: [{ f: 1, x: 24, y: 12 }, { f: 3, x: cx(roomBy(3, 'Cuarto de servicio')), y: cy(roomBy(3, 'Cuarto de servicio')) }, { f: 4, x: cx(roomBy(4, 'Suite 2002')), y: cy(roomBy(4, 'Suite 2002')) }],
   badge: [{ f: 1, x: 8, y: 21 }, { f: 1, x: 36, y: 19 }]
 };
 var SCRAP_SPOTS = [
@@ -841,7 +902,7 @@ function describeOutfit(o) {
 
 /* ===== navegación y visión ===== */
 var _q = new Int32Array(W * H), _prev = new Int32Array(W * H), _seen = new Uint8Array(W * H);
-function bfs(f, sx, sy, tx, ty) {
+function bfs(f, sx, sy, tx, ty, avoid) {
   if (sx < 0 || sy < 0 || sx >= W || sy >= H) return null;
   var target = ty * W + tx, start = sy * W + sx;
   if (!f.pass[target]) {
@@ -861,7 +922,7 @@ function bfs(f, sx, sy, tx, ty) {
       var ax = cxn + DX[d], ay = cyn + DY[d];
       if (ax < 0 || ay < 0 || ax >= W || ay >= H) continue;
       var ni = ay * W + ax;
-      if (_seen[ni] || !f.pass[ni]) continue;
+      if (_seen[ni] || !f.pass[ni] || (avoid && avoid[ni])) continue;
       if (d >= 4 && (!f.pass[cyn * W + ax] || !f.pass[ay * W + cxn])) continue;
       _seen[ni] = 1; _prev[ni] = cur; _q[tail++] = ni;
       if (ni === target) { found = true; break; }
@@ -906,23 +967,23 @@ var NPC_SPECS = [
 function newEnt(w, o) {
   var e = { id: w.nextId++, name: '', type: 'npc', role: 'civil', floor: 1, x: 0, y: 0, dir: 'down', walk: 0, moving: false, alive: true, outfit: null, aim: false, aimX: 0, aimY: 0, aimAng: 0, cd: 0,
     sus: 0, inv: { masterkey: false, badge: false, scrap: 0, melee: false, carry: null }, hold: null, bubble: null, bt: 0, path: null, pathKey: null, pi: 0, goal: null,
-    ai: { mode: 'idle', t: rnd() * 3, scan: rnd() * 0.3 }, state: 'idle', stairCd: 0, knows: {}, spot: {}, restricted: false, wasRestricted: false, elevT: 0 };
+    ai: { mode: 'idle', t: rnd() * 3, scan: rnd() * 0.3 }, state: 'idle', stairCd: 0, knows: {}, spot: {}, restricted: false, wasRestricted: false, elevT: 0,
+    tasks: null, room: null, roomFloor: -1, reports: 0, marked: false, arrest: 0, repLock: 0 };
   for (var k in o) e[k] = o[k];
   return e;
 }
 function say(e, t, d) { e.bubble = t; e.bt = d || 2.4; }
-function wlog(w, msg, kind) { w.logs.push({ id: ++w.logId, t: w.time, msg: msg, kind: kind || 'info' }); }
+function wlog(w, msg, kind, who) { w.logs.push({ id: ++w.logId, t: w.time, msg: msg, kind: kind || 'info', who: who || 0 }); }
 function tileOf(e) { return { x: Math.floor(e.x / TS), y: Math.floor(e.y / TS) }; }
 
 function newWorld(opt) {
   seed(opt.seed || (Date.now() & 0xffffff));
   OID = 0; USED_OUTFITS = {};
-  var w = { time: 0, limit: opt.minutes * 60, ents: [], corpses: [], pick: [], dispatch: [], wanted: {}, posters: [], posterActive: {}, logs: [], logId: 0, over: null, tasksDone: 0,
-    nextId: 1, human: null, opt: opt, tasks: TASK_DEFS.map(function (t) { var c = {}; for (var k in t) c[k] = t[k]; c.cool = 0; c.busy = 0; return c; }),
-    fx: [], acc: 0, acc2: 0, hint: null, targets: [], stats: { kills: 0, civKills: 0, calls: 0, tasks: 0 } };
+  var w = { time: 0, limit: opt.minutes * 60, ents: [], corpses: [], pick: [], dispatch: [], wanted: {}, posters: [], posterActive: {}, logs: [], logId: 0, over: null, tasksDone: 0, quota: 0,
+    nextId: 1, human: null, opt: opt, sab: { blackout: 0, alarm: 0, elev: 0 }, unlocked: {},
+    fx: [], acc: 0, acc2: 0, hint: null, targets: [], stats: { kills: 0, civKills: 0, calls: 0, tasks: 0, reports: 0, arrests: 0, forced: 0 } };
   w.wards = []; FLOORS.forEach(function (f) { f.wards.forEach(function (x) { x.looted = false; }); });
   var nH = clamp(opt.hunters, 1, 2), nR = clamp(opt.runners, 2, 4);
-  w.quota = Math.round((CFG.quotaBase + CFG.quotaPerRunner * nR) * (opt.minutes / 12));
   var i, e;
   var hSpawn = [{ x: 21, y: 24 }, { x: 23, y: 24 }];
   for (i = 0; i < nH; i++) {
@@ -941,6 +1002,10 @@ function newWorld(opt) {
     if (isR) w.human = e;
     w.ents.push(e); runners.push(e);
   }
+  var pool = shuffle(ROOM_POOL.slice());
+  runners.forEach(function (r) { var rm = pool.pop(); r.room = rm.name; r.roomFloor = rm.fi; });
+  var taken = {};
+  runners.forEach(function (r) { r.tasks = assignTasks(r, taken); });
   shuffle(runners);
   w.targets = runners.slice(0, 2).map(function (r) { return r.id; });
   w.ents.forEach(function (x) { if (x.role === 'hunter') x.targetIds = w.targets.slice(); });
@@ -949,12 +1014,12 @@ function newWorld(opt) {
     var f = FLOORS[sp.f], tiles;
     if (sp.home === 'pub') tiles = f.tilesPub;
     else if (sp.home === 'rooms') { tiles = []; f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM) tiles = tiles.concat(f.roomTiles[r.name]); }); tiles = tiles.concat(f.tilesPub); }
-    else if (sp.home === 'roomOne') { var rr = f.rooms.filter(function (r) { return r.zone === ZONE_ROOM && r.name !== 'Despacho del gerente'; }); tiles = f.roomTiles[pick(rr).name]; }
+    else if (sp.home === 'roomOne') { var rr = f.rooms.filter(function (r) { return r.zone === ZONE_ROOM && r.name !== 'Despacho del gerente'; }), pr = pick(rr); tiles = f.roomTiles[pr.name]; tiles = tiles.slice(); tiles.roomName = pr.name; }
     else if (sp.home === 'fixed') tiles = [sp.at];
     else tiles = f.roomTiles[sp.home.room];
     var t0 = sp.home === 'fixed' ? sp.at : pick(tiles);
     var o = sp.staff ? newStaff(sp.staff) : newGuest(rnd() < 0.4);
-    var n = newEnt(w, { name: sp.staff ? STAFF[sp.staff].label : (o.kind === 'dress' ? 'Huésped' : 'Huésped'), type: 'npc', role: 'civil', floor: sp.f, x: (t0.x + .5) * TS, y: (t0.y + .5) * TS, outfit: o });
+    var n = newEnt(w, { room: sp.home === 'roomOne' ? tiles.roomName : null, roomFloor: sp.f, name: sp.staff ? STAFF[sp.staff].label : (o.kind === 'dress' ? 'Huésped' : 'Huésped'), type: 'npc', role: 'civil', floor: sp.f, x: (t0.x + .5) * TS, y: (t0.y + .5) * TS, outfit: o });
     n.staff = !!sp.staff; n.tiles = tiles; n.fixed = sp.home === 'fixed'; n.ai = { mode: 'idle', wait: rnd() * 4 };
     w.ents.push(n);
   });
@@ -964,7 +1029,12 @@ function newWorld(opt) {
   w.pick.push({ id: ++pid, kind: 'masterkey', floor: mk1.f, x: mk1.x, y: mk1.y, name: 'llave maestra' });
   w.pick.push({ id: ++pid, kind: 'badge', floor: bd.f, x: bd.x, y: bd.y, name: 'insignia de botones' });
   shuffle(SCRAP_SPOTS.slice()).slice(0, 8).forEach(function (s) { w.pick.push({ id: ++pid, kind: 'scrap', floor: s.f, x: s.x, y: s.y, name: pick(SCRAP_NAMES) }); });
-  wlog(w, opt.role === 'hunter' ? 'Tu cartel tiene dos rostros. Encuéntralos y elimínalos sin que nadie lo vea.' : 'Completa el trato antes de que llegue el cliente. Hay cazadores entre los huéspedes.', 'info');
+  refreshTasks(w);
+  if (opt.role === 'runner') {
+    var me = w.human;
+    wlog(w, 'Tu cartel de corredor: ' + me.tasks.filter(function (t) { return t.kind !== 'pick'; }).length + ' encargos propios. Tu habitación es la ' + me.room.replace(/^\D+/, '') + '. Las demás puertas están cerradas: fuerza la cerradura (mantén la tecla de interactuar) o busca la llave maestra, pero si alguien te ve te denunciará.', 'info');
+    wlog(w, 'Tus compañeros corredores se ven con el nombre en azul.', 'info');
+  } else wlog(w, opt.role === 'hunter' ? 'Tu cartel tiene dos rostros. Encuéntralos y elimínalos sin que nadie lo vea.' : 'Observas una partida entre bots.', 'info');
   return w;
 }
 
@@ -975,6 +1045,87 @@ function access(e) {
   if (e.outfit.staffRole) return { room: true, staff: true };
   return { room: !!e.inv.masterkey, staff: !!e.inv.badge };
 }
+/* ---------- encargos personales, puertas y sabotajes ---------- */
+function assignTasks(r, taken) {
+  var n = ri(CFG.tasksMin, CFG.tasksMax), out = [], i;
+  function add(o) { var c = {}; for (var k in o) c[k] = o[k]; c.done = false; c.busy = 0; out.push(c); }
+  /* 1 encargo en tu propia habitación + 2 en habitaciones ajenas (cerradas) */
+  var own = roomBy(r.roomFloor, r.room), tpl = shuffle(ROOM_TASKS.slice());
+  var o0 = tpl.pop(), sp0 = roomSpot(own);
+  add({ id: 'own_' + o0.id, name: o0.name.replace('la {r}', 'tu ' + roomLabel(own)), floor: own.fi, x: sp0.x, y: sp0.y, dur: o0.dur, roomName: own.name, own: true });
+  var others = shuffle(ROOM_POOL.filter(function (q) { return q !== own && !taken[q.fi + ':' + q.name]; }));
+  for (i = 0; i < 2 && others.length; i++) {
+    var q = others.pop(), t1 = tpl.pop(), sp = roomSpot(q); taken[q.fi + ':' + q.name] = true;
+    add({ id: 'room' + i + '_' + t1.id, name: t1.name.replace('{r}', roomLabel(q)), floor: q.fi, x: sp.x, y: sp.y, dur: t1.dur, roomName: q.name });
+  }
+  /* el resto, del catálogo con sitio fijo (las parejas recoger/entregar cuentan como un encargo) */
+  var units = [];
+  TASK_DEFS.forEach(function (t) { if (t.kind === 'pick') units.push([t, TASK_DEFS.filter(function (x) { return x.id === t.pair; })[0]]); else if (t.kind !== 'drop') units.push([t]); });
+  shuffle(units);
+  var need = n - out.length, nSab = 0;
+  for (i = 0; i < units.length && need > 0; i++) {
+    var u = units[i];
+    if (u[0].sab && nSab >= 2) continue;
+    if (u[0].sab) nSab++;
+    u.forEach(function (t) { add(t); });
+    need--;
+  }
+  return out;
+}
+function refreshTasks(w) {
+  var d = 0, t = 0;
+  w.ents.forEach(function (e) { if (e.role === 'runner' && e.alive && e.tasks) e.tasks.forEach(function (k) { if (k.kind === 'pick') return; t++; if (k.done) d++; }); });
+  w.tasksDone = d; w.quota = t;
+}
+function taskUnits(e) { var d = 0, t = 0; (e.tasks || []).forEach(function (k) { if (k.kind === 'pick') return; t++; if (k.done) d++; }); return { done: d, total: t }; }
+function roomKey(r) { return r.fi + ':' + r.name; }
+function hasKey(e, r) {
+  if (r.zone !== ZONE_ROOM) return true;
+  if (e.role === 'police' || (e.outfit && e.outfit.staffRole) || e.inv.masterkey) return true;
+  return !!(e.room && e.room === r.name && e.roomFloor === r.fi);
+}
+function doorOpen(w, r) { return (w.unlocked[roomKey(r)] || 0) > w.time; }
+function canPass(w, e, r) { return hasKey(e, r) || doorOpen(w, r); }
+function insideRoom(e, r) { var tx = Math.floor(e.x / TS), ty = Math.floor(e.y / TS); return e.floor === r.fi && tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h; }
+var LOCKM = new Uint8Array(W * H);
+function lockMask(w, e) {
+  var f = FLOORS[e.floor], m = null;
+  for (var k in f.lockAt) { var r = f.lockAt[k]; if (canPass(w, e, r) || insideRoom(e, r)) continue; if (!m) { m = LOCKM; m.fill(0); } m[k] = 1; }
+  return m;
+}
+function freeFor(w, e, f, x, y) {
+  if (!freeAt(f, x, y)) return false;
+  for (var c = 0; c < 4; c++) {
+    var px = x + ((c & 1) ? 9 : -9), py = y + ((c & 2) ? 9 : -9), rm = f.lockAt[Math.floor(py / TS) * W + Math.floor(px / TS)];
+    if (rm && !canPass(w, e, rm) && !insideRoom(e, rm)) return false;
+  }
+  return true;
+}
+function sightScale(w) { return w.sab.blackout > w.time ? CFG.blackoutSight : 1; }
+function elevOut(w) { return w.sab.elev > w.time || w.sab.alarm > w.time; }
+var ASSEMBLY = FLOORS[1].tilesPub.filter(function (t) { return t.y >= 19 && t.y <= 25 && t.x >= 15 && t.x <= 29; });
+function reportBy(w, culprit, msg) {
+  var wit = civilsSeeing(w, culprit, null, CFG.witnessRadius * TS * sightScale(w));
+  if (!wit.length) return false;
+  var c = wit.filter(function (x) { return x.staff; })[0] || wit[0];
+  alertNpc(w, c, null, 'report', culprit.floor, Math.floor(culprit.x / TS), Math.floor(culprit.y / TS), { rep: culprit.id, msg: msg });
+  return true;
+}
+function applySab(w, e, t) {
+  var now = w.time;
+  reportBy(w, e, '¡Ha sido ese! ¡Ha tocado algo que no debía! Aviso a seguridad.');
+  if (t.sab === 'blackout') { w.sab.blackout = now + CFG.sab.blackout; wlog(w, 'Se ha ido la luz en todo el hotel.', 'alarm'); }
+  else if (t.sab === 'alarm') { w.sab.alarm = now + CFG.sab.alarm; wlog(w, '¡Suena la alarma de incendios! Los huéspedes evacúan.', 'alarm'); }
+  else if (t.sab === 'elev') { w.sab.elev = now + CFG.sab.elev; wlog(w, 'Los ascensores han quedado fuera de servicio.', 'alarm'); }
+}
+function arrest(w, r, p) {
+  r.arrest = CFG.arrestDur; r.marked = false; cancelHold(w, r); r.goal = null; r.path = null; r.pathKey = null; r.moving = false; w.stats.arrests++;
+  if (r.inv.carry) { var pk = (r.tasks || []).filter(function (t) { return t.pair === r.inv.carry; })[0]; if (pk) pk.done = false; r.inv.carry = null; }
+  if (r.ai) { r.ai.mode = 'blend'; r.ai.t = 6; }
+  wlog(w, r === w.human ? 'La policía te detiene: pierdes el encargo que llevabas y quedas retenido ' + CFG.arrestDur + ' s.' : r.name + ' ha sido detenido por la policía.', r === w.human ? 'report' : 'team', r.id);
+  if (p) p.stayUntil = Math.max(p.stayUntil || 0, w.time + 12);
+}
+
 function callersFor(w, oid) {
   for (var i = 0; i < w.ents.length; i++) { var c = w.ents[i]; if (c.alive && c.role === 'civil' && (c.state === 'call' || c.state === 'calling') && c.callCtx && c.callCtx.outfit === oid) return true; }
   return false;
@@ -990,24 +1141,40 @@ function civilsSeeing(w, a, b, rad) {
   }
   return out;
 }
-function alertNpc(w, npc, culpritId, why, fl, tx, ty) {
+function alertNpc(w, npc, culpritId, why, fl, tx, ty, extra) {
   if (!npc.alive || npc.state === 'call' || npc.state === 'calling' || npc.state === 'stun') return;
-  npc.state = 'call'; npc.callCtx = { outfit: culpritId, floor: fl, x: tx, y: ty, why: why }; npc.goal = null; npc.pathKey = null; npc.ai.mode = 'call';
-  say(npc, why === 'crime' ? '¡Un crimen! ¡Voy a llamar a la policía!' : (why === 'body' ? '¡Un cadáver! ¡Policía!' : '¡Esto no me gusta! Llamo a la policía.'), 3);
+  npc.state = 'call'; npc.callCtx = { outfit: culpritId, floor: fl, x: tx, y: ty, why: why }; if (extra) for (var k in extra) npc.callCtx[k] = extra[k]; npc.goal = null; npc.pathKey = null; npc.ai.mode = 'call';
+  say(npc, why === 'report' ? ((extra && extra.msg) || '¡Alguien está forzando una puerta! Aviso a seguridad.') : (why === 'crime' ? '¡Un crimen! ¡Voy a llamar a la policía!' : (why === 'body' ? '¡Un cadáver! ¡Policía!' : '¡Esto no me gusta! Llamo a la policía.')), 3);
+}
+function sendPolice(w, ctx, stay) {
+  var active = w.ents.filter(function (p) { return p.role === 'police' && p.alive; });
+  if (active.length) active.forEach(function (p) { p.target = { floor: ctx.floor, x: ctx.x, y: ctx.y }; p.ai.mode = 'go'; p.goal = null; p.stayUntil = Math.max(p.stayUntil || 0, w.time + stay); });
+  else if (!w.dispatch.some(function (d) { return !d.done; })) w.dispatch.push({ t: w.time + CFG.policeDelay, floor: ctx.floor, x: ctx.x, y: ctx.y, done: false, stay: stay });
 }
 function policeCall(w, ctx) {
+  if (ctx.rep) { reportRunner(w, ctx); return; }
   w.stats.calls++;
   if (ctx.outfit) w.wanted[ctx.outfit] = true;
   wlog(w, 'Un testigo ha llamado a la policía.', 'call');
-  var active = w.ents.filter(function (p) { return p.role === 'police' && p.alive; });
-  if (active.length) active.forEach(function (p) { p.target = { floor: ctx.floor, x: ctx.x, y: ctx.y }; p.ai.mode = 'go'; p.goal = null; p.stayUntil = w.time + CFG.policeStay; });
-  else if (!w.dispatch.some(function (d) { return !d.done; })) w.dispatch.push({ t: w.time + CFG.policeDelay, floor: ctx.floor, x: ctx.x, y: ctx.y, done: false });
+  sendPolice(w, ctx, CFG.policeStay);
+}
+function reportRunner(w, ctx) {
+  var r = null; w.ents.forEach(function (e) { if (e.id === ctx.rep) r = e; });
+  w.stats.reports++;
+  sendPolice(w, ctx, 45);
+  if (!r || !r.alive) return;
+  r.reports++;
+  var left = CFG.strikes - r.reports;
+  if (r === w.human) wlog(w, 'Te han denunciado (' + r.reports + '). ' + (left > 0 ? 'La policía va a rondar por la zona. Con ' + CFG.strikes + ' denuncias quedarás fichado.' : 'Estás fichado: si la policía te ve, te detiene, y el cliente se retrasa.'), 'report', r.id);
+  else wlog(w, 'Denuncian a ' + r.name + ' (' + r.reports + ').', 'team', r.id);
+  wlog(w, 'Una denuncia: alguien sospechoso en ' + FLOORS[ctx.floor].label + '.', 'hunt');
+  if (r.reports >= CFG.strikes) { r.marked = true; w.limit += CFG.clientDelay; if (r !== w.human) wlog(w, r.name + ' queda fichado.', 'team', r.id); }
 }
 function spawnPolice(w, d) {
   var sp = [{ x: 21, y: 24 }, { x: 23, y: 24 }, { x: 22, y: 23 }];
   for (var i = 0; i < CFG.policeCount; i++) {
     var p = newEnt(w, { name: 'Policía', type: 'police', role: 'police', floor: 1, x: (sp[i].x + .5) * TS, y: (sp[i].y + .5) * TS, outfit: newPolice(), dir: 'up' });
-    p.target = { floor: d.floor, x: d.x, y: d.y }; p.ai = { mode: 'go', t: 0 }; p.stayUntil = w.time + CFG.policeStay;
+    p.target = { floor: d.floor, x: d.x, y: d.y }; p.ai = { mode: 'go', t: 0 }; p.stayUntil = w.time + (d.stay || CFG.policeStay);
     w.ents.push(p);
   }
   wlog(w, 'La policía ha llegado al hotel.', 'alarm');
@@ -1037,13 +1204,13 @@ function kill(w, killer, victim, how) {
   w.corpses.push({ id: w.nextId++, x: victim.x, y: victim.y, floor: victim.floor, outfit: victim.outfit, stripped: false, found: false, name: victim.name, role: victim.role, t: w.time, victimId: victim.id, ang: (victim.id * 1.7) % 6.28 });
   if (victim.role === 'civil') w.stats.civKills++; else w.stats.kills++;
   if (how === 'gun') {
-    var wit = civilsSeeing(w, killer, victim, CFG.witnessRadius * TS).filter(function (c) { return c !== victim; });
+    var wit = civilsSeeing(w, killer, victim, CFG.witnessRadius * TS * sightScale(w)).filter(function (c) { return c !== victim; });
     if (wit.length) {
       killer.sus = 100;
       wit.forEach(function (c) { alertNpc(w, c, killer.outfit.id, 'crime', killer.floor, Math.floor(killer.x / TS), Math.floor(killer.y / TS)); });
     }
     w.ents.forEach(function (r) {
-      if (r.role === 'runner' && r.alive && r.type === 'bot' && r.floor === killer.floor && dist(r.x, r.y, killer.x, killer.y) < CFG.witnessRadius * TS && los(FLOORS[r.floor], r.x, r.y, killer.x, killer.y)) r.knows[killer.outfit.id] = true;
+      if (r.role === 'runner' && r.alive && r.type === 'bot' && r.floor === killer.floor && dist(r.x, r.y, killer.x, killer.y) < CFG.witnessRadius * TS * sightScale(w) && los(FLOORS[r.floor], r.x, r.y, killer.x, killer.y)) r.knows[killer.outfit.id] = true;
     });
   }
   if (how === 'police') { w.fx.push({ type: 'flash', floor: killer.floor, x: killer.x, y: killer.y, t: 0.25 }); wlog(w, victim.role === 'hunter' ? 'La policía abate a un sospechoso.' : 'La policía abate a ' + victim.name + '.', 'alarm'); }
@@ -1081,8 +1248,7 @@ function tryMelee(w, e) {
   }
 }
 function taskAvail(w, t, e) {
-  if (t.cool > w.time) return false;
-  if (t.busy && t.busy !== e.id) { var b = w.ents[t.busy - 1]; for (var i = 0; i < w.ents.length; i++) if (w.ents[i].id === t.busy) b = w.ents[i]; if (b && b.alive && b.hold && b.hold.ref === t) return false; t.busy = 0; }
+  if (t.done) return false;
   if (t.kind === 'drop') return e.inv.carry === t.id;
   if (t.kind === 'pick') return !e.inv.carry;
   return true;
@@ -1099,18 +1265,29 @@ function cancelHold(w, e) {
 function holdValid(w, e, h) {
   if (h.type === 'strip') return !h.ref.stripped && h.ref.outfit.kind !== 'under';
   if (h.type === 'ward') return !h.ref.looted;
-  if (h.type === 'task') return taskAvail(w, h.ref, e) || h.ref.busy === e.id;
+  if (h.type === 'task') return taskAvail(w, h.ref, e);
+  if (h.type === 'force') return !canPass(w, e, h.ref) && !insideRoom(e, h.ref);
   return true;
 }
 function finishHold(w, e, h) {
   var human = e === w.human;
   if (h.type === 'task') {
     var t = h.ref;
-    t.cool = w.time + CFG.taskCooldown;
-    if (t.kind === 'pick') { e.inv.carry = t.pair; if (human) wlog(w, 'Llevas el encargo. Entrégalo: ' + w.tasks.filter(function (x) { return x.id === t.pair; })[0].name + '.', 'info'); }
-    else { if (t.kind === 'drop') e.inv.carry = null; w.tasksDone++; w.stats.tasks++; wlog(w, (human ? 'Hecho: ' : e.name + ' completa: ') + t.name + '. Trato: ' + w.tasksDone + '/' + w.quota, 'task'); }
+    t.done = true;
+    if (t.kind === 'pick') { e.inv.carry = t.pair; if (human) wlog(w, 'Llevas el encargo. Entrégalo: ' + e.tasks.filter(function (x) { return x.id === t.pair; })[0].name + '.', 'info'); }
+    else {
+      if (t.kind === 'drop') e.inv.carry = null;
+      w.stats.tasks++; refreshTasks(w); var mine = taskUnits(e);
+      wlog(w, (human ? 'Hecho: ' + t.name + '. Tus encargos ' + mine.done + '/' + mine.total + ' · equipo ' + w.tasksDone + '/' + w.quota : e.name + ' completa: ' + t.name + '. Equipo ' + w.tasksDone + '/' + w.quota), 'task');
+      if (t.sab) applySab(w, e, t);
+    }
     if (e.type === 'bot') { e.ai.mode = 'blend'; e.ai.t = ri(CFG.botIdle[0], CFG.botIdle[1]); e.goal = null; }
     checkWin(w);
+  } else if (h.type === 'force') {
+    var rm = h.ref; w.unlocked[roomKey(rm)] = w.time + CFG.unlockFor; w.stats.forced++; e.goal = null; e.path = null; e.pathKey = null;
+    if (e.role === 'runner') { if (reportBy(w, e, '¡Está forzando la cerradura de una habitación! Aviso a seguridad.') && human) wlog(w, 'Alguien te ha visto forzar la puerta y va a avisar a seguridad.', 'report', e.id); }
+    else if (civilsSeeing(w, e, null, CFG.witnessRadius * TS * sightScale(w)).length) { e.sus = Math.min(100, Math.max(e.sus, 55)); if (human) wlog(w, 'Te han visto forzar la puerta: tu sospecha se dispara.', 'info'); }
+    if (human) wlog(w, 'Has forzado la cerradura de la ' + roomLabel(rm) + '. Queda abierta unos segundos.', 'info');
   } else if (h.type === 'strip') {
     var c = h.ref, o = cloneOutfit(c.outfit);
     o.blood = true; swapOutfit(w, e, o);
@@ -1136,10 +1313,11 @@ function holdUpdate(w, e, dt) {
 function checkWin(w) {
   if (w.over) return;
   var tA = 0, hA = 0;
+  refreshTasks(w);
   w.ents.forEach(function (e) { if (e.alive && w.targets.indexOf(e.id) >= 0) tA++; if (e.alive && e.role === 'hunter') hA++; });
   if (tA === 0) w.over = { winner: 'hunters', reason: 'Los dos objetivos han sido eliminados.' };
   else if (hA === 0) w.over = { winner: 'runners', reason: 'Todos los cazadores han caído.' };
-  else if (w.tasksDone >= w.quota) w.over = { winner: 'runners', reason: 'Trato cerrado: el cargamento está listo antes de que llegue el cliente.' };
+  else if (w.quota > 0 && w.tasksDone >= w.quota) w.over = { winner: 'runners', reason: 'Trato cerrado: todos los corredores han terminado sus encargos antes de que llegue el cliente.' };
   else if (w.time >= w.limit) w.over = { winner: 'runners', reason: 'El cliente ha llegado y al menos un objetivo sigue con vida.' };
 }
 
@@ -1151,7 +1329,7 @@ function navTo(w, e, fl, x, y) { e.goal = { floor: fl, x: x, y: y }; e.pathKey =
 function walkTo(w, e, dt, speed, tx, ty) {
   var key = e.floor + ':' + tx + ',' + ty;
   if (e.pathKey !== key || !e.path) {
-    e.path = bfs(FLOORS[e.floor], Math.floor(e.x / TS), Math.floor(e.y / TS), tx, ty); e.pathKey = key; e.pi = 0;
+    e.path = bfs(FLOORS[e.floor], Math.floor(e.x / TS), Math.floor(e.y / TS), tx, ty, lockMask(w, e)); e.pathKey = key; e.pi = 0;
     if (!e.path) { e.path = []; e.unreach = true; return true; }
     e.unreach = false;
   }
@@ -1165,6 +1343,7 @@ function navUpdate(w, e, dt, speed) {
   var g = e.goal; if (!g) return true;
   var f = FLOORS[e.floor];
   if (e.floor !== g.floor) {
+    if (elevOut(w) && e.state !== 'evac' && e.role !== 'police') { e.moving = false; if (!e.liftWait) e.liftWait = true; return false; }
     var fx = f.spawn.x, fy = f.spawn.y - 1;
     if (Math.abs(e.x - (fx + .5) * TS) < 14 && Math.abs(e.y - (fy + .5) * TS) < 14) {
       e.moving = false; e.elevT += dt;
@@ -1188,6 +1367,12 @@ function npcAI(w, e, dt) {
   }
   if (e.state === 'calling') { ai.t -= dt; e.moving = false; if (ai.t <= 0) { policeCall(w, e.callCtx); e.state = 'scared'; ai.t = 12; e.goal = null; } return; }
   if (e.state === 'scared') { ai.t -= dt; e.moving = false; if (ai.t <= 0) { e.state = 'idle'; ai.wait = 1; } return; }
+  if (w.sab.alarm > w.time) {
+    if (e.state !== 'evac') { e.state = 'evac'; e.goal = null; e.pathKey = null; var as = pick(ASSEMBLY); navTo(w, e, 1, as.x, as.y); if (rnd() < 0.5) say(e, '¡Fuego! ¡Todos fuera!', 2.6); }
+    if (e.goal) { if (navUpdate(w, e, dt, CFG.speed.npc * 1.6)) { e.goal = null; e.moving = false; } } else e.moving = false;
+    return;
+  }
+  if (e.state === 'evac') { e.state = 'idle'; ai.wait = ri(1, 5); e.goal = null; e.moving = false; return; }
   if (e.fixed) { ai.wait -= dt; if (ai.wait <= 0) { ai.wait = ri(3, 7); e.dir = pick(['down', 'left', 'right', 'down']); } e.moving = false; return; }
   if (ai.wait > 0) { ai.wait -= dt; e.moving = false; return; }
   if (!e.goal) { var t = pick(e.tiles); navTo(w, e, e.floor, t.x, t.y); }
@@ -1219,7 +1404,7 @@ function policeAI(w, e, dt) {
 function posterKnown(w, h) { return !!w.posterActive[h.outfit.id]; }
 function chooseTask(w, e) {
   var best = null, bs = 1e9;
-  w.tasks.forEach(function (t) {
+  (e.tasks || []).forEach(function (t) {
     if (!taskAvail(w, t, e)) return;
     var s = Math.abs(t.floor - e.floor) * 22 + Math.abs(t.x - e.x / TS) + Math.abs(t.y - e.y / TS) + rnd() * 30;
     if (e.inv.carry && t.id === e.inv.carry) s -= 200;
@@ -1231,6 +1416,7 @@ function runnerAI(w, e, dt) {
   var ai = e.ai, i;
   e.cd = Math.max(0, e.cd - dt);
   if (e.fxSwing > 0) e.fxSwing -= dt;
+  if (e.arrest > 0) { e.arrest -= dt; e.moving = false; return; }
   ai.scan -= dt;
   if (ai.scan <= 0) {
     ai.scan = 0.3;
@@ -1238,7 +1424,7 @@ function runnerAI(w, e, dt) {
       var h = w.ents[i];
       if (h.role !== 'hunter' || !h.alive || h.floor !== e.floor) continue;
       var d = dist(e.x, e.y, h.x, h.y);
-      if (d > 6 * TS || !los(FLOORS[e.floor], e.x, e.y, h.x, h.y)) continue;
+      if (d > 6 * TS * sightScale(w) || !los(FLOORS[e.floor], e.x, e.y, h.x, h.y)) continue;
       var danger = h.aim || e.knows[h.outfit.id] || posterKnown(w, h);
       if (!danger) continue;
       if (e.inv.melee && d < 2.6 * TS) { cancelHold(w, e); e.aimX = h.x; e.aimY = h.y; e.dir = dirOf(h.x - e.x, h.y - e.y); tryMelee(w, e); e.moving = false; return; }
@@ -1258,6 +1444,14 @@ function runnerAI(w, e, dt) {
   if (ai.mode === 'task') {
     var t = ai.task;
     if (!t || !taskAvail(w, t, e)) { ai.mode = 'blend'; ai.t = 6; e.goal = null; return; }
+    var rm = t.roomName ? roomBy(t.floor, t.roomName) : null;
+    if (rm && !canPass(w, e, rm) && !insideRoom(e, rm)) {
+      /* habitación cerrada: ir a la puerta y forzar la cerradura */
+      if (!e.goal || !e.goal.force) { navTo(w, e, t.floor, rm.out.x, rm.out.y); e.goal.force = true; }
+      if (navUpdate(w, e, dt, CFG.speed.bot)) { if (e.floor === t.floor) startHold(w, e, 'force', rm, CFG.forceDur); else { ai.mode = 'blend'; ai.t = 5; e.goal = null; } }
+      return;
+    }
+    if (e.goal && e.goal.force) e.goal = null;
     if (!e.goal) navTo(w, e, t.floor, t.x, t.y);
     if (navUpdate(w, e, dt, CFG.speed.bot)) { if (e.floor === t.floor) startHold(w, e, 'task', t, t.dur); else { ai.mode = 'blend'; ai.t = 5; e.goal = null; } }
     return;
@@ -1296,7 +1490,7 @@ function hunterAI(w, e, dt) {
       for (i = 0; i < w.ents.length; i++) {
         var t = w.ents[i];
         if (!t.alive || e.targetIds.indexOf(t.id) < 0 || t.floor !== e.floor) continue;
-        if (dist(e.x, e.y, t.x, t.y) <= CFG.botSight * TS && los(FLOORS[e.floor], e.x, e.y, t.x, t.y)) { seen = t; break; }
+        if (dist(e.x, e.y, t.x, t.y) <= CFG.botSight * TS * sightScale(w) && los(FLOORS[e.floor], e.x, e.y, t.x, t.y)) { seen = t; break; }
       }
       if (seen) {
         ai.rec = (ai.rec || 0) + 0.2;
@@ -1329,7 +1523,7 @@ function hunterAI(w, e, dt) {
       return;
     }
     e.moving = false; e.dir = dirOf(tg.x - e.x, tg.y - e.y);
-    var safe = civilsSeeing(w, e, tg, CFG.witnessRadius * TS).length === 0;
+    var safe = civilsSeeing(w, e, tg, CFG.witnessRadius * TS * sightScale(w)).length === 0;
     if (safe || ai.patience >= CFG.botPatience) {
       e.aim = true; e.aimX = tg.x; e.aimY = tg.y - 2; ai.aimT += dt;
       if (ai.aimT >= CFG.botAimTime && e.cd <= 0) { tryShoot(w, e); e.aim = false; ai.aimT = 0; ai.mode = 'patrol'; e.goal = null; ai.wait = 1.5; ai.patience = 0; }
@@ -1345,13 +1539,14 @@ function hunterAI(w, e, dt) {
 
 /* ---------- percepción (10 veces por segundo) ---------- */
 function perceive(w, dt) {
+  var sc = sightScale(w);
   var civils = w.ents.filter(function (c) { return c.alive && c.role === 'civil'; });
   w.ents.forEach(function (h) {
     if (h.role !== 'hunter' || !h.alive) return;
-    var f = FLOORS[h.floor], tx = Math.floor(h.x / TS), ty = Math.floor(h.y / TS), z = f.zone[ty * W + tx], acc = access(h);
-    var restricted = (z === ZONE_ROOM && !acc.room) || (z === ZONE_STAFF && !acc.staff);
+    var f = FLOORS[h.floor], tx = Math.floor(h.x / TS), ty = Math.floor(h.y / TS), z = f.zone[ty * W + tx], acc = access(h), rmHere = roomAt(f, tx, ty);
+    var restricted = (z === ZONE_ROOM && rmHere && !hasKey(h, rmHere)) || (z === ZONE_STAFF && !acc.staff);
     var view = [];
-    civils.forEach(function (c) { if (c.floor === h.floor && c.state !== 'dead') { var d = dist(c.x, c.y, h.x, h.y); if (d <= CFG.sightTiles * TS && los(f, c.x, c.y, h.x, h.y)) view.push({ c: c, d: d }); } });
+    civils.forEach(function (c) { if (c.floor === h.floor && c.state !== 'dead') { var d = dist(c.x, c.y, h.x, h.y); if (d <= CFG.sightTiles * TS * sc && los(f, c.x, c.y, h.x, h.y)) view.push({ c: c, d: d }); } });
     if (isHot(w, h)) { h.sus = 100; }
     else {
       var rate = 0, staffV = null;
@@ -1360,7 +1555,7 @@ function perceive(w, dt) {
         view.forEach(function (v) { rate += v.c.staff ? CFG.restrictedStaff : CFG.restrictedGuest; if (v.c.staff && !staffV) staffV = v.c; });
       }
       if (h.aim) {
-        var aimR = CFG.aimNoticeRadius * TS, nearest = null;
+        var aimR = CFG.aimNoticeRadius * TS * sc, nearest = null;
         view.forEach(function (v) { if (v.d <= aimR) { rate += CFG.aimRate + CFG.aimNear * (1 - v.d / aimR); if (!nearest || v.d < nearest.d) nearest = v; } });
         if (nearest && h.sus >= 20 && w.time - (nearest.c.lastAim || -99) > 6) { nearest.c.lastAim = w.time; say(nearest.c, h.sus >= CFG.warnAt ? '¿Eso que lleva en la mano es un arma?' : '¿Qué esconde ese tipo?', 2.6); }
       }
@@ -1375,18 +1570,41 @@ function perceive(w, dt) {
     }
     h.wasRestricted = restricted; h.restricted = restricted;
   });
+  /* corredores: un intruso en una habitación ajena provoca denuncias */
+  w.ents.forEach(function (r) {
+    if (r.role !== 'runner' || !r.alive) return;
+    var f = FLOORS[r.floor], tx = Math.floor(r.x / TS), ty = Math.floor(r.y / TS), rm = roomAt(f, tx, ty);
+    var intr = !!(rm && rm.zone === ZONE_ROOM && !hasKey(r, rm)), rate = 0, staffV = null;
+    if (intr) civils.forEach(function (c) {
+      if (c.floor !== r.floor || c.state === 'dead' || c.state === 'evac') return;
+      var d = dist(c.x, c.y, r.x, r.y);
+      if (d <= CFG.sightTiles * TS * sc && los(f, c.x, c.y, r.x, r.y)) { rate += c.staff ? CFG.restrictedStaff : CFG.restrictedGuest; if (c.staff && !staffV) staffV = c; }
+    });
+    if (rate === 0) rate = -CFG.susDecay;
+    if (intr && rate > 0 && !r.wasIntr) r.sus = Math.min(100, r.sus + 6);
+    r.sus = clamp(r.sus + rate * dt, 0, 100); r.wasIntr = intr; r.restricted = intr && rate > 0;
+    if (intr && staffV && r.sus >= CFG.warnAt && r.sus < CFG.callAt && w.time - (staffV.lastWarn || -99) > 6) { staffV.lastWarn = w.time; say(staffV, '¿Quién es usted? Esta habitación no es suya.', 3); }
+    if (r.sus >= CFG.callAt && w.time > (r.repLock || 0)) {
+      if (reportBy(w, r, 'Hay un desconocido en una habitación que no es suya. Aviso a seguridad.')) { r.repLock = w.time + 25; r.sus = 55; if (r === w.human) wlog(w, 'Te han visto donde no debes: alguien va a avisar a seguridad.', 'report', r.id); }
+    }
+  });
   /* policía */
   w.ents.forEach(function (p) {
     if (p.role !== 'police' || !p.alive) return;
-    var spotted = null;
+    var spotted = null, spotR = null;
     w.ents.forEach(function (h) {
-      if (h.role !== 'hunter' || !h.alive || h.floor !== p.floor) return;
-      if (!(w.wanted[h.outfit.id] || h.outfit.blood)) return;
-      if (dist(p.x, p.y, h.x, h.y) <= CFG.policeSight * TS && los(FLOORS[p.floor], p.x, p.y, h.x, h.y)) spotted = h;
+      if (!h.alive || h.floor !== p.floor) return;
+      var inR = dist(p.x, p.y, h.x, h.y) <= CFG.policeSight * TS * sc && los(FLOORS[p.floor], p.x, p.y, h.x, h.y);
+      if (!inR) return;
+      if (h.role === 'hunter' && (w.wanted[h.outfit.id] || h.outfit.blood)) spotted = h;
+      else if (h.role === 'runner' && h.marked && !(h.arrest > 0)) spotR = h;
     });
     if (spotted) {
       p.freeze = true; p.dir = dirOf(spotted.x - p.x, spotted.y - p.y); p.spot[spotted.id] = (p.spot[spotted.id] || 0) + dt; p.spotting = true;
       if (p.spot[spotted.id] >= CFG.policeReact) { kill(w, p, spotted, 'police'); p.spot = {}; p.freeze = false; p.spotting = false; p.stayUntil = Math.max(p.stayUntil, w.time + 20); }
+    } else if (spotR) {
+      p.freeze = true; p.dir = dirOf(spotR.x - p.x, spotR.y - p.y); p.spot[spotR.id] = (p.spot[spotR.id] || 0) + dt; p.spotting = true;
+      if (p.spot[spotR.id] >= CFG.policeReact * 1.5) { arrest(w, spotR, p); p.spot = {}; p.freeze = false; p.spotting = false; }
     } else { p.freeze = false; p.spotting = false; p.spot = {}; }
   });
   /* cadáveres */
@@ -1424,13 +1642,14 @@ function findInteract(w, e) {
   var f = FLOORS[e.floor], best = null, bd = 1e9;
   function cand(type, ref, x, y, range, label, dur) { var d = dist(e.x, e.y, x, y); if (d < range && d < bd) { bd = d; best = { type: type, ref: ref, label: label, dur: dur }; } }
   var tx = Math.floor(e.x / TS), ty = Math.floor(e.y / TS), i, j;
-  for (j = ty - 2; j <= ty + 2; j++) for (i = tx - 2; i <= tx + 2; i++) if (at(f, i, j) === T.ELEV) cand('elev', null, (i + .5) * TS, (j + .5) * TS, 52, 'Llamar al ascensor', 0);
+  for (j = ty - 2; j <= ty + 2; j++) for (i = tx - 2; i <= tx + 2; i++) if (at(f, i, j) === T.ELEV) { if (elevOut(w)) cand('elevx', null, (i + .5) * TS, (j + .5) * TS, 52, 'Ascensor fuera de servicio', 0); else cand('elev', null, (i + .5) * TS, (j + .5) * TS, 52, 'Llamar al ascensor', 0); }
+  for (var lk in f.lockAt) { var lr = f.lockAt[lk]; if (!canPass(w, e, lr) && !insideRoom(e, lr)) cand('force', lr, (lr.door.x + .5) * TS, (lr.door.y + .5) * TS, 46, 'Forzar la cerradura · ' + roomLabel(lr), CFG.forceDur); }
   if (e.role === 'hunter') {
     w.corpses.forEach(function (c) { if (c.floor === e.floor && !c.stripped && c.outfit.kind !== 'under') cand('strip', c, c.x, c.y, 38, 'Coger su ropa', CFG.hold.strip); });
     f.wards.forEach(function (wd) { if (!wd.looted) cand('ward', wd, (wd.x + wd.w / 2) * TS, (wd.y + wd.h / 2) * TS, 50, 'Registrar el armario', CFG.hold.ward); });
     if (e.outfit.blood) { f.washers.forEach(function (s) { cand('wash', s, (s.x + s.w / 2) * TS, (s.y + s.h / 2) * TS, 56, 'Lavar el traje', CFG.hold.wash); }); f.sinks.forEach(function (s) { cand('wash', s, (s.x + .5) * TS, (s.y + .5) * TS, 46, 'Lavar el traje', CFG.hold.sink); }); }
   } else {
-    w.tasks.forEach(function (t) { if (t.floor === e.floor && taskAvail(w, t, e)) cand('task', t, (t.x + .5) * TS, (t.y + .5) * TS, 30, t.name, t.dur); });
+    (e.tasks || []).forEach(function (t) { if (t.floor === e.floor && taskAvail(w, t, e) && (!t.roomName || insideRoom(e, roomBy(t.floor, t.roomName)) || e.floor !== t.floor)) cand('task', t, (t.x + .5) * TS, (t.y + .5) * TS, 30, t.name, t.dur); });
   }
   return best;
 }
@@ -1439,9 +1658,9 @@ function autoPickup(w, e) {
     var p = w.pick[i];
     if (p.floor !== e.floor || dist(e.x, e.y, (p.x + .5) * TS, (p.y + .5) * TS) > 20) continue;
     if (p.kind === 'scrap' && e.role !== 'runner') continue;
-    if (p.kind !== 'scrap' && e.role !== 'hunter') continue;
+    if (p.kind === 'badge' && e.role !== 'hunter') continue;
     w.pick.splice(i, 1);
-    if (p.kind === 'masterkey') { e.inv.masterkey = true; if (e === w.human) wlog(w, 'Has cogido una llave maestra: abre las habitaciones sin levantar sospechas.', 'info'); }
+    if (p.kind === 'masterkey') { e.inv.masterkey = true; if (e === w.human) wlog(w, 'Has cogido una llave maestra: abre cualquier habitación sin forzarla.', 'info'); }
     else if (p.kind === 'badge') { e.inv.badge = true; if (e === w.human) wlog(w, 'Has cogido una insignia de botones: te deja pasar a las zonas del personal.', 'info'); }
     else {
       e.inv.scrap++;
@@ -1463,8 +1682,8 @@ function humanControl(w, e, dt, inp) {
     if (e.hold) cancelHold(w, e);
     var len = Math.hypot(mx, my), sp = e.aim ? CFG.speed.aim : (inp.run ? CFG.speed.run : CFG.speed.walk);
     var vx = mx / len * sp * dt, vy = my / len * sp * dt;
-    if (freeAt(f, e.x + vx, e.y)) e.x += vx;
-    if (freeAt(f, e.x, e.y + vy)) e.y += vy;
+    if (freeFor(w, e, f, e.x + vx, e.y)) e.x += vx;
+    if (freeFor(w, e, f, e.x, e.y + vy)) e.y += vy;
     e.walk += dt * 10; e.moving = true;
     if (!e.aim) e.dir = dirOf(mx, my);
   } else e.moving = false;
@@ -1476,7 +1695,7 @@ function humanControl(w, e, dt, inp) {
   }
   var hint = e.hold ? null : findInteract(w, e);
   w.hint = hint;
-  if (inp.interactHeld && !e.hold && hint && hint.type !== 'elev') startHold(w, e, hint.type, hint.ref, hint.dur);
+  if (inp.interactHeld && !e.hold && hint && hint.type !== 'elev' && hint.type !== 'elevx') startHold(w, e, hint.type, hint.ref, hint.dur);
   if (e.hold && !inp.interactHeld) cancelHold(w, e);
   if (inp.fire) { if (e.role === 'hunter' && e.aim) tryShoot(w, e); else if (e.role === 'runner' && e.inv.melee) tryMelee(w, e); }
 }
@@ -1486,12 +1705,13 @@ function step(w, dt, inp) {
   if (w.over) return;
   w.time += dt;
   var h = w.human;
-  if (h && h.alive && inp) humanControl(w, h, dt, inp);
+  if (h && h.alive && h.arrest > 0) { h.arrest -= dt; h.moving = false; h.aim = false; h.hold = null; w.hint = null; }
+  else if (h && h.alive && inp) humanControl(w, h, dt, inp);
   var i;
   for (i = 0; i < w.ents.length; i++) {
     var e = w.ents[i];
     if (e.bt > 0) { e.bt -= dt; if (e.bt <= 0) e.bubble = null; }
-    if (!e.alive) continue;
+    if (!e.alive || e.type === 'frozen') continue;
     if (e.type === 'human') { holdUpdate(w, e, dt); if (!e.hold) { /* nada */ } autoPickup(w, e); continue; }
     if (e.type === 'npc') npcAI(w, e, dt);
     else if (e.type === 'police') policeAI(w, e, dt);
@@ -1501,12 +1721,13 @@ function step(w, dt, inp) {
   w.ents = w.ents.filter(function (e) { return !e.remove; });
   for (i = 0; i < w.dispatch.length; i++) { var d = w.dispatch[i]; if (!d.done && w.time >= d.t) { d.done = true; spawnPolice(w, d); } }
   w.fx = w.fx.filter(function (x) { x.t -= dt; return x.t > 0; });
+  [['blackout', 'Vuelve la luz.'], ['alarm', 'Cesa la alarma de incendios.'], ['elev', 'Los ascensores vuelven a funcionar.']].forEach(function (s) { if (w.sab[s[0]] && w.time >= w.sab[s[0]]) { w.sab[s[0]] = 0; wlog(w, s[1], 'info'); } });
   w.acc += dt;
   if (w.acc >= 0.1) { var pd = w.acc; w.acc = 0; perceive(w, pd); }
-  if (w.time >= w.limit || w.tasksDone >= w.quota) checkWin(w);
+  if (w.time >= w.limit || (w.quota > 0 && w.tasksDone >= w.quota)) checkWin(w);
 }
 
-if (typeof globalThis.__EXPOSE !== 'undefined') globalThis.__API = { FLOORS: FLOORS, TASK_DEFS: TASK_DEFS, KEY_SPOTS: KEY_SPOTS, SCRAP_SPOTS: SCRAP_SPOTS, newWorld: newWorld, step: step, CFG: CFG, T: T, W: W, H: H, TS: TS, SOLIDT: SOLIDT, bfs: bfs, los: los, isHot: isHot, kill: kill, access: access, findInteract: findInteract, startHold: startHold, tryShoot: tryShoot, humanControl: humanControl, teleport: teleport, civilsSeeing: civilsSeeing, perceive: perceive, alertNpc: alertNpc, swapOutfit: swapOutfit, newGuest: newGuest };
+if (typeof globalThis.__EXPOSE !== 'undefined') globalThis.__API = { FLOORS: FLOORS, TASK_DEFS: TASK_DEFS, KEY_SPOTS: KEY_SPOTS, SCRAP_SPOTS: SCRAP_SPOTS, newWorld: newWorld, step: step, CFG: CFG, T: T, W: W, H: H, TS: TS, SOLIDT: SOLIDT, bfs: bfs, los: los, isHot: isHot, kill: kill, access: access, findInteract: findInteract, startHold: startHold, tryShoot: tryShoot, humanControl: humanControl, teleport: teleport, civilsSeeing: civilsSeeing, perceive: perceive, alertNpc: alertNpc, swapOutfit: swapOutfit, newGuest: newGuest, hasKey: hasKey, canPass: canPass, insideRoom: insideRoom, roomBy: roomBy, roomAt: roomAt, ROOM_POOL: ROOM_POOL, refreshTasks: refreshTasks, taskUnits: taskUnits, freeFor: freeFor, ZONE_ROOM: ZONE_ROOM, elevOut: elevOut, policeCall: policeCall, arrest: arrest, sightScale: sightScale, checkWin: checkWin, spawnPolice: spawnPolice };
 
 /* ===== texturas procedurales: se generan una vez en canvas fuera de pantalla ===== */
 var TEX = {}, SPR = {};
@@ -1768,7 +1989,7 @@ function drawPortrait(cv, outfit, alt) {
 function canSee(f, view, e) {
   if (e === view) return true;
   var d = dist(view.x, view.y, e.x, e.y);
-  return d <= SIGHT_PX && los(f, view.x, view.y, e.x, e.y);
+  return d <= (REN.sight || SIGHT_PX) && los(f, view.x, view.y, e.x, e.y);
 }
 function updateExplored(view) {
   var ex = REN.expl[view.floor], f = FLOORS[view.floor], tx = Math.floor(view.x / TS), ty = Math.floor(view.y / TS);
@@ -1908,12 +2129,11 @@ function drawActor(g, x, y, o, dir, walk, opt) {
 /* ---------- placas de las puertas ---------- */
 var PLATES = { 'Despacho del gerente': 'DESPACHO', 'Sala de calderas': 'CALDERAS', 'Lavandería': 'LAVANDERÍA', 'Almacén': 'ALMACÉN', 'Cocina de servicio': 'COCINA', 'Sala eléctrica': 'ELÉCTRICA', 'Cuarto de servicio': 'SERVICIO', 'Correos': 'CORREOS', 'Tienda de regalos': 'TIENDA', 'Cafetería': 'CAFETERÍA', 'Restaurante Terrace': 'RESTAURANTE', 'Bar': 'BAR', 'Gran Salón': 'GRAN SALÓN', 'Salón mirador': 'MIRADOR', 'Biblioteca': 'BIBLIOTECA' };
 function plateText(n) { var m = /^(?:Hab\.|Suite)\s+(\d+)/.exec(n); return m ? m[1] : (PLATES[n] || ''); }
-function roomAt(f, tx, ty) {
-  var best = null, ba = 1e9;
-  f.rooms.forEach(function (r) { if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h && r.w * r.h < ba) { ba = r.w * r.h; best = r; } });
-  return best;
+function drawName(g, x, y, text, color) {
+  g.save(); g.font = '700 10px "Josefin Sans", sans-serif'; g.textAlign = 'center'; g.lineJoin = 'round'; g.lineWidth = 3.2; g.strokeStyle = 'rgba(2,6,14,.9)'; g.strokeText(text, x, y); g.fillStyle = color; g.fillText(text, x, y);
+  g.restore();
 }
-function drawPlates(g, f, x0, x1, y0, y1) {
+function drawPlates(g, f, x0, x1, y0, y1, lockFn) {
   g.textAlign = 'center'; g.textBaseline = 'middle';
   f.rooms.forEach(function (r) {
     if (!r.door) return;
@@ -1927,6 +2147,17 @@ function drawPlates(g, f, x0, x1, y0, y1) {
     g.fillStyle = col[0]; g.fillRect(cx - w / 2, cy - 5, w, 10);
     g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1; g.strokeRect(cx - w / 2 + 0.5, cy - 4.5, w - 1, 9);
     g.fillStyle = col[1]; g.fillText(t, cx, cy + 0.6);
+    var lk = lockFn ? lockFn(r) : null;
+    if (lk) {
+      var ix = cx + w / 2 + 6, iy = cy + 0.5;
+      if (lk === 'own') { g.strokeStyle = '#6fb8ff'; g.lineWidth = 1.6; g.strokeRect(cx - w / 2 - 1.5, cy - 6.5, w + 3, 13); g.fillStyle = '#6fb8ff'; g.fillRect(ix - 3, iy - 1, 6, 5); g.beginPath(); g.arc(ix + 2.4, iy - 1, 2.2, Math.PI, 0); g.strokeStyle = '#6fb8ff'; g.lineWidth = 1.2; g.stroke(); }
+      else {
+        var lc = lk === 'locked' ? '#e0525f' : '#6fcf97';
+        g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(ix - 4.5, iy - 5.5, 9, 11);
+        g.fillStyle = lc; g.fillRect(ix - 3, iy - 1, 6, 5);
+        g.strokeStyle = lc; g.lineWidth = 1.3; g.beginPath(); g.arc(ix + (lk === 'locked' ? 0 : 2.2), iy - 1, 2.2, Math.PI, 0); g.stroke();
+      }
+    }
   });
   g.textBaseline = 'alphabetic';
 }
@@ -1947,6 +2178,7 @@ function drawMarkers(g, list, cx0, cy0, time) {
     } else {
       var cxs = VW / 2, cys = VH / 2, dx = sx - cxs, dy = sy - cys, ang = Math.atan2(dy, dx);
       var t = Math.min((VW / 2 - m) / Math.max(Math.abs(dx), 1e-6), (VH / 2 - m) / Math.max(Math.abs(dy), 1e-6)), ax = cxs + dx * t, ay = cys + dy * t;
+      var av = REN.avoid; if (av && ax > av.x0 - 24 && ax < av.x1 + 24 && ay > av.y0 - 24 && ay < av.y1 + 24) ay = av.y1 + 28;
       g.save(); g.translate(ax, ay); g.rotate(ang);
       g.fillStyle = 'rgba(0,0,0,.6)'; g.beginPath(); g.moveTo(13, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath(); g.fill();
       g.fillStyle = '#ebd08a'; g.beginPath(); g.moveTo(10, 0); g.lineTo(-6, -7.5); g.lineTo(-2, 0); g.lineTo(-6, 7.5); g.closePath(); g.fill();
@@ -1961,7 +2193,8 @@ function drawMarkers(g, list, cx0, cy0, time) {
 /* ---------- escena principal ---------- */
 function drawWorld(g, w, view, time, mouse, opt) {
   opt = opt || {};
-  var debug = !!opt.debug, f = FLOORS[view.floor], cam = REN.cam, px = REN.px;
+  var debug = !!opt.debug, f = FLOORS[view.floor], cam = REN.cam, px = REN.px, bo = w.sab.blackout > w.time, alarm = w.sab.alarm > w.time;
+  REN.sight = SIGHT_PX * (bo ? 0.5 : 1);
   if (VW >= W * TS + 128) cam.x = (W * TS - VW) / 2; else cam.x = clamp(view.x - VW / 2, -64, W * TS - VW + 64);
   if (VH >= H * TS + 128) cam.y = (H * TS - VH) / 2; else cam.y = clamp(view.y - VH / 2, -64, H * TS - VH + 64);
   var cx0 = Math.round(cam.x * px) / px, cy0 = Math.round(cam.y * px) / px; REN.cx0 = cx0; REN.cy0 = cy0;
@@ -1972,7 +2205,12 @@ function drawWorld(g, w, view, time, mouse, opt) {
   var y, x;
   for (y = y0; y <= y1; y++) for (x = x0; x <= x1; x++) { var t = f.g[y * W + x]; if (t !== T.VOID) drawTile(g, f, x, y, t, time); }
   f.furn.forEach(function (o) { if (!o.solid) drawFurn(g, o, time); });
-  if (SET.plates) drawPlates(g, f, x0, x1, y0, y1);
+  if (SET.plates) drawPlates(g, f, x0, x1, y0, y1, function (r) {
+    if (r.zone !== ZONE_ROOM) return null;
+    if (view.room === r.name && view.roomFloor === r.fi) return 'own';
+    if (hasKey(view, r)) return 'open';
+    return doorOpen(w, r) ? 'open' : 'locked';
+  });
   w.pick.forEach(function (p) {
     if (p.floor !== view.floor) return;
     var ppx = (p.x + 0.5) * TS, ppy = (p.y + 0.5) * TS + Math.sin(time * 3 + p.id) * 1.5;
@@ -1983,7 +2221,7 @@ function drawWorld(g, w, view, time, mouse, opt) {
     else { g.fillStyle = '#9aa3ab'; g.fillRect(ppx - 5, ppy - 2, 10, 4); g.fillStyle = '#6a7279'; g.fillRect(ppx - 3, ppy + 2, 8, 2); g.fillStyle = '#c9a24b'; g.fillRect(ppx - 6, ppy - 1, 2, 3); }
   });
   w.corpses.forEach(function (c) { if (c.floor === view.floor && canSee(f, view, c)) drawCorpse(g, c, time); });
-  var ents = [];
+  var ents = [], nameQ = [];
   f.furn.forEach(function (o) { if (o.solid) ents.push({ y: (o.y + o.h) * TS, d: function () { drawFurn(g, o, time); } }); });
   w.ents.forEach(function (e) {
     if (!e.alive || e.floor !== view.floor) return;
@@ -1994,7 +2232,9 @@ function drawWorld(g, w, view, time, mouse, opt) {
       if (e.fxSwing > 0) { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y - 6, 20, Math.atan2(e.aimY - e.y, e.aimX - e.x) - 0.9, Math.atan2(e.aimY - e.y, e.aimX - e.x) + 0.9); g.stroke(); }
       if (e.role === 'police' && e.spotting) { g.fillStyle = '#ff4a4a'; g.font = '700 16px sans-serif'; g.textAlign = 'center'; g.fillText('!', e.x, e.y - 46); }
       if (e.hold && e === view) { var pr = e.hold.t / e.hold.dur; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 4; g.beginPath(); g.arc(e.x, e.y - 42, 8, 0, 6.283); g.stroke(); g.strokeStyle = '#ebd08a'; g.beginPath(); g.arc(e.x, e.y - 42, 8, -1.57, -1.57 + 6.283 * pr); g.stroke(); }
-      if (debug && e.role !== 'civil') { g.font = '600 9px sans-serif'; g.textAlign = 'center'; g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#6ad8c8' : '#8aa8ff'); g.fillText(e.name, e.x, e.y - 44); }
+      if (debug && e.role !== 'civil') { g.font = '600 9px sans-serif'; g.textAlign = 'center'; g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#6fb8ff' : '#8aa8ff'); g.fillText(e.name, e.x, e.y - 44); }
+      else if (e !== view && e.role !== 'civil' && e.role === view.role && (e.role === 'runner' || e.role === 'hunter')) nameQ.push([e.x, e.y - 30, e.name, e.role === 'runner' ? '#6fb8ff' : '#ff9a9a']);
+      if (e.arrest > 0) nameQ.push([e.x, e.y - 44, 'DETENIDO', '#ff6a78']);
     } });
     if (e.bubble) ents.push({ y: 99999, d: function () { drawBubble(g, e.x, e.y - 2, e.bubble); } });
   });
@@ -2005,11 +2245,11 @@ function drawWorld(g, w, view, time, mouse, opt) {
   /* luz ambiental */
   var sxv = view.x - cx0, syv = view.y - cy0, vis = [];
   if (SET.lights) {
-    var lg = REN.lightC.getContext('2d'), amb = clamp((f.dark + 0.28) / SET.bright, 0.28, 0.84);
+    var lg = REN.lightC.getContext('2d'), amb = bo ? Math.min(0.97, 0.94 + 0.03 / SET.bright) : clamp((f.dark + 0.28) / SET.bright, 0.28, 0.84);
     lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, REN.lightC.width, REN.lightC.height); lg.fillStyle = 'rgba(4,6,12,' + amb + ')'; lg.fillRect(0, 0, REN.lightC.width, REN.lightC.height);
     lg.globalCompositeOperation = 'destination-out'; lg.globalAlpha = 0.92;
-    f.lamps.forEach(function (l) { var sx = l.x - cx0, sy = l.y - cy0; if (sx < -l.r || sy < -l.r || sx > VW + l.r || sy > VH + l.r) return; vis.push([sx, sy, l]); lg.drawImage(SPR.lamp, sx - l.r, sy - l.r, l.r * 2, l.r * 2); });
-    lg.globalAlpha = 0.85; lg.drawImage(SPR.lamp, sxv - 110, syv - 110, 220, 220); lg.globalAlpha = 1; lg.globalCompositeOperation = 'source-over';
+    if (!bo) f.lamps.forEach(function (l) { var sx = l.x - cx0, sy = l.y - cy0; if (sx < -l.r || sy < -l.r || sx > VW + l.r || sy > VH + l.r) return; vis.push([sx, sy, l]); lg.drawImage(SPR.lamp, sx - l.r, sy - l.r, l.r * 2, l.r * 2); });
+    lg.globalAlpha = 0.85; var hr = bo ? 62 : 110; lg.drawImage(SPR.lamp, sxv - hr, syv - hr, hr * 2, hr * 2); lg.globalAlpha = 1; lg.globalCompositeOperation = 'source-over';
     g.drawImage(REN.lightC, 0, 0, VW, VH);
     g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.2;
     vis.forEach(function (v) { g.drawImage(v[2].tint === 'cold' ? SPR.cold : SPR.warm, v[0] - v[2].r, v[1] - v[2].r, v[2].r * 2, v[2].r * 2); });
@@ -2020,12 +2260,14 @@ function drawWorld(g, w, view, time, mouse, opt) {
     var fg = REN.fogC.getContext('2d'), N = SET.lights ? 150 : 72, i;
     fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, REN.fogC.width, REN.fogC.height); fg.fillStyle = 'rgba(3,5,9,' + SET.fog + ')'; fg.fillRect(0, 0, REN.fogC.width, REN.fogC.height);
     fg.globalCompositeOperation = 'destination-out';
-    var rg = fg.createRadialGradient(sxv, syv, 50, sxv, syv, SIGHT_PX); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.7, 'rgba(0,0,0,.95)'); rg.addColorStop(1, 'rgba(0,0,0,.4)');
+    var rg = fg.createRadialGradient(sxv, syv, 50, sxv, syv, REN.sight); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.7, 'rgba(0,0,0,.95)'); rg.addColorStop(1, 'rgba(0,0,0,.4)');
     fg.fillStyle = rg; fg.beginPath();
-    for (i = 0; i < N; i++) { var a = i / N * 6.2832, d = rayDist(f, view.x, view.y, a, SIGHT_PX), qx = sxv + Math.cos(a) * d, qy = syv + Math.sin(a) * d; if (i === 0) fg.moveTo(qx, qy); else fg.lineTo(qx, qy); }
+    for (i = 0; i < N; i++) { var a = i / N * 6.2832, d = rayDist(f, view.x, view.y, a, REN.sight), qx = sxv + Math.cos(a) * d, qy = syv + Math.sin(a) * d; if (i === 0) fg.moveTo(qx, qy); else fg.lineTo(qx, qy); }
     fg.closePath(); fg.fill(); fg.globalCompositeOperation = 'source-over';
     g.drawImage(REN.fogC, 0, 0, VW, VH);
   }
+  nameQ.forEach(function (n) { drawName(g, n[0] - cx0, n[1] - cy0, n[2], n[3]); });
+  if (alarm) { g.fillStyle = 'rgba(210,30,44,' + (0.05 + 0.07 * (0.5 + 0.5 * Math.sin(time * 7))) + ')'; g.fillRect(0, 0, VW + 1, VH + 1); }
   if (opt.markers && opt.markers.length) drawMarkers(g, opt.markers, cx0, cy0, time);
   if (mouse && mouse.aiming) {
     var mx = mouse.x, my = mouse.y;
@@ -2065,7 +2307,7 @@ function drawMapFloor(g, w, view, fl, s, o) {
     if (!e.alive || e.floor !== fl || e === view) return;
     var ally = e.role === view.role && e.role !== 'civil' && e.role !== 'police';
     if (!ally && !o.all) return;
-    g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#4fd8c8' : (e.role === 'police' ? '#8aa8ff' : 'rgba(255,255,255,.35)'));
+    g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#5aa8ff' : (e.role === 'police' ? '#c9b8ff' : 'rgba(255,255,255,.35)'));
     var r = Math.max(1.5, s * 0.3); g.fillRect(e.x / TS * s - r, e.y / TS * s - r, r * 2, r * 2);
   });
   (o.marks || []).forEach(function (m) {
@@ -2180,7 +2422,7 @@ var UI = {
   hudT: 0, exT: 0, last: 0, endShown: false, ac: null, demoT: 0, taskEls: null, tgCache: {}, tabOpen: false, tabFloor: 0, tabT: 0, tabSide: '', prevLayout: 'normal', logDirty: false
 };
 var MODAL = { kind: null, tab: null, capture: null };
-var cv, g, mini, mg, bigc, bg;
+var cv, g, mini, mg, mini2, mg2, bigc, bg;
 
 function fmt(t) { t = Math.max(0, Math.ceil(t)); var m = Math.floor(t / 60), s = t % 60; return m + ':' + (s < 10 ? '0' : '') + s; }
 function showErr(err) { var el = $('err'); el.hidden = false; el.textContent = String(err && err.stack || err).slice(0, 600); }
@@ -2254,7 +2496,7 @@ function startGame() {
   setMode('play');
   var hm = w.human;
   $('pnHunter').hidden = !(hm && hm.role === 'hunter'); $('pnRunner').hidden = !(hm && hm.role === 'runner');
-  $('susWrap').hidden = !(hm && hm.role === 'hunter');
+  $('susWrap').hidden = true;
   $('sbRole').textContent = hm ? (hm.role === 'hunter' ? 'Cazador' : 'Corredor') : 'Observador';
   $('sbSub').textContent = hm ? hm.name : 'solo bots';
   $('sbTimerLbl').textContent = hm && hm.role === 'hunter' ? 'Tiempo de ronda' : 'Llega el cliente en';
@@ -2362,7 +2604,8 @@ function buildTargets(w) {
 var FL_SHORT = ['Sót.', 'PB', 'P2', 'P10', 'P20', 'P30', 'Azotea'];
 function buildTasks(w) {
   var ul = $('taskList'); ul.innerHTML = ''; UI.taskEls = [];
-  var tasks = w.tasks.slice().sort(function (a, b) { return a.floor - b.floor; });
+  var hm = w.human; if (!(hm && hm.role === 'runner')) return;
+  var tasks = hm.tasks.filter(function (t) { return t.kind !== 'drop' || true; }).slice().sort(function (a, b) { return a.floor - b.floor; });
   tasks.forEach(function (t) {
     var li = el('li', '', '<em>' + FL_SHORT[t.floor] + '</em><span>' + t.name + '<small></small></span>');
     ul.appendChild(li); UI.taskEls.push({ li: li, t: t, sm: li.querySelector('small') });
@@ -2373,50 +2616,54 @@ function buildFloors() {
   for (var i = FLOORS.length - 1; i >= 0; i--) { var li = el('li', '', '<span>' + FLOORS[i].label + '</span><span>' + FLOORS[i].sub + '</span>'); li.dataset.f = i; ul.appendChild(li); }
 }
 function taskState(w, hm, t) {
-  if (t.cool > w.time) return { cls: 'cool', msg: 'Hecho · otra vez en ' + fmt(t.cool - w.time) };
+  if (t.done) return { cls: 'cool', msg: 'Hecho' };
   if (t.kind === 'drop' && hm.inv.carry !== t.id) return { cls: 'lock', msg: 'Necesitas recoger el encargo antes' };
   if (t.kind === 'pick' && hm.inv.carry) return { cls: 'lock', msg: 'Ya llevas un encargo' };
+  if (t.roomName) { var rm = roomBy(t.floor, t.roomName); if (rm && !canPass(w, hm, rm)) return { cls: 'rlock', msg: 'Puerta cerrada: fuerza la cerradura o busca la llave maestra' }; }
   if (t.kind === 'drop') return { cls: '', msg: 'Llevas el encargo: entrégalo' };
+  if (t.own) return { cls: '', msg: 'En tu habitación' };
   return { cls: '', msg: '' };
 }
 function taskMarks(w, hm, fl) {
-  if (!(hm && hm.role === 'runner')) return [];
-  var out = []; w.tasks.forEach(function (t) { if (t.floor === fl) out.push({ x: t.x, y: t.y, dim: taskState(w, hm, t).cls !== '' }); });
+  if (!(hm && hm.role === 'runner' && hm.tasks)) return [];
+  var out = []; hm.tasks.forEach(function (t) { if (t.floor === fl && !t.done) out.push({ x: t.x, y: t.y, dim: taskState(w, hm, t).cls !== '' }); });
   return out;
 }
 function worldMarkers(w, hm, view) {
-  if (!SET.arrows || !(hm && hm.alive && hm.role === 'runner')) return null;
+  if (!SET.arrows || !(hm && hm.alive && hm.role === 'runner' && hm.tasks)) return null;
   var out = [];
-  w.tasks.forEach(function (t) {
-    if (t.floor !== view.floor || taskState(w, hm, t).cls) return;
+  hm.tasks.forEach(function (t) {
+    if (t.floor !== view.floor) return;
+    var c = taskState(w, hm, t).cls; if (c === 'cool' || c === 'lock') return;
     var x = (t.x + 0.5) * TS, y = (t.y + 0.5) * TS, d = dist(x, y, view.x, view.y);
     if (d <= 17 * TS && d > 26) out.push({ x: x, y: y, d: d });
   });
   out.sort(function (a, b) { return a.d - b.d; });
   return out.slice(0, 3);
 }
-function logVisible(l, role) {
-  if (role === 'runner') return l.kind !== 'call' && l.kind !== 'hunt';
-  if (role === 'hunter') return l.kind !== 'task' && l.kind !== 'poster';
+function logVisible(l, role, hm) {
+  if (role === 'runner') return l.kind !== 'call' && l.kind !== 'hunt' && (l.kind !== 'report' || (hm && l.who === hm.id));
+  if (role === 'hunter') return l.kind !== 'task' && l.kind !== 'poster' && l.kind !== 'report' && l.kind !== 'team';
   return true;
 }
 function pumpLogs(w) {
   var role = w.human ? w.human.role : null, tb = $('toasts');
   w.logs.forEach(function (l) {
     if (l.id <= UI.lastLog) return; UI.lastLog = l.id;
-    if (UI.mode !== 'play' || !logVisible(l, role)) return;
+    if (UI.mode !== 'play' || !logVisible(l, role, w.human)) return;
     UI.logList.push(l); if (UI.logList.length > 60) UI.logList.shift();
     var e = el('div', 'toast ' + l.kind); e.textContent = l.msg; tb.appendChild(e);
-    while (tb.children.length > 4) tb.removeChild(tb.firstChild);
+    while (tb.children.length > (window.innerWidth < 640 ? 2 : 4)) tb.removeChild(tb.firstChild);
     setTimeout(function () { e.classList.add('out'); setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 700); }, 6000);
     UI.logDirty = true;
-    if (l.kind === 'task') sfx('task'); else if (l.kind === 'alarm') sfx('alarm'); else if (l.kind === 'call') sfx('call');
+    if (l.kind === 'task') sfx('task'); else if (l.kind === 'alarm') sfx('alarm'); else if (l.kind === 'call' || l.kind === 'report') sfx('call');
   });
 }
 function holdLabel(h) {
   if (h.type === 'strip') return 'Cogiendo su ropa…';
   if (h.type === 'ward') return 'Registrando el armario…';
   if (h.type === 'wash') return 'Lavando el traje…';
+  if (h.type === 'force') return 'Forzando la cerradura…';
   return h.ref.name + '…';
 }
 function hunterFlags(w, hm) {
@@ -2435,8 +2682,25 @@ function updateHud(force) {
   $('hTime').innerHTML = (role === 'hunter' ? 'Tiempo ' : 'Cliente ') + '<b>' + fmt(rem) + '</b>';
   $('sbTimer').textContent = fmt(rem);
   $('dealTxt').textContent = w.tasksDone + ' / ' + w.quota;
-  $('dealBar').style.width = Math.min(100, w.tasksDone / w.quota * 100) + '%';
-  if (role === 'runner') $('hDeal').innerHTML = 'Trato <b>' + w.tasksDone + '/' + w.quota + '</b>';
+  $('dealBar').style.width = (w.quota ? Math.min(100, w.tasksDone / w.quota * 100) : 0) + '%';
+  var own = $('hOwn'), rep = $('hRep');
+  if (role === 'runner') {
+    var mu = taskUnits(hm); $('hDeal').innerHTML = 'Encargos <b>' + mu.done + '/' + mu.total + '</b> · equipo <b>' + w.tasksDone + '/' + w.quota + '</b>';
+    own.hidden = false; own.innerHTML = 'Tu habitación <b>' + hm.room.replace(/^\D+/, '') + '</b> · ' + FLOORS[hm.roomFloor].label.replace('Planta ', 'P');
+    if (hm.arrest > 0) { rep.hidden = false; rep.innerHTML = 'DETENIDO <b>' + Math.ceil(hm.arrest) + ' s</b>'; }
+    else if (hm.marked) { rep.hidden = false; rep.innerHTML = 'FICHADO · la policía te detiene si te ve'; }
+    else if (hm.reports > 0) { rep.hidden = false; rep.innerHTML = 'Denuncias <b>' + hm.reports + '/' + CFG.strikes + '</b>'; }
+    else rep.hidden = true;
+  } else { own.hidden = true; rep.hidden = true; }
+  var sbl = [], sb1 = w.sab.blackout - w.time, sb2 = w.sab.alarm - w.time, sb3 = w.sab.elev - w.time;
+  if (sb1 > 0) sbl.push('Apagón <b>' + fmt(sb1) + '</b>'); if (sb2 > 0) sbl.push('Alarma de incendios <b>' + fmt(sb2) + '</b>'); if (sb3 > 0) sbl.push('Ascensores averiados <b>' + fmt(sb3) + '</b>');
+  $('hSab').hidden = !sbl.length; if (sbl.length) $('hSab').innerHTML = sbl.join(' · ');
+  var sw = $('susWrap');
+  if (hm && hm.alive && hm.role === 'runner') {
+    sw.hidden = !(hm.sus > 2);
+    if (!sw.hidden) { $('susLbl').textContent = 'Te vigilan'; $('susFill').style.width = hm.sus + '%'; $('susNum').textContent = Math.round(hm.sus); var rf = hm.restricted ? '<span class="flag warn">Habitación ajena</span>' : ''; if ($('susFlags').innerHTML !== rf) $('susFlags').innerHTML = rf; }
+  } else if (hm && hm.role === 'hunter') { sw.hidden = false; $('susLbl').textContent = 'Sospecha'; } else sw.hidden = true;
+  if (false) $('hDeal').innerHTML = '';
   else if (role === 'hunter') { var tl = 0; w.targets.forEach(function (id) { w.ents.forEach(function (e) { if (e.id === id && e.alive) tl++; }); }); $('hDeal').innerHTML = 'Objetivos vivos <b>' + tl + '/' + w.targets.length + '</b>'; }
   $('mapFloor').textContent = f.label;
   Array.prototype.forEach.call($('floors').children, function (li) { li.className = (+li.dataset.f === view.floor) ? 'cur' : ''; });
@@ -2450,7 +2714,7 @@ function updateHud(force) {
     for (var id in UI.tgCache) { var tg = UI.tgCache[id]; if (!tg.ent.alive && !tg.dead) { tg.dead = true; tg.el.classList.add('dead'); drawPortrait(tg.el.firstChild, tg.ent.outfit, 'dead'); tg.el.children[1].textContent += ' ✕'; } }
   }
   if (hm && hm.role === 'runner') {
-    $('rInv').textContent = hm.inv.melee ? 'llave inglesa ✓' : 'piezas ' + Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded;
+    $('rInv').textContent = (hm.inv.masterkey ? 'llave maestra ✓ · ' : '') + (hm.inv.melee ? 'llave inglesa ✓' : 'piezas ' + Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded);
     UI.taskEls.forEach(function (te) {
       var st = taskState(w, hm, te.t), cls = st.cls;
       if (te.t.floor === view.floor && !cls) cls = 'here';
@@ -2504,13 +2768,14 @@ function renderTab() {
   $('tabTitle').textContent = FLOORS[fl].label + ' · ' + FLOORS[fl].sub;
   var h = '';
   if (hm && hm.role === 'runner') {
-    h += '<div class="blk"><h3>Trato ' + w.tasksDone + ' / ' + w.quota + '</h3><div class="bar"><i style="width:' + Math.min(100, w.tasksDone / w.quota * 100) + '%"></i></div></div>';
-    h += '<div class="blk"><h3>Encargos</h3><ul class="tl">';
-    w.tasks.slice().sort(function (a, b) { return (a.floor === fl ? -1 : 0) - (b.floor === fl ? -1 : 0) || a.floor - b.floor; }).forEach(function (t) {
+    var mu2 = taskUnits(hm), ownRm = roomBy(hm.roomFloor, hm.room);
+    h += '<div class="blk"><h3>Tus encargos ' + mu2.done + ' / ' + mu2.total + '</h3><div class="bar"><i style="width:' + (mu2.total ? mu2.done / mu2.total * 100 : 0) + '%"></i></div><div class="meta" style="margin-top:6px">Equipo ' + w.tasksDone + ' / ' + w.quota + ' · tu habitación: ' + roomLabel(ownRm) + ' (' + FLOORS[ownRm.fi].label + ')</div></div>';
+    h += '<div class="blk"><ul class="tl">';
+    hm.tasks.slice().sort(function (a, b) { return (a.floor === fl ? -1 : 0) - (b.floor === fl ? -1 : 0) || a.floor - b.floor; }).forEach(function (t) {
       var st = taskState(w, hm, t), cls = st.cls || (t.floor === fl ? 'here' : '');
       h += '<li class="' + cls + '"><em>' + FL_SHORT[t.floor] + '</em><span>' + t.name + (st.msg ? '<small>' + st.msg + '</small>' : '') + '</span></li>';
     });
-    h += '</ul></div><div class="blk"><h3>Inventario</h3><div class="kv"><span class="flag ' + (hm.inv.melee ? 'on' : '') + '">Llave inglesa ' + (hm.inv.melee ? '✓' : Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded) + '</span><span class="flag ' + (hm.inv.carry ? 'on' : '') + '">Encargo ' + (hm.inv.carry ? 'en mano' : '—') + '</span></div></div>';
+    h += '</ul></div><div class="blk"><h3>Estado</h3><div class="kv"><span class="flag ' + (hm.inv.masterkey ? 'on' : '') + '">Llave maestra ' + (hm.inv.masterkey ? '✓' : '—') + '</span><span class="flag ' + (hm.inv.melee ? 'on' : '') + '">Llave inglesa ' + (hm.inv.melee ? '✓' : Math.min(hm.inv.scrap, CFG.scrapNeeded) + '/' + CFG.scrapNeeded) + '</span><span class="flag ' + (hm.inv.carry ? 'on' : '') + '">Encargo ' + (hm.inv.carry ? 'en mano' : '—') + '</span><span class="flag ' + (hm.reports ? 'warn' : '') + '">Denuncias ' + hm.reports + '/' + CFG.strikes + '</span></div></div>';
   } else if (hm && hm.role === 'hunter') {
     h += '<div class="blk"><h3>Sospecha ' + (isHot(w, hm) ? '· buscado' : Math.round(hm.alive ? hm.sus : 0)) + '</h3><div class="bar"><i style="width:' + (hm.alive ? hm.sus : 0) + '%;background:var(--warn)"></i></div><div class="kv">' + hunterFlags(w, hm) + '</div></div>';
     h += '<div class="blk"><h3>Llevas puesto</h3><div id="outfitDesc">' + describeOutfit(hm.outfit) + (hm.outfit.blood ? ' · manchado de sangre' : '') + '</div></div>';
@@ -2519,6 +2784,8 @@ function renderTab() {
     var nh = 0, nr = 0; w.ents.forEach(function (e) { if (e.alive && e.role === 'hunter') nh++; if (e.alive && e.role === 'runner') nr++; });
     h += '<div class="blk"><h3>Partida</h3><div class="kv"><span class="flag">Cazadores vivos ' + nh + '</span><span class="flag">Corredores vivos ' + nr + '</span><span class="flag">Trato ' + w.tasksDone + '/' + w.quota + '</span></div></div>';
   }
+  var evs = ''; for (var ei = UI.logList.length - 1, en = 0; ei >= 0 && en < 6; ei--, en++) { var le = UI.logList[ei]; evs += '<div class="ev ' + le.kind + '"><time>' + fmt(le.t) + '</time> ' + le.msg + '</div>'; }
+  h += '<div class="blk"><h3>Sucesos</h3>' + (evs || '<div class="ev">Nada todavía.</div>') + '</div><div class="blk"><h3>Controles</h3><dl class="ctrl">' + $('ctrlList').innerHTML + '</dl></div>';
   if (h !== UI.tabSide) { UI.tabSide = h; $('tabDyn').innerHTML = h; }
 }
 
@@ -2526,7 +2793,7 @@ function renderTab() {
 var pct = function (v) { return Math.round(v * 100) + '%'; };
 var SCHEMA = {
   image: [
-    { k: 'layout', t: 'seg', label: 'Tamaño del visor', note: 'Normal junto a los paneles · Ancho ocupa toda la página · Pantalla completa (tecla F)', opts: [['normal', 'Normal'], ['wide', 'Ancho'], ['full', 'Completa']] },
+    { k: 'layout', t: 'seg', label: 'Tamaño del visor', note: 'Completa (recomendada): todo dentro de la pantalla, con minimapa y Tab para el resto · Ancho y Con paneles añaden la barra lateral (tecla F alterna)', opts: [['full', 'Completa'], ['wide', 'Ancho'], ['normal', 'Con paneles']] },
     { k: 'zoom', t: 'range', min: 0.8, max: 1.9, step: 0.05, label: 'Zoom de cámara', note: 'Más zoom = personajes y detalles más grandes', fmt: pct },
     { k: 'bright', t: 'range', min: 0.7, max: 1.6, step: 0.05, label: 'Brillo', note: 'Aclara u oscurece las plantas', fmt: pct },
     { k: 'fog', t: 'range', min: 0.5, max: 0.97, step: 0.01, label: 'Oscuridad de la niebla', note: 'Lo que no ves ahora mismo', fmt: pct },
@@ -2575,9 +2842,9 @@ function settingRow(d) {
   row.appendChild(lab); row.appendChild(ctl); return row;
 }
 var HOW = {
-  goal: '<h4>Dos bandos</h4><ul><li><b>Cazadores</b> (máx. 2): policía secreta infiltrada en el hotel. Solo ganan eliminando a los <b>dos</b> retratados en su cartel.</li><li><b>Corredores</b> (máx. 4): mafia contratada. Ganan cerrando el trato (completando tareas), aguantando hasta que llegue el cliente (fin del tiempo) o abatiendo a los cazadores.</li></ul><h4>Los testigos</h4><ul><li>Huéspedes y trabajadores ven lo que ocurre. Si presencian un asesinato corren a un teléfono y llaman a la policía.</li><li>La policía tarda unos segundos en llegar y dispara solo al cazador descrito (o a cualquiera manchado de sangre) en cuanto lo ve.</li><li>Los corredores no saben nada de los cazadores hasta que la policía reparte un cartel con su aspecto.</li></ul>',
-  hunter: '<h4>Cartel y arma</h4><ul><li>Tu cartel muestra a los dos objetivos. Búscalos entre los huéspedes.</li><li><b>Clic derecho</b> saca la pistola con silenciador y aparece una mira. <b>Clic izquierdo</b> dispara. Con el arma fuera te mueves más despacio.</li></ul><h4>Sospecha</h4><ul><li>La barra sube si entras sin permiso en habitaciones o zonas de personal, si apuntas cerca de un PNJ (más rápido cuanto más cerca) o si llevas ropa manchada de sangre.</li><li>A partir de 35 los trabajadores te avisan; a partir de 80, si insistes, llaman a la policía. Matar con testigos la lleva al máximo.</li></ul><h4>Disfraz y accesos</h4><ul><li>Mantén la tecla de interactuar sobre un cadáver para coger su ropa (queda manchada: lávala en una pila o lavadora) o abre un armario para llevarte un traje limpio.</li><li>Cambiar de ropa anula el cartel que la policía repartió sobre ti.</li><li>Una llave maestra abre habitaciones, una insignia de botones abre zonas de personal, y el uniforme de trabajador sirve para ambas.</li></ul>',
-  runner: '<h4>Encargos</h4><ul><li>Hay 14 encargos repartidos por las 7 plantas. Mantén la tecla de interactuar sobre el punto marcado. Algunos son parejas: recoger en un sitio y entregar en otro.</li><li>Cada encargo suma al trato y se puede repetir pasado un tiempo. El ascensor (acércate y pulsa la tecla) te lleva a cualquier planta; las escaleras, a la contigua.</li><li>En el mapa (tecla Tab) y con flechas en pantalla ves dónde están los encargos cercanos.</li></ul><h4>Defensa</h4><ul><li>Recoge 4 objetos sueltos por el hotel y fabricarás una <b>llave inglesa</b>: clic izquierdo para golpear. Un golpe mata a un cazador.</li><li>No puedes cambiar de ropa. Cuando la policía reparta un cartel de busca y captura, verás el aspecto del cazador; si se cambia, el cartel se pone gris y desaparece.</li></ul>'
+  goal: '<h4>Dos bandos</h4><ul><li><b>Cazadores</b> (máx. 2): policía secreta infiltrada en el hotel. Solo ganan eliminando a los <b>dos</b> retratados en su cartel.</li><li><b>Corredores</b> (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente (fin del tiempo) o si abaten a los cazadores.</li></ul><h4>Los testigos</h4><ul><li>Huéspedes y trabajadores ven lo que ocurre. Si presencian un asesinato corren a un teléfono y llaman a la policía.</li><li>La policía tarda unos segundos en llegar y dispara solo al cazador descrito (o a cualquiera manchado de sangre) en cuanto lo ve.</li><li>Los corredores no saben nada de los cazadores hasta que la policía reparte un cartel con su aspecto.</li></ul><h4>El hotel</h4><ul><li>Las habitaciones están cerradas. Solo abren a su dueño, al personal con llave y a quien fuerce la cerradura o tenga la llave maestra.</li><li>Un apagón, la alarma de incendios o los ascensores averiados cambian la partida para todos.</li></ul>',
+  hunter: '<h4>Cartel y arma</h4><ul><li>Tu cartel muestra a los dos objetivos. Búscalos entre los huéspedes.</li><li><b>Clic derecho</b> saca la pistola con silenciador y aparece una mira. <b>Clic izquierdo</b> dispara. Con el arma fuera te mueves más despacio.</li></ul><h4>Sospecha</h4><ul><li>La barra sube si entras sin permiso en habitaciones o zonas de personal, si apuntas cerca de un PNJ (más rápido cuanto más cerca) o si llevas ropa manchada de sangre.</li><li>A partir de 35 los trabajadores te avisan; a partir de 80, si insistes, llaman a la policía. Matar con testigos la lleva al máximo.</li><li>Las puertas de habitación también están cerradas para ti: forzarlas con testigos delante te delata.</li></ul><h4>Disfraz y accesos</h4><ul><li>Mantén la tecla de interactuar sobre un cadáver para coger su ropa (queda manchada: lávala en una pila o lavadora) o abre un armario para llevarte un traje limpio.</li><li>Cambiar de ropa anula el cartel que la policía repartió sobre ti.</li><li>La llave maestra abre habitaciones, la insignia de botones abre zonas de personal, y el uniforme de trabajador sirve para ambas.</li><li>Cuando alguien denuncia a un corredor, te enteras de en qué planta ha sido.</li></ul>',
+  runner: '<h4>Tus encargos</h4><ul><li>Tienes tu propia lista de 8 a 10 encargos (tecla Tab). El trato solo se cierra cuando todos los corredores terminan los suyos, así que hace falta tiempo y compañeros.</li><li>Mantén la tecla de interactuar sobre el punto marcado. Algunos son parejas: recoger en un sitio y entregar en otro.</li><li>Los compañeros se ven con el nombre en azul, también en el mapa. Los cazadores no se ven.</li></ul><h4>Habitaciones y denuncias</h4><ul><li>Solo tu habitación está abierta. Para los encargos en habitaciones ajenas, mantén la tecla frente a la puerta para forzar la cerradura (unos segundos) o busca la llave maestra, que es única.</li><li>Si un testigo te ve forzar la puerta, o te ve dentro de una habitación que no es tuya, te denuncia y la policía ronda la zona.</li><li>A la tercera denuncia quedas fichado: si la policía te ve, te detiene unos segundos (pierdes lo que lleves) y el cliente se retrasa 30 s por cada denuncia desde esa.</li></ul><h4>Sabotajes</h4><ul><li><b>Fusible:</b> apagón. Todos ven mucho menos y los testigos también.</li><li><b>Alarma de incendios:</b> los huéspedes evacúan al vestíbulo y los ascensores no funcionan.</li><li><b>Sala de máquinas:</b> ascensores fuera de servicio un buen rato.</li><li>Un testigo que te vea sabotear también te denuncia.</li></ul><h4>Defensa</h4><ul><li>Recoge 4 objetos sueltos por el hotel y fabricarás una <b>llave inglesa</b>: clic izquierdo para golpear. Un golpe mata a un cazador.</li><li>No puedes cambiar de ropa. Cuando la policía reparta un cartel de busca y captura, verás el aspecto del cazador; si se cambia, el cartel se pone gris y desaparece.</li></ul>'
 };
 function modalTabs(list) {
   var box = $('mTabs'); box.innerHTML = '';
@@ -2605,11 +2872,11 @@ function renderModal() {
     modalTabs([['goal', 'Objetivo'], ['hunter', 'Cazador'], ['runner', 'Corredor'], ['keys', 'Controles']]);
     if (MODAL.tab === 'keys') { body.innerHTML = '<div class="how"><h4>Teclado y ratón</h4><dl class="ctrl" style="font-size:.92rem;gap:6px 14px">' + $('ctrlList').innerHTML + '</dl><p>Puedes cambiar las teclas en Ajustes › Controles.</p></div>'; }
     else body.innerHTML = '<div class="how">' + HOW[MODAL.tab] + '</div>';
-    foot.appendChild(el('span', 'meta', 'Partida contra bots · v0.2')); foot.appendChild(close);
+    foot.appendChild(el('span', 'meta', 'Partida contra bots · v0.3')); foot.appendChild(close);
   } else if (MODAL.kind === 'credits') {
     $('mTitle').textContent = 'Créditos';
     $('mTabs').innerHTML = '';
-    body.innerHTML = '<div class="how"><h4>Caza en el New Yorker</h4><p>Prototipo jugable v0.2 de un juego asimétrico de cazadores y corredores ambientado en el hotel New Yorker de 1930.</p><h4>Equipo</h4><ul><li><b>Idea y diseño del juego:</b> Luca</li><li><b>Código, texturas procedurales y bots:</b> Claude</li></ul><h4>Qué hay hoy</h4><ul><li>Siete plantas con zonas públicas, de habitaciones y de personal.</li><li>Cazadores, corredores, PNJ con testigos, policía y carteles de busca y captura.</li><li>Bots para ambos bandos, así que se puede probar sin más jugadores.</li></ul><h4>Próximamente</h4><ul><li>Economía de los corredores, munición y ventajas del cazador.</li><li>Ascensor con enfriamiento y avería.</li><li>Disparos visibles y sonido de armas y pasos.</li><li>Multijugador con servidor y, más adelante, versión 3D.</li></ul></div>';
+    body.innerHTML = '<div class="how"><h4>Caza en el New Yorker</h4><p>Prototipo jugable v0.3 de un juego asimétrico de cazadores y corredores ambientado en el hotel New Yorker de 1930.</p><h4>Equipo</h4><ul><li><b>Idea y diseño del juego:</b> Luca</li><li><b>Código, texturas procedurales y bots:</b> Claude</li></ul><h4>Qué hay hoy</h4><ul><li>Siete plantas con zonas públicas, de habitaciones y de personal.</li><li>Cazadores, corredores, PNJ con testigos, policía y carteles de busca y captura.</li><li>Bots para ambos bandos, así que se puede probar sin más jugadores.</li></ul><h4>Próximamente</h4><ul><li>Dinero y objetos para los corredores, munición y ventajas del cazador.</li><li>Ascensor con enfriamiento y avería.</li><li>Disparos visibles y sonido de armas y pasos.</li><li>Multijugador con servidor y, más adelante, versión 3D.</li></ul></div>';
     foot.appendChild(el('span', 'meta', 'Hecho para probar ideas')); foot.appendChild(close);
   }
 }
@@ -2697,6 +2964,7 @@ function bindInput() {
   $('btnElevClose').onclick = closeElev;
   $('btnPrev').onclick = function () { cycleFollow(-1); }; $('btnNext').onclick = function () { cycleFollow(1); };
   Array.prototype.forEach.call(document.querySelectorAll('#specbar [data-speed]'), function (b) { b.onclick = function () { UI.speed = +b.dataset.speed; }; });
+  $('btnPauseHud').onclick = function () { togglePause(); };
   $('btnTab').onclick = function () { toggleTab(); }; $('btnSet').onclick = function () { openModal('settings'); }; $('btnFull').onclick = toggleFull;
   $('btnHome').onclick = function () { if (UI.mode === 'play' && !UI.w.over && !UI.endShown) togglePause(); else toTitle(); };
   $('mClose').onclick = closeModal;
@@ -2760,16 +3028,17 @@ function frame(now) {
       tick(dt);
       var w = UI.w, view = viewEnt(), play = UI.mode === 'play', hm = w.human, dbg = !play || !!w.opt.debug;
       UI.exT -= dt; if (UI.exT <= 0) { UI.exT = 0.12; updateExplored(view); }
+      if (play) { var hr = $('hudTop').getBoundingClientRect(), cr = cv.getBoundingClientRect(); REN.avoid = { x0: hr.left - cr.left, y0: hr.top - cr.top, x1: hr.right - cr.left, y1: hr.bottom - cr.top }; } else REN.avoid = null;
       drawWorld(g, w, view, UI.anim, play ? mouseState(view, w) : null, { debug: dbg, markers: play ? worldMarkers(w, hm, view) : null });
       UI.hudT -= dt;
-      if (play && UI.hudT <= 0) { UI.hudT = 0.12; updateHud(false); drawMini(mg, w, view, !!w.opt.debug, taskMarks(w, hm, view.floor)); }
+      if (play && UI.hudT <= 0) { UI.hudT = 0.12; updateHud(false); drawMini(SET.layout === 'full' ? mg2 : mg, w, view, !!w.opt.debug, taskMarks(w, hm, view.floor)); }
       if (UI.tabOpen) { UI.tabT -= dt; if (UI.tabT <= 0) { UI.tabT = 0.25; renderTab(); } }
     }
   } catch (err) { showErr(err); console.error(err); }
   requestAnimationFrame(frame);
 }
 function init() {
-  cv = $('cv'); g = cv.getContext('2d'); mini = $('mini'); mg = mini.getContext('2d'); bigc = $('bigmap'); bg = bigc.getContext('2d');
+  cv = $('cv'); g = cv.getContext('2d'); mini = $('mini'); mg = mini.getContext('2d'); mini2 = $('mini2'); mg2 = mini2.getContext('2d'); bigc = $('bigmap'); bg = bigc.getContext('2d');
   loadSettings();
   try { var sv = JSON.parse(localStorage.getItem('caza-cfg') || 'null'); if (sv) for (var k in UI.cfg) if (sv[k] !== undefined && typeof sv[k] === typeof UI.cfg[k]) UI.cfg[k] = sv[k]; } catch (e) { /* sin almacenamiento */ }
   $('optDebug').checked = UI.cfg.debug;

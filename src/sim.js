@@ -12,23 +12,23 @@ var NPC_SPECS = [
 function newEnt(w, o) {
   var e = { id: w.nextId++, name: '', type: 'npc', role: 'civil', floor: 1, x: 0, y: 0, dir: 'down', walk: 0, moving: false, alive: true, outfit: null, aim: false, aimX: 0, aimY: 0, aimAng: 0, cd: 0,
     sus: 0, inv: { masterkey: false, badge: false, scrap: 0, melee: false, carry: null }, hold: null, bubble: null, bt: 0, path: null, pathKey: null, pi: 0, goal: null,
-    ai: { mode: 'idle', t: rnd() * 3, scan: rnd() * 0.3 }, state: 'idle', stairCd: 0, knows: {}, spot: {}, restricted: false, wasRestricted: false, elevT: 0 };
+    ai: { mode: 'idle', t: rnd() * 3, scan: rnd() * 0.3 }, state: 'idle', stairCd: 0, knows: {}, spot: {}, restricted: false, wasRestricted: false, elevT: 0,
+    tasks: null, room: null, roomFloor: -1, reports: 0, marked: false, arrest: 0, repLock: 0 };
   for (var k in o) e[k] = o[k];
   return e;
 }
 function say(e, t, d) { e.bubble = t; e.bt = d || 2.4; }
-function wlog(w, msg, kind) { w.logs.push({ id: ++w.logId, t: w.time, msg: msg, kind: kind || 'info' }); }
+function wlog(w, msg, kind, who) { w.logs.push({ id: ++w.logId, t: w.time, msg: msg, kind: kind || 'info', who: who || 0 }); }
 function tileOf(e) { return { x: Math.floor(e.x / TS), y: Math.floor(e.y / TS) }; }
 
 function newWorld(opt) {
   seed(opt.seed || (Date.now() & 0xffffff));
   OID = 0; USED_OUTFITS = {};
-  var w = { time: 0, limit: opt.minutes * 60, ents: [], corpses: [], pick: [], dispatch: [], wanted: {}, posters: [], posterActive: {}, logs: [], logId: 0, over: null, tasksDone: 0,
-    nextId: 1, human: null, opt: opt, tasks: TASK_DEFS.map(function (t) { var c = {}; for (var k in t) c[k] = t[k]; c.cool = 0; c.busy = 0; return c; }),
-    fx: [], acc: 0, acc2: 0, hint: null, targets: [], stats: { kills: 0, civKills: 0, calls: 0, tasks: 0 } };
+  var w = { time: 0, limit: opt.minutes * 60, ents: [], corpses: [], pick: [], dispatch: [], wanted: {}, posters: [], posterActive: {}, logs: [], logId: 0, over: null, tasksDone: 0, quota: 0,
+    nextId: 1, human: null, opt: opt, sab: { blackout: 0, alarm: 0, elev: 0 }, unlocked: {},
+    fx: [], acc: 0, acc2: 0, hint: null, targets: [], stats: { kills: 0, civKills: 0, calls: 0, tasks: 0, reports: 0, arrests: 0, forced: 0 } };
   w.wards = []; FLOORS.forEach(function (f) { f.wards.forEach(function (x) { x.looted = false; }); });
   var nH = clamp(opt.hunters, 1, 2), nR = clamp(opt.runners, 2, 4);
-  w.quota = Math.round((CFG.quotaBase + CFG.quotaPerRunner * nR) * (opt.minutes / 12));
   var i, e;
   var hSpawn = [{ x: 21, y: 24 }, { x: 23, y: 24 }];
   for (i = 0; i < nH; i++) {
@@ -47,6 +47,10 @@ function newWorld(opt) {
     if (isR) w.human = e;
     w.ents.push(e); runners.push(e);
   }
+  var pool = shuffle(ROOM_POOL.slice());
+  runners.forEach(function (r) { var rm = pool.pop(); r.room = rm.name; r.roomFloor = rm.fi; });
+  var taken = {};
+  runners.forEach(function (r) { r.tasks = assignTasks(r, taken); });
   shuffle(runners);
   w.targets = runners.slice(0, 2).map(function (r) { return r.id; });
   w.ents.forEach(function (x) { if (x.role === 'hunter') x.targetIds = w.targets.slice(); });
@@ -55,12 +59,12 @@ function newWorld(opt) {
     var f = FLOORS[sp.f], tiles;
     if (sp.home === 'pub') tiles = f.tilesPub;
     else if (sp.home === 'rooms') { tiles = []; f.rooms.forEach(function (r) { if (r.zone === ZONE_ROOM) tiles = tiles.concat(f.roomTiles[r.name]); }); tiles = tiles.concat(f.tilesPub); }
-    else if (sp.home === 'roomOne') { var rr = f.rooms.filter(function (r) { return r.zone === ZONE_ROOM && r.name !== 'Despacho del gerente'; }); tiles = f.roomTiles[pick(rr).name]; }
+    else if (sp.home === 'roomOne') { var rr = f.rooms.filter(function (r) { return r.zone === ZONE_ROOM && r.name !== 'Despacho del gerente'; }), pr = pick(rr); tiles = f.roomTiles[pr.name]; tiles = tiles.slice(); tiles.roomName = pr.name; }
     else if (sp.home === 'fixed') tiles = [sp.at];
     else tiles = f.roomTiles[sp.home.room];
     var t0 = sp.home === 'fixed' ? sp.at : pick(tiles);
     var o = sp.staff ? newStaff(sp.staff) : newGuest(rnd() < 0.4);
-    var n = newEnt(w, { name: sp.staff ? STAFF[sp.staff].label : (o.kind === 'dress' ? 'Huésped' : 'Huésped'), type: 'npc', role: 'civil', floor: sp.f, x: (t0.x + .5) * TS, y: (t0.y + .5) * TS, outfit: o });
+    var n = newEnt(w, { room: sp.home === 'roomOne' ? tiles.roomName : null, roomFloor: sp.f, name: sp.staff ? STAFF[sp.staff].label : (o.kind === 'dress' ? 'Huésped' : 'Huésped'), type: 'npc', role: 'civil', floor: sp.f, x: (t0.x + .5) * TS, y: (t0.y + .5) * TS, outfit: o });
     n.staff = !!sp.staff; n.tiles = tiles; n.fixed = sp.home === 'fixed'; n.ai = { mode: 'idle', wait: rnd() * 4 };
     w.ents.push(n);
   });
@@ -70,7 +74,12 @@ function newWorld(opt) {
   w.pick.push({ id: ++pid, kind: 'masterkey', floor: mk1.f, x: mk1.x, y: mk1.y, name: 'llave maestra' });
   w.pick.push({ id: ++pid, kind: 'badge', floor: bd.f, x: bd.x, y: bd.y, name: 'insignia de botones' });
   shuffle(SCRAP_SPOTS.slice()).slice(0, 8).forEach(function (s) { w.pick.push({ id: ++pid, kind: 'scrap', floor: s.f, x: s.x, y: s.y, name: pick(SCRAP_NAMES) }); });
-  wlog(w, opt.role === 'hunter' ? 'Tu cartel tiene dos rostros. Encuéntralos y elimínalos sin que nadie lo vea.' : 'Completa el trato antes de que llegue el cliente. Hay cazadores entre los huéspedes.', 'info');
+  refreshTasks(w);
+  if (opt.role === 'runner') {
+    var me = w.human;
+    wlog(w, 'Tu cartel de corredor: ' + me.tasks.filter(function (t) { return t.kind !== 'pick'; }).length + ' encargos propios. Tu habitación es la ' + me.room.replace(/^\D+/, '') + '. Las demás puertas están cerradas: fuerza la cerradura (mantén la tecla de interactuar) o busca la llave maestra, pero si alguien te ve te denunciará.', 'info');
+    wlog(w, 'Tus compañeros corredores se ven con el nombre en azul.', 'info');
+  } else wlog(w, opt.role === 'hunter' ? 'Tu cartel tiene dos rostros. Encuéntralos y elimínalos sin que nadie lo vea.' : 'Observas una partida entre bots.', 'info');
   return w;
 }
 
@@ -81,6 +90,87 @@ function access(e) {
   if (e.outfit.staffRole) return { room: true, staff: true };
   return { room: !!e.inv.masterkey, staff: !!e.inv.badge };
 }
+/* ---------- encargos personales, puertas y sabotajes ---------- */
+function assignTasks(r, taken) {
+  var n = ri(CFG.tasksMin, CFG.tasksMax), out = [], i;
+  function add(o) { var c = {}; for (var k in o) c[k] = o[k]; c.done = false; c.busy = 0; out.push(c); }
+  /* 1 encargo en tu propia habitación + 2 en habitaciones ajenas (cerradas) */
+  var own = roomBy(r.roomFloor, r.room), tpl = shuffle(ROOM_TASKS.slice());
+  var o0 = tpl.pop(), sp0 = roomSpot(own);
+  add({ id: 'own_' + o0.id, name: o0.name.replace('la {r}', 'tu ' + roomLabel(own)), floor: own.fi, x: sp0.x, y: sp0.y, dur: o0.dur, roomName: own.name, own: true });
+  var others = shuffle(ROOM_POOL.filter(function (q) { return q !== own && !taken[q.fi + ':' + q.name]; }));
+  for (i = 0; i < 2 && others.length; i++) {
+    var q = others.pop(), t1 = tpl.pop(), sp = roomSpot(q); taken[q.fi + ':' + q.name] = true;
+    add({ id: 'room' + i + '_' + t1.id, name: t1.name.replace('{r}', roomLabel(q)), floor: q.fi, x: sp.x, y: sp.y, dur: t1.dur, roomName: q.name });
+  }
+  /* el resto, del catálogo con sitio fijo (las parejas recoger/entregar cuentan como un encargo) */
+  var units = [];
+  TASK_DEFS.forEach(function (t) { if (t.kind === 'pick') units.push([t, TASK_DEFS.filter(function (x) { return x.id === t.pair; })[0]]); else if (t.kind !== 'drop') units.push([t]); });
+  shuffle(units);
+  var need = n - out.length, nSab = 0;
+  for (i = 0; i < units.length && need > 0; i++) {
+    var u = units[i];
+    if (u[0].sab && nSab >= 2) continue;
+    if (u[0].sab) nSab++;
+    u.forEach(function (t) { add(t); });
+    need--;
+  }
+  return out;
+}
+function refreshTasks(w) {
+  var d = 0, t = 0;
+  w.ents.forEach(function (e) { if (e.role === 'runner' && e.alive && e.tasks) e.tasks.forEach(function (k) { if (k.kind === 'pick') return; t++; if (k.done) d++; }); });
+  w.tasksDone = d; w.quota = t;
+}
+function taskUnits(e) { var d = 0, t = 0; (e.tasks || []).forEach(function (k) { if (k.kind === 'pick') return; t++; if (k.done) d++; }); return { done: d, total: t }; }
+function roomKey(r) { return r.fi + ':' + r.name; }
+function hasKey(e, r) {
+  if (r.zone !== ZONE_ROOM) return true;
+  if (e.role === 'police' || (e.outfit && e.outfit.staffRole) || e.inv.masterkey) return true;
+  return !!(e.room && e.room === r.name && e.roomFloor === r.fi);
+}
+function doorOpen(w, r) { return (w.unlocked[roomKey(r)] || 0) > w.time; }
+function canPass(w, e, r) { return hasKey(e, r) || doorOpen(w, r); }
+function insideRoom(e, r) { var tx = Math.floor(e.x / TS), ty = Math.floor(e.y / TS); return e.floor === r.fi && tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h; }
+var LOCKM = new Uint8Array(W * H);
+function lockMask(w, e) {
+  var f = FLOORS[e.floor], m = null;
+  for (var k in f.lockAt) { var r = f.lockAt[k]; if (canPass(w, e, r) || insideRoom(e, r)) continue; if (!m) { m = LOCKM; m.fill(0); } m[k] = 1; }
+  return m;
+}
+function freeFor(w, e, f, x, y) {
+  if (!freeAt(f, x, y)) return false;
+  for (var c = 0; c < 4; c++) {
+    var px = x + ((c & 1) ? 9 : -9), py = y + ((c & 2) ? 9 : -9), rm = f.lockAt[Math.floor(py / TS) * W + Math.floor(px / TS)];
+    if (rm && !canPass(w, e, rm) && !insideRoom(e, rm)) return false;
+  }
+  return true;
+}
+function sightScale(w) { return w.sab.blackout > w.time ? CFG.blackoutSight : 1; }
+function elevOut(w) { return w.sab.elev > w.time || w.sab.alarm > w.time; }
+var ASSEMBLY = FLOORS[1].tilesPub.filter(function (t) { return t.y >= 19 && t.y <= 25 && t.x >= 15 && t.x <= 29; });
+function reportBy(w, culprit, msg) {
+  var wit = civilsSeeing(w, culprit, null, CFG.witnessRadius * TS * sightScale(w));
+  if (!wit.length) return false;
+  var c = wit.filter(function (x) { return x.staff; })[0] || wit[0];
+  alertNpc(w, c, null, 'report', culprit.floor, Math.floor(culprit.x / TS), Math.floor(culprit.y / TS), { rep: culprit.id, msg: msg });
+  return true;
+}
+function applySab(w, e, t) {
+  var now = w.time;
+  reportBy(w, e, '¡Ha sido ese! ¡Ha tocado algo que no debía! Aviso a seguridad.');
+  if (t.sab === 'blackout') { w.sab.blackout = now + CFG.sab.blackout; wlog(w, 'Se ha ido la luz en todo el hotel.', 'alarm'); }
+  else if (t.sab === 'alarm') { w.sab.alarm = now + CFG.sab.alarm; wlog(w, '¡Suena la alarma de incendios! Los huéspedes evacúan.', 'alarm'); }
+  else if (t.sab === 'elev') { w.sab.elev = now + CFG.sab.elev; wlog(w, 'Los ascensores han quedado fuera de servicio.', 'alarm'); }
+}
+function arrest(w, r, p) {
+  r.arrest = CFG.arrestDur; r.marked = false; cancelHold(w, r); r.goal = null; r.path = null; r.pathKey = null; r.moving = false; w.stats.arrests++;
+  if (r.inv.carry) { var pk = (r.tasks || []).filter(function (t) { return t.pair === r.inv.carry; })[0]; if (pk) pk.done = false; r.inv.carry = null; }
+  if (r.ai) { r.ai.mode = 'blend'; r.ai.t = 6; }
+  wlog(w, r === w.human ? 'La policía te detiene: pierdes el encargo que llevabas y quedas retenido ' + CFG.arrestDur + ' s.' : r.name + ' ha sido detenido por la policía.', r === w.human ? 'report' : 'team', r.id);
+  if (p) p.stayUntil = Math.max(p.stayUntil || 0, w.time + 12);
+}
+
 function callersFor(w, oid) {
   for (var i = 0; i < w.ents.length; i++) { var c = w.ents[i]; if (c.alive && c.role === 'civil' && (c.state === 'call' || c.state === 'calling') && c.callCtx && c.callCtx.outfit === oid) return true; }
   return false;
@@ -96,24 +186,40 @@ function civilsSeeing(w, a, b, rad) {
   }
   return out;
 }
-function alertNpc(w, npc, culpritId, why, fl, tx, ty) {
+function alertNpc(w, npc, culpritId, why, fl, tx, ty, extra) {
   if (!npc.alive || npc.state === 'call' || npc.state === 'calling' || npc.state === 'stun') return;
-  npc.state = 'call'; npc.callCtx = { outfit: culpritId, floor: fl, x: tx, y: ty, why: why }; npc.goal = null; npc.pathKey = null; npc.ai.mode = 'call';
-  say(npc, why === 'crime' ? '¡Un crimen! ¡Voy a llamar a la policía!' : (why === 'body' ? '¡Un cadáver! ¡Policía!' : '¡Esto no me gusta! Llamo a la policía.'), 3);
+  npc.state = 'call'; npc.callCtx = { outfit: culpritId, floor: fl, x: tx, y: ty, why: why }; if (extra) for (var k in extra) npc.callCtx[k] = extra[k]; npc.goal = null; npc.pathKey = null; npc.ai.mode = 'call';
+  say(npc, why === 'report' ? ((extra && extra.msg) || '¡Alguien está forzando una puerta! Aviso a seguridad.') : (why === 'crime' ? '¡Un crimen! ¡Voy a llamar a la policía!' : (why === 'body' ? '¡Un cadáver! ¡Policía!' : '¡Esto no me gusta! Llamo a la policía.')), 3);
+}
+function sendPolice(w, ctx, stay) {
+  var active = w.ents.filter(function (p) { return p.role === 'police' && p.alive; });
+  if (active.length) active.forEach(function (p) { p.target = { floor: ctx.floor, x: ctx.x, y: ctx.y }; p.ai.mode = 'go'; p.goal = null; p.stayUntil = Math.max(p.stayUntil || 0, w.time + stay); });
+  else if (!w.dispatch.some(function (d) { return !d.done; })) w.dispatch.push({ t: w.time + CFG.policeDelay, floor: ctx.floor, x: ctx.x, y: ctx.y, done: false, stay: stay });
 }
 function policeCall(w, ctx) {
+  if (ctx.rep) { reportRunner(w, ctx); return; }
   w.stats.calls++;
   if (ctx.outfit) w.wanted[ctx.outfit] = true;
   wlog(w, 'Un testigo ha llamado a la policía.', 'call');
-  var active = w.ents.filter(function (p) { return p.role === 'police' && p.alive; });
-  if (active.length) active.forEach(function (p) { p.target = { floor: ctx.floor, x: ctx.x, y: ctx.y }; p.ai.mode = 'go'; p.goal = null; p.stayUntil = w.time + CFG.policeStay; });
-  else if (!w.dispatch.some(function (d) { return !d.done; })) w.dispatch.push({ t: w.time + CFG.policeDelay, floor: ctx.floor, x: ctx.x, y: ctx.y, done: false });
+  sendPolice(w, ctx, CFG.policeStay);
+}
+function reportRunner(w, ctx) {
+  var r = null; w.ents.forEach(function (e) { if (e.id === ctx.rep) r = e; });
+  w.stats.reports++;
+  sendPolice(w, ctx, 45);
+  if (!r || !r.alive) return;
+  r.reports++;
+  var left = CFG.strikes - r.reports;
+  if (r === w.human) wlog(w, 'Te han denunciado (' + r.reports + '). ' + (left > 0 ? 'La policía va a rondar por la zona. Con ' + CFG.strikes + ' denuncias quedarás fichado.' : 'Estás fichado: si la policía te ve, te detiene, y el cliente se retrasa.'), 'report', r.id);
+  else wlog(w, 'Denuncian a ' + r.name + ' (' + r.reports + ').', 'team', r.id);
+  wlog(w, 'Una denuncia: alguien sospechoso en ' + FLOORS[ctx.floor].label + '.', 'hunt');
+  if (r.reports >= CFG.strikes) { r.marked = true; w.limit += CFG.clientDelay; if (r !== w.human) wlog(w, r.name + ' queda fichado.', 'team', r.id); }
 }
 function spawnPolice(w, d) {
   var sp = [{ x: 21, y: 24 }, { x: 23, y: 24 }, { x: 22, y: 23 }];
   for (var i = 0; i < CFG.policeCount; i++) {
     var p = newEnt(w, { name: 'Policía', type: 'police', role: 'police', floor: 1, x: (sp[i].x + .5) * TS, y: (sp[i].y + .5) * TS, outfit: newPolice(), dir: 'up' });
-    p.target = { floor: d.floor, x: d.x, y: d.y }; p.ai = { mode: 'go', t: 0 }; p.stayUntil = w.time + CFG.policeStay;
+    p.target = { floor: d.floor, x: d.x, y: d.y }; p.ai = { mode: 'go', t: 0 }; p.stayUntil = w.time + (d.stay || CFG.policeStay);
     w.ents.push(p);
   }
   wlog(w, 'La policía ha llegado al hotel.', 'alarm');
@@ -143,13 +249,13 @@ function kill(w, killer, victim, how) {
   w.corpses.push({ id: w.nextId++, x: victim.x, y: victim.y, floor: victim.floor, outfit: victim.outfit, stripped: false, found: false, name: victim.name, role: victim.role, t: w.time, victimId: victim.id, ang: (victim.id * 1.7) % 6.28 });
   if (victim.role === 'civil') w.stats.civKills++; else w.stats.kills++;
   if (how === 'gun') {
-    var wit = civilsSeeing(w, killer, victim, CFG.witnessRadius * TS).filter(function (c) { return c !== victim; });
+    var wit = civilsSeeing(w, killer, victim, CFG.witnessRadius * TS * sightScale(w)).filter(function (c) { return c !== victim; });
     if (wit.length) {
       killer.sus = 100;
       wit.forEach(function (c) { alertNpc(w, c, killer.outfit.id, 'crime', killer.floor, Math.floor(killer.x / TS), Math.floor(killer.y / TS)); });
     }
     w.ents.forEach(function (r) {
-      if (r.role === 'runner' && r.alive && r.type === 'bot' && r.floor === killer.floor && dist(r.x, r.y, killer.x, killer.y) < CFG.witnessRadius * TS && los(FLOORS[r.floor], r.x, r.y, killer.x, killer.y)) r.knows[killer.outfit.id] = true;
+      if (r.role === 'runner' && r.alive && r.type === 'bot' && r.floor === killer.floor && dist(r.x, r.y, killer.x, killer.y) < CFG.witnessRadius * TS * sightScale(w) && los(FLOORS[r.floor], r.x, r.y, killer.x, killer.y)) r.knows[killer.outfit.id] = true;
     });
   }
   if (how === 'police') { w.fx.push({ type: 'flash', floor: killer.floor, x: killer.x, y: killer.y, t: 0.25 }); wlog(w, victim.role === 'hunter' ? 'La policía abate a un sospechoso.' : 'La policía abate a ' + victim.name + '.', 'alarm'); }
@@ -187,8 +293,7 @@ function tryMelee(w, e) {
   }
 }
 function taskAvail(w, t, e) {
-  if (t.cool > w.time) return false;
-  if (t.busy && t.busy !== e.id) { var b = w.ents[t.busy - 1]; for (var i = 0; i < w.ents.length; i++) if (w.ents[i].id === t.busy) b = w.ents[i]; if (b && b.alive && b.hold && b.hold.ref === t) return false; t.busy = 0; }
+  if (t.done) return false;
   if (t.kind === 'drop') return e.inv.carry === t.id;
   if (t.kind === 'pick') return !e.inv.carry;
   return true;
@@ -205,18 +310,29 @@ function cancelHold(w, e) {
 function holdValid(w, e, h) {
   if (h.type === 'strip') return !h.ref.stripped && h.ref.outfit.kind !== 'under';
   if (h.type === 'ward') return !h.ref.looted;
-  if (h.type === 'task') return taskAvail(w, h.ref, e) || h.ref.busy === e.id;
+  if (h.type === 'task') return taskAvail(w, h.ref, e);
+  if (h.type === 'force') return !canPass(w, e, h.ref) && !insideRoom(e, h.ref);
   return true;
 }
 function finishHold(w, e, h) {
   var human = e === w.human;
   if (h.type === 'task') {
     var t = h.ref;
-    t.cool = w.time + CFG.taskCooldown;
-    if (t.kind === 'pick') { e.inv.carry = t.pair; if (human) wlog(w, 'Llevas el encargo. Entrégalo: ' + w.tasks.filter(function (x) { return x.id === t.pair; })[0].name + '.', 'info'); }
-    else { if (t.kind === 'drop') e.inv.carry = null; w.tasksDone++; w.stats.tasks++; wlog(w, (human ? 'Hecho: ' : e.name + ' completa: ') + t.name + '. Trato: ' + w.tasksDone + '/' + w.quota, 'task'); }
+    t.done = true;
+    if (t.kind === 'pick') { e.inv.carry = t.pair; if (human) wlog(w, 'Llevas el encargo. Entrégalo: ' + e.tasks.filter(function (x) { return x.id === t.pair; })[0].name + '.', 'info'); }
+    else {
+      if (t.kind === 'drop') e.inv.carry = null;
+      w.stats.tasks++; refreshTasks(w); var mine = taskUnits(e);
+      wlog(w, (human ? 'Hecho: ' + t.name + '. Tus encargos ' + mine.done + '/' + mine.total + ' · equipo ' + w.tasksDone + '/' + w.quota : e.name + ' completa: ' + t.name + '. Equipo ' + w.tasksDone + '/' + w.quota), 'task');
+      if (t.sab) applySab(w, e, t);
+    }
     if (e.type === 'bot') { e.ai.mode = 'blend'; e.ai.t = ri(CFG.botIdle[0], CFG.botIdle[1]); e.goal = null; }
     checkWin(w);
+  } else if (h.type === 'force') {
+    var rm = h.ref; w.unlocked[roomKey(rm)] = w.time + CFG.unlockFor; w.stats.forced++; e.goal = null; e.path = null; e.pathKey = null;
+    if (e.role === 'runner') { if (reportBy(w, e, '¡Está forzando la cerradura de una habitación! Aviso a seguridad.') && human) wlog(w, 'Alguien te ha visto forzar la puerta y va a avisar a seguridad.', 'report', e.id); }
+    else if (civilsSeeing(w, e, null, CFG.witnessRadius * TS * sightScale(w)).length) { e.sus = Math.min(100, Math.max(e.sus, 55)); if (human) wlog(w, 'Te han visto forzar la puerta: tu sospecha se dispara.', 'info'); }
+    if (human) wlog(w, 'Has forzado la cerradura de la ' + roomLabel(rm) + '. Queda abierta unos segundos.', 'info');
   } else if (h.type === 'strip') {
     var c = h.ref, o = cloneOutfit(c.outfit);
     o.blood = true; swapOutfit(w, e, o);
@@ -242,10 +358,11 @@ function holdUpdate(w, e, dt) {
 function checkWin(w) {
   if (w.over) return;
   var tA = 0, hA = 0;
+  refreshTasks(w);
   w.ents.forEach(function (e) { if (e.alive && w.targets.indexOf(e.id) >= 0) tA++; if (e.alive && e.role === 'hunter') hA++; });
   if (tA === 0) w.over = { winner: 'hunters', reason: 'Los dos objetivos han sido eliminados.' };
   else if (hA === 0) w.over = { winner: 'runners', reason: 'Todos los cazadores han caído.' };
-  else if (w.tasksDone >= w.quota) w.over = { winner: 'runners', reason: 'Trato cerrado: el cargamento está listo antes de que llegue el cliente.' };
+  else if (w.quota > 0 && w.tasksDone >= w.quota) w.over = { winner: 'runners', reason: 'Trato cerrado: todos los corredores han terminado sus encargos antes de que llegue el cliente.' };
   else if (w.time >= w.limit) w.over = { winner: 'runners', reason: 'El cliente ha llegado y al menos un objetivo sigue con vida.' };
 }
 
@@ -257,7 +374,7 @@ function navTo(w, e, fl, x, y) { e.goal = { floor: fl, x: x, y: y }; e.pathKey =
 function walkTo(w, e, dt, speed, tx, ty) {
   var key = e.floor + ':' + tx + ',' + ty;
   if (e.pathKey !== key || !e.path) {
-    e.path = bfs(FLOORS[e.floor], Math.floor(e.x / TS), Math.floor(e.y / TS), tx, ty); e.pathKey = key; e.pi = 0;
+    e.path = bfs(FLOORS[e.floor], Math.floor(e.x / TS), Math.floor(e.y / TS), tx, ty, lockMask(w, e)); e.pathKey = key; e.pi = 0;
     if (!e.path) { e.path = []; e.unreach = true; return true; }
     e.unreach = false;
   }
@@ -271,6 +388,7 @@ function navUpdate(w, e, dt, speed) {
   var g = e.goal; if (!g) return true;
   var f = FLOORS[e.floor];
   if (e.floor !== g.floor) {
+    if (elevOut(w) && e.state !== 'evac' && e.role !== 'police') { e.moving = false; if (!e.liftWait) e.liftWait = true; return false; }
     var fx = f.spawn.x, fy = f.spawn.y - 1;
     if (Math.abs(e.x - (fx + .5) * TS) < 14 && Math.abs(e.y - (fy + .5) * TS) < 14) {
       e.moving = false; e.elevT += dt;
@@ -294,6 +412,12 @@ function npcAI(w, e, dt) {
   }
   if (e.state === 'calling') { ai.t -= dt; e.moving = false; if (ai.t <= 0) { policeCall(w, e.callCtx); e.state = 'scared'; ai.t = 12; e.goal = null; } return; }
   if (e.state === 'scared') { ai.t -= dt; e.moving = false; if (ai.t <= 0) { e.state = 'idle'; ai.wait = 1; } return; }
+  if (w.sab.alarm > w.time) {
+    if (e.state !== 'evac') { e.state = 'evac'; e.goal = null; e.pathKey = null; var as = pick(ASSEMBLY); navTo(w, e, 1, as.x, as.y); if (rnd() < 0.5) say(e, '¡Fuego! ¡Todos fuera!', 2.6); }
+    if (e.goal) { if (navUpdate(w, e, dt, CFG.speed.npc * 1.6)) { e.goal = null; e.moving = false; } } else e.moving = false;
+    return;
+  }
+  if (e.state === 'evac') { e.state = 'idle'; ai.wait = ri(1, 5); e.goal = null; e.moving = false; return; }
   if (e.fixed) { ai.wait -= dt; if (ai.wait <= 0) { ai.wait = ri(3, 7); e.dir = pick(['down', 'left', 'right', 'down']); } e.moving = false; return; }
   if (ai.wait > 0) { ai.wait -= dt; e.moving = false; return; }
   if (!e.goal) { var t = pick(e.tiles); navTo(w, e, e.floor, t.x, t.y); }
@@ -325,7 +449,7 @@ function policeAI(w, e, dt) {
 function posterKnown(w, h) { return !!w.posterActive[h.outfit.id]; }
 function chooseTask(w, e) {
   var best = null, bs = 1e9;
-  w.tasks.forEach(function (t) {
+  (e.tasks || []).forEach(function (t) {
     if (!taskAvail(w, t, e)) return;
     var s = Math.abs(t.floor - e.floor) * 22 + Math.abs(t.x - e.x / TS) + Math.abs(t.y - e.y / TS) + rnd() * 30;
     if (e.inv.carry && t.id === e.inv.carry) s -= 200;
@@ -337,6 +461,7 @@ function runnerAI(w, e, dt) {
   var ai = e.ai, i;
   e.cd = Math.max(0, e.cd - dt);
   if (e.fxSwing > 0) e.fxSwing -= dt;
+  if (e.arrest > 0) { e.arrest -= dt; e.moving = false; return; }
   ai.scan -= dt;
   if (ai.scan <= 0) {
     ai.scan = 0.3;
@@ -344,7 +469,7 @@ function runnerAI(w, e, dt) {
       var h = w.ents[i];
       if (h.role !== 'hunter' || !h.alive || h.floor !== e.floor) continue;
       var d = dist(e.x, e.y, h.x, h.y);
-      if (d > 6 * TS || !los(FLOORS[e.floor], e.x, e.y, h.x, h.y)) continue;
+      if (d > 6 * TS * sightScale(w) || !los(FLOORS[e.floor], e.x, e.y, h.x, h.y)) continue;
       var danger = h.aim || e.knows[h.outfit.id] || posterKnown(w, h);
       if (!danger) continue;
       if (e.inv.melee && d < 2.6 * TS) { cancelHold(w, e); e.aimX = h.x; e.aimY = h.y; e.dir = dirOf(h.x - e.x, h.y - e.y); tryMelee(w, e); e.moving = false; return; }
@@ -364,6 +489,14 @@ function runnerAI(w, e, dt) {
   if (ai.mode === 'task') {
     var t = ai.task;
     if (!t || !taskAvail(w, t, e)) { ai.mode = 'blend'; ai.t = 6; e.goal = null; return; }
+    var rm = t.roomName ? roomBy(t.floor, t.roomName) : null;
+    if (rm && !canPass(w, e, rm) && !insideRoom(e, rm)) {
+      /* habitación cerrada: ir a la puerta y forzar la cerradura */
+      if (!e.goal || !e.goal.force) { navTo(w, e, t.floor, rm.out.x, rm.out.y); e.goal.force = true; }
+      if (navUpdate(w, e, dt, CFG.speed.bot)) { if (e.floor === t.floor) startHold(w, e, 'force', rm, CFG.forceDur); else { ai.mode = 'blend'; ai.t = 5; e.goal = null; } }
+      return;
+    }
+    if (e.goal && e.goal.force) e.goal = null;
     if (!e.goal) navTo(w, e, t.floor, t.x, t.y);
     if (navUpdate(w, e, dt, CFG.speed.bot)) { if (e.floor === t.floor) startHold(w, e, 'task', t, t.dur); else { ai.mode = 'blend'; ai.t = 5; e.goal = null; } }
     return;
@@ -402,7 +535,7 @@ function hunterAI(w, e, dt) {
       for (i = 0; i < w.ents.length; i++) {
         var t = w.ents[i];
         if (!t.alive || e.targetIds.indexOf(t.id) < 0 || t.floor !== e.floor) continue;
-        if (dist(e.x, e.y, t.x, t.y) <= CFG.botSight * TS && los(FLOORS[e.floor], e.x, e.y, t.x, t.y)) { seen = t; break; }
+        if (dist(e.x, e.y, t.x, t.y) <= CFG.botSight * TS * sightScale(w) && los(FLOORS[e.floor], e.x, e.y, t.x, t.y)) { seen = t; break; }
       }
       if (seen) {
         ai.rec = (ai.rec || 0) + 0.2;
@@ -435,7 +568,7 @@ function hunterAI(w, e, dt) {
       return;
     }
     e.moving = false; e.dir = dirOf(tg.x - e.x, tg.y - e.y);
-    var safe = civilsSeeing(w, e, tg, CFG.witnessRadius * TS).length === 0;
+    var safe = civilsSeeing(w, e, tg, CFG.witnessRadius * TS * sightScale(w)).length === 0;
     if (safe || ai.patience >= CFG.botPatience) {
       e.aim = true; e.aimX = tg.x; e.aimY = tg.y - 2; ai.aimT += dt;
       if (ai.aimT >= CFG.botAimTime && e.cd <= 0) { tryShoot(w, e); e.aim = false; ai.aimT = 0; ai.mode = 'patrol'; e.goal = null; ai.wait = 1.5; ai.patience = 0; }
@@ -451,13 +584,14 @@ function hunterAI(w, e, dt) {
 
 /* ---------- percepción (10 veces por segundo) ---------- */
 function perceive(w, dt) {
+  var sc = sightScale(w);
   var civils = w.ents.filter(function (c) { return c.alive && c.role === 'civil'; });
   w.ents.forEach(function (h) {
     if (h.role !== 'hunter' || !h.alive) return;
-    var f = FLOORS[h.floor], tx = Math.floor(h.x / TS), ty = Math.floor(h.y / TS), z = f.zone[ty * W + tx], acc = access(h);
-    var restricted = (z === ZONE_ROOM && !acc.room) || (z === ZONE_STAFF && !acc.staff);
+    var f = FLOORS[h.floor], tx = Math.floor(h.x / TS), ty = Math.floor(h.y / TS), z = f.zone[ty * W + tx], acc = access(h), rmHere = roomAt(f, tx, ty);
+    var restricted = (z === ZONE_ROOM && rmHere && !hasKey(h, rmHere)) || (z === ZONE_STAFF && !acc.staff);
     var view = [];
-    civils.forEach(function (c) { if (c.floor === h.floor && c.state !== 'dead') { var d = dist(c.x, c.y, h.x, h.y); if (d <= CFG.sightTiles * TS && los(f, c.x, c.y, h.x, h.y)) view.push({ c: c, d: d }); } });
+    civils.forEach(function (c) { if (c.floor === h.floor && c.state !== 'dead') { var d = dist(c.x, c.y, h.x, h.y); if (d <= CFG.sightTiles * TS * sc && los(f, c.x, c.y, h.x, h.y)) view.push({ c: c, d: d }); } });
     if (isHot(w, h)) { h.sus = 100; }
     else {
       var rate = 0, staffV = null;
@@ -466,7 +600,7 @@ function perceive(w, dt) {
         view.forEach(function (v) { rate += v.c.staff ? CFG.restrictedStaff : CFG.restrictedGuest; if (v.c.staff && !staffV) staffV = v.c; });
       }
       if (h.aim) {
-        var aimR = CFG.aimNoticeRadius * TS, nearest = null;
+        var aimR = CFG.aimNoticeRadius * TS * sc, nearest = null;
         view.forEach(function (v) { if (v.d <= aimR) { rate += CFG.aimRate + CFG.aimNear * (1 - v.d / aimR); if (!nearest || v.d < nearest.d) nearest = v; } });
         if (nearest && h.sus >= 20 && w.time - (nearest.c.lastAim || -99) > 6) { nearest.c.lastAim = w.time; say(nearest.c, h.sus >= CFG.warnAt ? '¿Eso que lleva en la mano es un arma?' : '¿Qué esconde ese tipo?', 2.6); }
       }
@@ -481,18 +615,41 @@ function perceive(w, dt) {
     }
     h.wasRestricted = restricted; h.restricted = restricted;
   });
+  /* corredores: un intruso en una habitación ajena provoca denuncias */
+  w.ents.forEach(function (r) {
+    if (r.role !== 'runner' || !r.alive) return;
+    var f = FLOORS[r.floor], tx = Math.floor(r.x / TS), ty = Math.floor(r.y / TS), rm = roomAt(f, tx, ty);
+    var intr = !!(rm && rm.zone === ZONE_ROOM && !hasKey(r, rm)), rate = 0, staffV = null;
+    if (intr) civils.forEach(function (c) {
+      if (c.floor !== r.floor || c.state === 'dead' || c.state === 'evac') return;
+      var d = dist(c.x, c.y, r.x, r.y);
+      if (d <= CFG.sightTiles * TS * sc && los(f, c.x, c.y, r.x, r.y)) { rate += c.staff ? CFG.restrictedStaff : CFG.restrictedGuest; if (c.staff && !staffV) staffV = c; }
+    });
+    if (rate === 0) rate = -CFG.susDecay;
+    if (intr && rate > 0 && !r.wasIntr) r.sus = Math.min(100, r.sus + 6);
+    r.sus = clamp(r.sus + rate * dt, 0, 100); r.wasIntr = intr; r.restricted = intr && rate > 0;
+    if (intr && staffV && r.sus >= CFG.warnAt && r.sus < CFG.callAt && w.time - (staffV.lastWarn || -99) > 6) { staffV.lastWarn = w.time; say(staffV, '¿Quién es usted? Esta habitación no es suya.', 3); }
+    if (r.sus >= CFG.callAt && w.time > (r.repLock || 0)) {
+      if (reportBy(w, r, 'Hay un desconocido en una habitación que no es suya. Aviso a seguridad.')) { r.repLock = w.time + 25; r.sus = 55; if (r === w.human) wlog(w, 'Te han visto donde no debes: alguien va a avisar a seguridad.', 'report', r.id); }
+    }
+  });
   /* policía */
   w.ents.forEach(function (p) {
     if (p.role !== 'police' || !p.alive) return;
-    var spotted = null;
+    var spotted = null, spotR = null;
     w.ents.forEach(function (h) {
-      if (h.role !== 'hunter' || !h.alive || h.floor !== p.floor) return;
-      if (!(w.wanted[h.outfit.id] || h.outfit.blood)) return;
-      if (dist(p.x, p.y, h.x, h.y) <= CFG.policeSight * TS && los(FLOORS[p.floor], p.x, p.y, h.x, h.y)) spotted = h;
+      if (!h.alive || h.floor !== p.floor) return;
+      var inR = dist(p.x, p.y, h.x, h.y) <= CFG.policeSight * TS * sc && los(FLOORS[p.floor], p.x, p.y, h.x, h.y);
+      if (!inR) return;
+      if (h.role === 'hunter' && (w.wanted[h.outfit.id] || h.outfit.blood)) spotted = h;
+      else if (h.role === 'runner' && h.marked && !(h.arrest > 0)) spotR = h;
     });
     if (spotted) {
       p.freeze = true; p.dir = dirOf(spotted.x - p.x, spotted.y - p.y); p.spot[spotted.id] = (p.spot[spotted.id] || 0) + dt; p.spotting = true;
       if (p.spot[spotted.id] >= CFG.policeReact) { kill(w, p, spotted, 'police'); p.spot = {}; p.freeze = false; p.spotting = false; p.stayUntil = Math.max(p.stayUntil, w.time + 20); }
+    } else if (spotR) {
+      p.freeze = true; p.dir = dirOf(spotR.x - p.x, spotR.y - p.y); p.spot[spotR.id] = (p.spot[spotR.id] || 0) + dt; p.spotting = true;
+      if (p.spot[spotR.id] >= CFG.policeReact * 1.5) { arrest(w, spotR, p); p.spot = {}; p.freeze = false; p.spotting = false; }
     } else { p.freeze = false; p.spotting = false; p.spot = {}; }
   });
   /* cadáveres */
@@ -530,13 +687,14 @@ function findInteract(w, e) {
   var f = FLOORS[e.floor], best = null, bd = 1e9;
   function cand(type, ref, x, y, range, label, dur) { var d = dist(e.x, e.y, x, y); if (d < range && d < bd) { bd = d; best = { type: type, ref: ref, label: label, dur: dur }; } }
   var tx = Math.floor(e.x / TS), ty = Math.floor(e.y / TS), i, j;
-  for (j = ty - 2; j <= ty + 2; j++) for (i = tx - 2; i <= tx + 2; i++) if (at(f, i, j) === T.ELEV) cand('elev', null, (i + .5) * TS, (j + .5) * TS, 52, 'Llamar al ascensor', 0);
+  for (j = ty - 2; j <= ty + 2; j++) for (i = tx - 2; i <= tx + 2; i++) if (at(f, i, j) === T.ELEV) { if (elevOut(w)) cand('elevx', null, (i + .5) * TS, (j + .5) * TS, 52, 'Ascensor fuera de servicio', 0); else cand('elev', null, (i + .5) * TS, (j + .5) * TS, 52, 'Llamar al ascensor', 0); }
+  for (var lk in f.lockAt) { var lr = f.lockAt[lk]; if (!canPass(w, e, lr) && !insideRoom(e, lr)) cand('force', lr, (lr.door.x + .5) * TS, (lr.door.y + .5) * TS, 46, 'Forzar la cerradura · ' + roomLabel(lr), CFG.forceDur); }
   if (e.role === 'hunter') {
     w.corpses.forEach(function (c) { if (c.floor === e.floor && !c.stripped && c.outfit.kind !== 'under') cand('strip', c, c.x, c.y, 38, 'Coger su ropa', CFG.hold.strip); });
     f.wards.forEach(function (wd) { if (!wd.looted) cand('ward', wd, (wd.x + wd.w / 2) * TS, (wd.y + wd.h / 2) * TS, 50, 'Registrar el armario', CFG.hold.ward); });
     if (e.outfit.blood) { f.washers.forEach(function (s) { cand('wash', s, (s.x + s.w / 2) * TS, (s.y + s.h / 2) * TS, 56, 'Lavar el traje', CFG.hold.wash); }); f.sinks.forEach(function (s) { cand('wash', s, (s.x + .5) * TS, (s.y + .5) * TS, 46, 'Lavar el traje', CFG.hold.sink); }); }
   } else {
-    w.tasks.forEach(function (t) { if (t.floor === e.floor && taskAvail(w, t, e)) cand('task', t, (t.x + .5) * TS, (t.y + .5) * TS, 30, t.name, t.dur); });
+    (e.tasks || []).forEach(function (t) { if (t.floor === e.floor && taskAvail(w, t, e) && (!t.roomName || insideRoom(e, roomBy(t.floor, t.roomName)) || e.floor !== t.floor)) cand('task', t, (t.x + .5) * TS, (t.y + .5) * TS, 30, t.name, t.dur); });
   }
   return best;
 }
@@ -545,9 +703,9 @@ function autoPickup(w, e) {
     var p = w.pick[i];
     if (p.floor !== e.floor || dist(e.x, e.y, (p.x + .5) * TS, (p.y + .5) * TS) > 20) continue;
     if (p.kind === 'scrap' && e.role !== 'runner') continue;
-    if (p.kind !== 'scrap' && e.role !== 'hunter') continue;
+    if (p.kind === 'badge' && e.role !== 'hunter') continue;
     w.pick.splice(i, 1);
-    if (p.kind === 'masterkey') { e.inv.masterkey = true; if (e === w.human) wlog(w, 'Has cogido una llave maestra: abre las habitaciones sin levantar sospechas.', 'info'); }
+    if (p.kind === 'masterkey') { e.inv.masterkey = true; if (e === w.human) wlog(w, 'Has cogido una llave maestra: abre cualquier habitación sin forzarla.', 'info'); }
     else if (p.kind === 'badge') { e.inv.badge = true; if (e === w.human) wlog(w, 'Has cogido una insignia de botones: te deja pasar a las zonas del personal.', 'info'); }
     else {
       e.inv.scrap++;
@@ -569,8 +727,8 @@ function humanControl(w, e, dt, inp) {
     if (e.hold) cancelHold(w, e);
     var len = Math.hypot(mx, my), sp = e.aim ? CFG.speed.aim : (inp.run ? CFG.speed.run : CFG.speed.walk);
     var vx = mx / len * sp * dt, vy = my / len * sp * dt;
-    if (freeAt(f, e.x + vx, e.y)) e.x += vx;
-    if (freeAt(f, e.x, e.y + vy)) e.y += vy;
+    if (freeFor(w, e, f, e.x + vx, e.y)) e.x += vx;
+    if (freeFor(w, e, f, e.x, e.y + vy)) e.y += vy;
     e.walk += dt * 10; e.moving = true;
     if (!e.aim) e.dir = dirOf(mx, my);
   } else e.moving = false;
@@ -582,7 +740,7 @@ function humanControl(w, e, dt, inp) {
   }
   var hint = e.hold ? null : findInteract(w, e);
   w.hint = hint;
-  if (inp.interactHeld && !e.hold && hint && hint.type !== 'elev') startHold(w, e, hint.type, hint.ref, hint.dur);
+  if (inp.interactHeld && !e.hold && hint && hint.type !== 'elev' && hint.type !== 'elevx') startHold(w, e, hint.type, hint.ref, hint.dur);
   if (e.hold && !inp.interactHeld) cancelHold(w, e);
   if (inp.fire) { if (e.role === 'hunter' && e.aim) tryShoot(w, e); else if (e.role === 'runner' && e.inv.melee) tryMelee(w, e); }
 }
@@ -592,12 +750,13 @@ function step(w, dt, inp) {
   if (w.over) return;
   w.time += dt;
   var h = w.human;
-  if (h && h.alive && inp) humanControl(w, h, dt, inp);
+  if (h && h.alive && h.arrest > 0) { h.arrest -= dt; h.moving = false; h.aim = false; h.hold = null; w.hint = null; }
+  else if (h && h.alive && inp) humanControl(w, h, dt, inp);
   var i;
   for (i = 0; i < w.ents.length; i++) {
     var e = w.ents[i];
     if (e.bt > 0) { e.bt -= dt; if (e.bt <= 0) e.bubble = null; }
-    if (!e.alive) continue;
+    if (!e.alive || e.type === 'frozen') continue;
     if (e.type === 'human') { holdUpdate(w, e, dt); if (!e.hold) { /* nada */ } autoPickup(w, e); continue; }
     if (e.type === 'npc') npcAI(w, e, dt);
     else if (e.type === 'police') policeAI(w, e, dt);
@@ -607,9 +766,10 @@ function step(w, dt, inp) {
   w.ents = w.ents.filter(function (e) { return !e.remove; });
   for (i = 0; i < w.dispatch.length; i++) { var d = w.dispatch[i]; if (!d.done && w.time >= d.t) { d.done = true; spawnPolice(w, d); } }
   w.fx = w.fx.filter(function (x) { x.t -= dt; return x.t > 0; });
+  [['blackout', 'Vuelve la luz.'], ['alarm', 'Cesa la alarma de incendios.'], ['elev', 'Los ascensores vuelven a funcionar.']].forEach(function (s) { if (w.sab[s[0]] && w.time >= w.sab[s[0]]) { w.sab[s[0]] = 0; wlog(w, s[1], 'info'); } });
   w.acc += dt;
   if (w.acc >= 0.1) { var pd = w.acc; w.acc = 0; perceive(w, pd); }
-  if (w.time >= w.limit || w.tasksDone >= w.quota) checkWin(w);
+  if (w.time >= w.limit || (w.quota > 0 && w.tasksDone >= w.quota)) checkWin(w);
 }
 
-if (typeof globalThis.__EXPOSE !== 'undefined') globalThis.__API = { FLOORS: FLOORS, TASK_DEFS: TASK_DEFS, KEY_SPOTS: KEY_SPOTS, SCRAP_SPOTS: SCRAP_SPOTS, newWorld: newWorld, step: step, CFG: CFG, T: T, W: W, H: H, TS: TS, SOLIDT: SOLIDT, bfs: bfs, los: los, isHot: isHot, kill: kill, access: access, findInteract: findInteract, startHold: startHold, tryShoot: tryShoot, humanControl: humanControl, teleport: teleport, civilsSeeing: civilsSeeing, perceive: perceive, alertNpc: alertNpc, swapOutfit: swapOutfit, newGuest: newGuest };
+if (typeof globalThis.__EXPOSE !== 'undefined') globalThis.__API = { FLOORS: FLOORS, TASK_DEFS: TASK_DEFS, KEY_SPOTS: KEY_SPOTS, SCRAP_SPOTS: SCRAP_SPOTS, newWorld: newWorld, step: step, CFG: CFG, T: T, W: W, H: H, TS: TS, SOLIDT: SOLIDT, bfs: bfs, los: los, isHot: isHot, kill: kill, access: access, findInteract: findInteract, startHold: startHold, tryShoot: tryShoot, humanControl: humanControl, teleport: teleport, civilsSeeing: civilsSeeing, perceive: perceive, alertNpc: alertNpc, swapOutfit: swapOutfit, newGuest: newGuest, hasKey: hasKey, canPass: canPass, insideRoom: insideRoom, roomBy: roomBy, roomAt: roomAt, ROOM_POOL: ROOM_POOL, refreshTasks: refreshTasks, taskUnits: taskUnits, freeFor: freeFor, ZONE_ROOM: ZONE_ROOM, elevOut: elevOut, policeCall: policeCall, arrest: arrest, sightScale: sightScale, checkWin: checkWin, spawnPolice: spawnPolice };

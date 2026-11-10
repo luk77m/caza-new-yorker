@@ -127,12 +127,11 @@ function drawActor(g, x, y, o, dir, walk, opt) {
 /* ---------- placas de las puertas ---------- */
 var PLATES = { 'Despacho del gerente': 'DESPACHO', 'Sala de calderas': 'CALDERAS', 'Lavandería': 'LAVANDERÍA', 'Almacén': 'ALMACÉN', 'Cocina de servicio': 'COCINA', 'Sala eléctrica': 'ELÉCTRICA', 'Cuarto de servicio': 'SERVICIO', 'Correos': 'CORREOS', 'Tienda de regalos': 'TIENDA', 'Cafetería': 'CAFETERÍA', 'Restaurante Terrace': 'RESTAURANTE', 'Bar': 'BAR', 'Gran Salón': 'GRAN SALÓN', 'Salón mirador': 'MIRADOR', 'Biblioteca': 'BIBLIOTECA' };
 function plateText(n) { var m = /^(?:Hab\.|Suite)\s+(\d+)/.exec(n); return m ? m[1] : (PLATES[n] || ''); }
-function roomAt(f, tx, ty) {
-  var best = null, ba = 1e9;
-  f.rooms.forEach(function (r) { if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h && r.w * r.h < ba) { ba = r.w * r.h; best = r; } });
-  return best;
+function drawName(g, x, y, text, color) {
+  g.save(); g.font = '700 10px "Josefin Sans", sans-serif'; g.textAlign = 'center'; g.lineJoin = 'round'; g.lineWidth = 3.2; g.strokeStyle = 'rgba(2,6,14,.9)'; g.strokeText(text, x, y); g.fillStyle = color; g.fillText(text, x, y);
+  g.restore();
 }
-function drawPlates(g, f, x0, x1, y0, y1) {
+function drawPlates(g, f, x0, x1, y0, y1, lockFn) {
   g.textAlign = 'center'; g.textBaseline = 'middle';
   f.rooms.forEach(function (r) {
     if (!r.door) return;
@@ -146,6 +145,17 @@ function drawPlates(g, f, x0, x1, y0, y1) {
     g.fillStyle = col[0]; g.fillRect(cx - w / 2, cy - 5, w, 10);
     g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1; g.strokeRect(cx - w / 2 + 0.5, cy - 4.5, w - 1, 9);
     g.fillStyle = col[1]; g.fillText(t, cx, cy + 0.6);
+    var lk = lockFn ? lockFn(r) : null;
+    if (lk) {
+      var ix = cx + w / 2 + 6, iy = cy + 0.5;
+      if (lk === 'own') { g.strokeStyle = '#6fb8ff'; g.lineWidth = 1.6; g.strokeRect(cx - w / 2 - 1.5, cy - 6.5, w + 3, 13); g.fillStyle = '#6fb8ff'; g.fillRect(ix - 3, iy - 1, 6, 5); g.beginPath(); g.arc(ix + 2.4, iy - 1, 2.2, Math.PI, 0); g.strokeStyle = '#6fb8ff'; g.lineWidth = 1.2; g.stroke(); }
+      else {
+        var lc = lk === 'locked' ? '#e0525f' : '#6fcf97';
+        g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(ix - 4.5, iy - 5.5, 9, 11);
+        g.fillStyle = lc; g.fillRect(ix - 3, iy - 1, 6, 5);
+        g.strokeStyle = lc; g.lineWidth = 1.3; g.beginPath(); g.arc(ix + (lk === 'locked' ? 0 : 2.2), iy - 1, 2.2, Math.PI, 0); g.stroke();
+      }
+    }
   });
   g.textBaseline = 'alphabetic';
 }
@@ -166,6 +176,7 @@ function drawMarkers(g, list, cx0, cy0, time) {
     } else {
       var cxs = VW / 2, cys = VH / 2, dx = sx - cxs, dy = sy - cys, ang = Math.atan2(dy, dx);
       var t = Math.min((VW / 2 - m) / Math.max(Math.abs(dx), 1e-6), (VH / 2 - m) / Math.max(Math.abs(dy), 1e-6)), ax = cxs + dx * t, ay = cys + dy * t;
+      var av = REN.avoid; if (av && ax > av.x0 - 24 && ax < av.x1 + 24 && ay > av.y0 - 24 && ay < av.y1 + 24) ay = av.y1 + 28;
       g.save(); g.translate(ax, ay); g.rotate(ang);
       g.fillStyle = 'rgba(0,0,0,.6)'; g.beginPath(); g.moveTo(13, 0); g.lineTo(-8, -10); g.lineTo(-3, 0); g.lineTo(-8, 10); g.closePath(); g.fill();
       g.fillStyle = '#ebd08a'; g.beginPath(); g.moveTo(10, 0); g.lineTo(-6, -7.5); g.lineTo(-2, 0); g.lineTo(-6, 7.5); g.closePath(); g.fill();
@@ -180,7 +191,8 @@ function drawMarkers(g, list, cx0, cy0, time) {
 /* ---------- escena principal ---------- */
 function drawWorld(g, w, view, time, mouse, opt) {
   opt = opt || {};
-  var debug = !!opt.debug, f = FLOORS[view.floor], cam = REN.cam, px = REN.px;
+  var debug = !!opt.debug, f = FLOORS[view.floor], cam = REN.cam, px = REN.px, bo = w.sab.blackout > w.time, alarm = w.sab.alarm > w.time;
+  REN.sight = SIGHT_PX * (bo ? 0.5 : 1);
   if (VW >= W * TS + 128) cam.x = (W * TS - VW) / 2; else cam.x = clamp(view.x - VW / 2, -64, W * TS - VW + 64);
   if (VH >= H * TS + 128) cam.y = (H * TS - VH) / 2; else cam.y = clamp(view.y - VH / 2, -64, H * TS - VH + 64);
   var cx0 = Math.round(cam.x * px) / px, cy0 = Math.round(cam.y * px) / px; REN.cx0 = cx0; REN.cy0 = cy0;
@@ -191,7 +203,12 @@ function drawWorld(g, w, view, time, mouse, opt) {
   var y, x;
   for (y = y0; y <= y1; y++) for (x = x0; x <= x1; x++) { var t = f.g[y * W + x]; if (t !== T.VOID) drawTile(g, f, x, y, t, time); }
   f.furn.forEach(function (o) { if (!o.solid) drawFurn(g, o, time); });
-  if (SET.plates) drawPlates(g, f, x0, x1, y0, y1);
+  if (SET.plates) drawPlates(g, f, x0, x1, y0, y1, function (r) {
+    if (r.zone !== ZONE_ROOM) return null;
+    if (view.room === r.name && view.roomFloor === r.fi) return 'own';
+    if (hasKey(view, r)) return 'open';
+    return doorOpen(w, r) ? 'open' : 'locked';
+  });
   w.pick.forEach(function (p) {
     if (p.floor !== view.floor) return;
     var ppx = (p.x + 0.5) * TS, ppy = (p.y + 0.5) * TS + Math.sin(time * 3 + p.id) * 1.5;
@@ -202,7 +219,7 @@ function drawWorld(g, w, view, time, mouse, opt) {
     else { g.fillStyle = '#9aa3ab'; g.fillRect(ppx - 5, ppy - 2, 10, 4); g.fillStyle = '#6a7279'; g.fillRect(ppx - 3, ppy + 2, 8, 2); g.fillStyle = '#c9a24b'; g.fillRect(ppx - 6, ppy - 1, 2, 3); }
   });
   w.corpses.forEach(function (c) { if (c.floor === view.floor && canSee(f, view, c)) drawCorpse(g, c, time); });
-  var ents = [];
+  var ents = [], nameQ = [];
   f.furn.forEach(function (o) { if (o.solid) ents.push({ y: (o.y + o.h) * TS, d: function () { drawFurn(g, o, time); } }); });
   w.ents.forEach(function (e) {
     if (!e.alive || e.floor !== view.floor) return;
@@ -213,7 +230,9 @@ function drawWorld(g, w, view, time, mouse, opt) {
       if (e.fxSwing > 0) { g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y - 6, 20, Math.atan2(e.aimY - e.y, e.aimX - e.x) - 0.9, Math.atan2(e.aimY - e.y, e.aimX - e.x) + 0.9); g.stroke(); }
       if (e.role === 'police' && e.spotting) { g.fillStyle = '#ff4a4a'; g.font = '700 16px sans-serif'; g.textAlign = 'center'; g.fillText('!', e.x, e.y - 46); }
       if (e.hold && e === view) { var pr = e.hold.t / e.hold.dur; g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 4; g.beginPath(); g.arc(e.x, e.y - 42, 8, 0, 6.283); g.stroke(); g.strokeStyle = '#ebd08a'; g.beginPath(); g.arc(e.x, e.y - 42, 8, -1.57, -1.57 + 6.283 * pr); g.stroke(); }
-      if (debug && e.role !== 'civil') { g.font = '600 9px sans-serif'; g.textAlign = 'center'; g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#6ad8c8' : '#8aa8ff'); g.fillText(e.name, e.x, e.y - 44); }
+      if (debug && e.role !== 'civil') { g.font = '600 9px sans-serif'; g.textAlign = 'center'; g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#6fb8ff' : '#8aa8ff'); g.fillText(e.name, e.x, e.y - 44); }
+      else if (e !== view && e.role !== 'civil' && e.role === view.role && (e.role === 'runner' || e.role === 'hunter')) nameQ.push([e.x, e.y - 30, e.name, e.role === 'runner' ? '#6fb8ff' : '#ff9a9a']);
+      if (e.arrest > 0) nameQ.push([e.x, e.y - 44, 'DETENIDO', '#ff6a78']);
     } });
     if (e.bubble) ents.push({ y: 99999, d: function () { drawBubble(g, e.x, e.y - 2, e.bubble); } });
   });
@@ -224,11 +243,11 @@ function drawWorld(g, w, view, time, mouse, opt) {
   /* luz ambiental */
   var sxv = view.x - cx0, syv = view.y - cy0, vis = [];
   if (SET.lights) {
-    var lg = REN.lightC.getContext('2d'), amb = clamp((f.dark + 0.28) / SET.bright, 0.28, 0.84);
+    var lg = REN.lightC.getContext('2d'), amb = bo ? Math.min(0.97, 0.94 + 0.03 / SET.bright) : clamp((f.dark + 0.28) / SET.bright, 0.28, 0.84);
     lg.globalCompositeOperation = 'source-over'; lg.clearRect(0, 0, REN.lightC.width, REN.lightC.height); lg.fillStyle = 'rgba(4,6,12,' + amb + ')'; lg.fillRect(0, 0, REN.lightC.width, REN.lightC.height);
     lg.globalCompositeOperation = 'destination-out'; lg.globalAlpha = 0.92;
-    f.lamps.forEach(function (l) { var sx = l.x - cx0, sy = l.y - cy0; if (sx < -l.r || sy < -l.r || sx > VW + l.r || sy > VH + l.r) return; vis.push([sx, sy, l]); lg.drawImage(SPR.lamp, sx - l.r, sy - l.r, l.r * 2, l.r * 2); });
-    lg.globalAlpha = 0.85; lg.drawImage(SPR.lamp, sxv - 110, syv - 110, 220, 220); lg.globalAlpha = 1; lg.globalCompositeOperation = 'source-over';
+    if (!bo) f.lamps.forEach(function (l) { var sx = l.x - cx0, sy = l.y - cy0; if (sx < -l.r || sy < -l.r || sx > VW + l.r || sy > VH + l.r) return; vis.push([sx, sy, l]); lg.drawImage(SPR.lamp, sx - l.r, sy - l.r, l.r * 2, l.r * 2); });
+    lg.globalAlpha = 0.85; var hr = bo ? 62 : 110; lg.drawImage(SPR.lamp, sxv - hr, syv - hr, hr * 2, hr * 2); lg.globalAlpha = 1; lg.globalCompositeOperation = 'source-over';
     g.drawImage(REN.lightC, 0, 0, VW, VH);
     g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.2;
     vis.forEach(function (v) { g.drawImage(v[2].tint === 'cold' ? SPR.cold : SPR.warm, v[0] - v[2].r, v[1] - v[2].r, v[2].r * 2, v[2].r * 2); });
@@ -239,12 +258,14 @@ function drawWorld(g, w, view, time, mouse, opt) {
     var fg = REN.fogC.getContext('2d'), N = SET.lights ? 150 : 72, i;
     fg.globalCompositeOperation = 'source-over'; fg.clearRect(0, 0, REN.fogC.width, REN.fogC.height); fg.fillStyle = 'rgba(3,5,9,' + SET.fog + ')'; fg.fillRect(0, 0, REN.fogC.width, REN.fogC.height);
     fg.globalCompositeOperation = 'destination-out';
-    var rg = fg.createRadialGradient(sxv, syv, 50, sxv, syv, SIGHT_PX); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.7, 'rgba(0,0,0,.95)'); rg.addColorStop(1, 'rgba(0,0,0,.4)');
+    var rg = fg.createRadialGradient(sxv, syv, 50, sxv, syv, REN.sight); rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.7, 'rgba(0,0,0,.95)'); rg.addColorStop(1, 'rgba(0,0,0,.4)');
     fg.fillStyle = rg; fg.beginPath();
-    for (i = 0; i < N; i++) { var a = i / N * 6.2832, d = rayDist(f, view.x, view.y, a, SIGHT_PX), qx = sxv + Math.cos(a) * d, qy = syv + Math.sin(a) * d; if (i === 0) fg.moveTo(qx, qy); else fg.lineTo(qx, qy); }
+    for (i = 0; i < N; i++) { var a = i / N * 6.2832, d = rayDist(f, view.x, view.y, a, REN.sight), qx = sxv + Math.cos(a) * d, qy = syv + Math.sin(a) * d; if (i === 0) fg.moveTo(qx, qy); else fg.lineTo(qx, qy); }
     fg.closePath(); fg.fill(); fg.globalCompositeOperation = 'source-over';
     g.drawImage(REN.fogC, 0, 0, VW, VH);
   }
+  nameQ.forEach(function (n) { drawName(g, n[0] - cx0, n[1] - cy0, n[2], n[3]); });
+  if (alarm) { g.fillStyle = 'rgba(210,30,44,' + (0.05 + 0.07 * (0.5 + 0.5 * Math.sin(time * 7))) + ')'; g.fillRect(0, 0, VW + 1, VH + 1); }
   if (opt.markers && opt.markers.length) drawMarkers(g, opt.markers, cx0, cy0, time);
   if (mouse && mouse.aiming) {
     var mx = mouse.x, my = mouse.y;
@@ -284,7 +305,7 @@ function drawMapFloor(g, w, view, fl, s, o) {
     if (!e.alive || e.floor !== fl || e === view) return;
     var ally = e.role === view.role && e.role !== 'civil' && e.role !== 'police';
     if (!ally && !o.all) return;
-    g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#4fd8c8' : (e.role === 'police' ? '#8aa8ff' : 'rgba(255,255,255,.35)'));
+    g.fillStyle = e.role === 'hunter' ? '#ff6a6a' : (e.role === 'runner' ? '#5aa8ff' : (e.role === 'police' ? '#c9b8ff' : 'rgba(255,255,255,.35)'));
     var r = Math.max(1.5, s * 0.3); g.fillRect(e.x / TS * s - r, e.y / TS * s - r, r * 2, r * 2);
   });
   (o.marks || []).forEach(function (m) {

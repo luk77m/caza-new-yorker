@@ -145,7 +145,7 @@ function drawPortrait(cv, outfit, alt) {
 function canSee(f, view, e) {
   if (e === view) return true;
   var d = dist(view.x, view.y, e.x, e.y);
-  return d <= SIGHT_PX && los(f, view.x, view.y, e.x, e.y);
+  return d <= (REN.sight || SIGHT_PX) && los(f, view.x, view.y, e.x, e.y);
 }
 function updateExplored(view) {
   var ex = REN.expl[view.floor], f = FLOORS[view.floor], tx = Math.floor(view.x / TS), ty = Math.floor(view.y / TS);

@@ -1,6 +1,7 @@
 /* ===== ajustes del jugador (se guardan en el navegador si se puede) ===== */
 var SET_DEF = {
-  layout: 'normal',        // normal | wide | full
+  ver: 2,
+  layout: 'full',          // full (pantalla completa, por defecto) | wide | normal (con paneles)
   zoom: 1.25, bright: 1, fog: 0.9,
   lights: true, plates: true, arrows: true, hints: true,
   vol: { master: 0.7, weapons: 1, alerts: 0.9, ui: 0.6 }, muted: false,
@@ -14,7 +15,7 @@ function mergeInto(dst, src) {
     else if (typeof src[k] === typeof dst[k]) dst[k] = src[k];
   }
 }
-function loadSettings() { try { var s = JSON.parse(localStorage.getItem('caza-set') || 'null'); if (s) mergeInto(SET, s); } catch (e) { /* sin almacenamiento */ } }
+function loadSettings() { try { var s = JSON.parse(localStorage.getItem('caza-set') || 'null'); if (s) { if (s.ver !== SET_DEF.ver) delete s.layout; mergeInto(SET, s); } SET.ver = SET_DEF.ver; } catch (e) { /* sin almacenamiento */ } }
 function saveSettings() { try { localStorage.setItem('caza-set', JSON.stringify(SET)); } catch (e) { /* sin almacenamiento */ } }
 function resetSettings(group) {
   var def = JSON.parse(JSON.stringify(SET_DEF));
