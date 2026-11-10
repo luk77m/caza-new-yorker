@@ -36,7 +36,7 @@ for f in files:
     if depth != 0:
         problems.append(f'{f}: paréntesis sin cerrar ({depth})')
     src = '\n'.join(lines)
-    for cls, mem in re.findall(r'\b(Sim|Hotel|Nav|Painter|Rng|Cfg|Outfit|Items|Goal|Hud|Minimap)\.(\w+)', src):
+    for cls, mem in re.findall(r'\b(Sim|Hotel|Nav|Painter|Rng|Cfg|Outfit|Items|Goal|Hud|Minimap|Alarm|Reward|Settings|Sfx)\.(\w+)', src):
         if mem in ('new',): continue
         if mem not in members.get(cls, set()):
             problems.append(f'{f}: {cls}.{mem} no existe')

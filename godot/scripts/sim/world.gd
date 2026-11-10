@@ -30,6 +30,15 @@ var hint := {}
 var targets: Array = []     # ids de los dos retratados
 var events: Array = []      # {type, fl, x, y} para sonidos y efectos; la escena los vacía
 var snitched := {}          # trajes de cazador ya delatados
+var cop_kills := 0
+var alarm := 0              # 0-3 (3 = Bluegeddon)
+var alarm_side := ""        # "hunters" o "runners": quién provocó el nivel 2
+var cop_killers := {}       # id -> true: la policía dispara a estos en cuanto los ve
+var first_done := 0         # primer corredor en terminar sus encargos
+var cine := {}              # cinemática en curso del jugador
+var announce := {}          # {text, color, t} rótulo grande en pantalla
+var exits: Array = []       # salidas del Bluegeddon {fl, x, y, item, name}
+var bench := Vector3i(1, 15, 23)   # banco de detenidos (planta baja)
 var stats := {"kills": 0, "civ_kills": 0, "calls": 0, "tasks": 0, "reports": 0, "arrests": 0, "forced": 0}
 
 func is_over() -> bool:

@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.5, 2D)
+# Caza en el New Yorker · versión Godot (v0.6, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -11,10 +11,33 @@ sabotajes (apagón, alarma de incendios, ascensores), policía, carteles de busc
 2. En el gestor de proyectos: **Importar** y elige `godot/project.godot`.
 3. Pulsa **F5** (Ejecutar proyecto).
 
-Controles: WASD/flechas, Shift correr, E mantener para interactuar o hablar con un PNJ, E junto al ascensor
-(elegir planta con 1-7) o junto a tu contacto (tienda), Tab mapa y encargos, clic derecho apuntar (cazador),
-clic izquierdo disparar / cuchillo / llave inglesa, rueda zoom, Esc pausa, F11 pantalla completa,
+Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o liberar, E mantenido para
+encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
+Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.6
+
+- **HUD nuevo:** minimapa con el nombre de la planta arriba a la izquierda, reloj de cronómetro arriba a la derecha,
+  inventario rápido abajo a la izquierda (Q cambia lo que llevas en la mano), avisos arriba en el centro.
+  Tab abre el bloc de notas con los encargos (se tachan al hacerlos), M el mapa e I el inventario.
+- **Interacción:** hablar, comprar, ascensor, sobornar o liberar se hace pulsando E o haciendo clic encima, sin
+  mantener. Los encargos y cerraduras se pueden empezar con un clic (se cancelan al moverte). Más alcance.
+- **Economía:** los encargos ya no pagan. El vendedor ofrece trabajos extra por $50-90. Las carteras son raras.
+  Los cazadores compran al vigilante de la entrada (amigo de la policía), no al contacto de los corredores.
+- **Recompensa:** el primer corredor en terminar recibe una pistola y el chivatazo de un cazador (se le marca en
+  rojo 45 s), con escena de cine: franjas negras, rótulo y el contacto que se acerca a dárselo. Evento raro: un
+  policía con un café le da su placa y su pistola, y la policía deja de molestarle. Los demás pueden hacer los
+  encargos de sus compañeros.
+- **Matar policías y niveles de alarma:** nivel 1, refuerzos y cacheos (si llevas algo te esposan 1:30 en el
+  vestíbulo; te libera un soborno de $250, la ganzúa de un compañero con minijuego o la llave de esposas caída;
+  si escapas sin guardia y te pillan, grilletes). Nivel 2, federales registrando habitación por habitación, y el
+  bando culpable paga en tiempo. Nivel 3, BLUEGEDDON: los huéspedes huyen, la policía dispara a cualquiera y los
+  corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano).
+- **Gráficos:** visión con bordes rectos (polígono exacto, sin dientes), muros altos en perspectiva 3/4 con papel
+  pintado y muebles con volumen, azotea abierta con la ciudad de noche, coches y el letrero de neón.
+  Texturas y música propias opcionales en `assets/` (ver `assets/README.md`).
+- **Menú principal** como el de la web, con una partida de fondo y música de swing de los años 30 generada por código.
 
 ## Novedades de la v0.5
 

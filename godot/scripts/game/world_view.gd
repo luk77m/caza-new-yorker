@@ -16,6 +16,8 @@ var base: Node2D
 var glow: Node2D
 var top: Node2D
 var light_tex: GradientTexture2D
+var _poly_key := ""
+var _poly := PackedVector2Array()
 
 func _ready() -> void:
 	base = Node2D.new()
@@ -83,8 +85,11 @@ func _draw_base() -> void:
 	var y0 := floori(cam_rect.position.y / TS) - 1
 	var x1 := ceili(cam_rect.end.x / TS) + 1
 	var y1 := ceili(cam_rect.end.y / TS) + 1
-	ci.draw_rect(cam_rect.grow(64), Color("#0b1a2a") if f.sky else Color("#05080b"))
-	if f.sky:
+	if f.roof:
+		Painter.draw_city(ci, cam_rect.grow(64), anim)
+	else:
+		ci.draw_rect(cam_rect.grow(64), Color("#0b1a2a") if f.sky else Color("#05080b"))
+	if f.sky and not f.roof:
 		# estrellas del cielo de Manhattan
 		for i in 60:
 			var sx := fmod(i * 97.13, 1408.0)
@@ -96,7 +101,9 @@ func _draw_base() -> void:
 		if o["k"] == "rug":
 			Painter.draw_furn(ci, o)
 	for o in f.furn:
-		if o["k"] != "rug":
+		if o["k"] == "sign" and f.roof:
+			Painter.draw_sign(ci, o["x"] * TS, o["y"] * TS - 12, o["w"] * TS, anim)
+		elif o["k"] != "rug":
 			Painter.draw_furn(ci, o)
 	_draw_plates(ci, f)
 	for p in w.picks:
@@ -110,6 +117,7 @@ func _draw_base() -> void:
 	_draw_task_marks(ci, f)
 	for e in _visible_ents(f):
 		Painter.draw_actor(ci, e.x, e.y, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
+		Painter.draw_extras(ci, e)
 		if e.fx_swing > 0:
 			var a := atan2(e.aim_y - e.y, e.aim_x - e.x)
 			ci.draw_arc(Vector2(e.x, e.y - 6), 20, a - 0.9, a + 0.9, 10, Color(1, 1, 1, 0.7), 3)
@@ -141,7 +149,7 @@ func _draw_base() -> void:
 					var a3 := k * 1.05
 					ci.draw_circle(fp + Vector2(cos(a3), sin(a3)) * (10.0 * (1.0 - fx["t"] / 0.6) + 3), 2.4, Color(0.6, 0.04, 0.08, 0.85))
 	# oscuridad ambiente (las luces de la capa glow la compensan)
-	var amb := 0.72 if bo else clampf(0.2 + f.dark * 0.7, 0.22, 0.5)
+	var amb := 0.72 if bo else (0.18 if f.roof else clampf(0.2 + f.dark * 0.7, 0.22, 0.5))
 	ci.draw_rect(cam_rect.grow(64), Color(0.012, 0.016, 0.04, amb))
 
 # ---------------------------------------------------------------- capa de luz (aditiva)
@@ -164,6 +172,10 @@ func _draw_glow() -> void:
 			var flick := 1.0 + 0.03 * sin(anim * 3.0 + lp.x)
 			var tint := Color(0.25, 0.32, 0.42) if l["tint"] == "cold" else Color(0.42, 0.33, 0.18)
 			_light(ci, lp, lr * 0.85 * flick, tint)
+	if f.roof:
+		for o in f.furn:
+			if o["k"] == "sign":
+				_light(ci, Vector2((o["x"] + o["w"] / 2.0) * Cfg.TS, o["y"] * Cfg.TS + 14), 260.0, Color(0.55, 0.08, 0.06))
 	# luz propia (linterna en el apagón)
 	_light(ci, Vector2(view_ent.x, view_ent.y - 8), 70.0 if bo else 110.0, Color(0.22, 0.2, 0.16) if bo else Color(0.16, 0.15, 0.12))
 	if w.sab_alarm > w.time:
@@ -181,8 +193,9 @@ func _draw_top() -> void:
 	var ci := top
 	var f: FloorData = Hotel.floors[view_ent.fl]
 	var list := _visible_ents(f)
-	if not see_all():
+	if not see_all() and not f.roof:
 		_draw_fog(ci, f)
+	_draw_marks_top(ci, f)
 	for e in list:
 		if e != view_ent and (e.role == "runner" or e.role == "hunter") and (see_all() or e.role == role):
 			Painter.text(ci, e.x, e.y - 30, e.nm, 10, Painter.BLUE if e.role == "runner" else Color("#ff9a9a"))
@@ -207,41 +220,70 @@ func _draw_top() -> void:
 		ci.draw_line(m - Vector2(0, 17), m - Vector2(0, 6), col, 1.5)
 		ci.draw_line(m + Vector2(0, 6), m + Vector2(0, 17), col, 1.5)
 
-## Niebla con borde suave: un anillo degradado alrededor de lo que ves y oscuridad total más allá.
+## Niebla con el polígono de visión exacto (bordes rectos junto a las paredes) y un borde suave
+## solo donde se acaba el alcance de la vista.
 func _draw_fog(ci: CanvasItem, f: FloorData) -> void:
 	var o := Vector2(view_ent.x, view_ent.y)
-	var n := 140
+	var key := str(f.fi) + ":" + str(roundi(o.x * 2)) + ":" + str(roundi(o.y * 2)) + ":" + str(roundi(sight))
+	if key != _poly_key:
+		_poly_key = key
+		_poly = Nav.vis_poly(f, o.x, o.y, sight)
+	var n := _poly.size()
+	if n < 3:
+		return
 	var far := 4000.0
-	var soft := 46.0
+	var soft := 40.0
 	var full := Color(0.012, 0.02, 0.035, Settings.fog)
-	var pts: Array = []
-	var outs: Array = []
-	var dirs: Array = []
-	var edge: Array = []
-	for i in n:
-		var a := TAU * i / n
-		var d := Nav.ray_dist(f, o.x, o.y, a, sight)
-		var dv := Vector2(cos(a), sin(a))
-		dirs.append(dv)
-		pts.append(o + dv * d)
-		outs.append(o + dv * (d + soft))
-		# junto a una pared el borde es nítido; en el límite de la vista, difuminado
-		edge.append(Color(full.r, full.g, full.b, 0.0) if d >= sight - 1.0 else Color(full.r, full.g, full.b, full.a * 0.8))
+	var clear := Color(full.r, full.g, full.b, 0.0)
 	for i in n:
 		var j := (i + 1) % n
-		ci.draw_polygon(PackedVector2Array([pts[i], pts[j], outs[j], outs[i]]), PackedColorArray([edge[i], edge[j], full, full]))
-		ci.draw_colored_polygon(PackedVector2Array([outs[i], outs[j], o + dirs[j] * far, o + dirs[i] * far]), full)
+		var pi: Vector2 = _poly[i]
+		var pj: Vector2 = _poly[j]
+		var di := (pi - o).normalized()
+		var dj := (pj - o).normalized()
+		var at_edge_i := pi.distance_to(o) >= sight - 1.0
+		var at_edge_j := pj.distance_to(o) >= sight - 1.0
+		if at_edge_i and at_edge_j:
+			ci.draw_polygon(PackedVector2Array([pi, pj, pj + dj * soft, pi + di * soft]), PackedColorArray([clear, clear, full, full]))
+			ci.draw_colored_polygon(PackedVector2Array([pi + di * soft, pj + dj * soft, o + dj * far, o + di * far]), full)
+		else:
+			ci.draw_colored_polygon(PackedVector2Array([pi, pj, o + dj * far, o + di * far]), full)
+
+## Marcas que se ven a través de la niebla: el cazador delatado, la salida y el trabajo extra.
+func _draw_marks_top(ci: CanvasItem, f: FloorData) -> void:
+	var hm := w.human
+	if hm == null or view_ent != hm:
+		return
+	var pulse := 0.6 + 0.4 * sin(anim * 5.0)
+	if hm.hunter_mark != 0 and hm.intel_until > w.time:
+		var h := w.ent_by_id(hm.hunter_mark)
+		if h != null and h.alive and h.fl == f.fi:
+			ci.draw_arc(Vector2(h.x, h.y - 10), 22, 0, TAU, 24, Color(1, 0.25, 0.25, pulse), 2.5)
+			Painter.text(ci, h.x, h.y - 48, "CAZADOR", 10, Color(1, 0.4, 0.4))
+	if hm.job != null and hm.job.fl == f.fi:
+		var jp := Vector2((hm.job.x + 0.5) * Cfg.TS, (hm.job.y + 0.5) * Cfg.TS)
+		ci.draw_arc(jp, 14, 0, TAU, 20, Color(0.45, 0.85, 0.5, pulse), 2.0)
+		Painter.text(ci, jp.x, jp.y - 22, "$", 14, Color(0.55, 0.95, 0.6))
+	if w.alarm >= 3 and hm.role == "runner":
+		for x in w.exits:
+			if int(x["fl"]) == f.fi:
+				var ep := Vector2((x["x"] + 0.5) * Cfg.TS, (x["y"] + 0.5) * Cfg.TS)
+				ci.draw_arc(ep, 18, 0, TAU, 24, Color(0.4, 1, 0.5, pulse), 2.5)
+				Painter.text(ci, ep.x, ep.y - 26, "SALIDA", 10, Color(0.5, 1, 0.6))
 
 ## Flechas en el borde de la pantalla hacia tus encargos de esta planta.
 func _draw_arrows(ci: CanvasItem) -> void:
-	if w.human == null or view_ent != w.human or w.human.role != "runner":
+	if w.human == null or view_ent != w.human:
 		return
 	var m := 30.0 / zoom
 	var inner := cam_rect.grow(-m)
 	var c := cam_rect.get_center()
 	var k := 1.0 / zoom
 	var n := 0
-	for t in w.human.tasks:
+	var list: Array = w.human.tasks.duplicate()
+	if w.human.job != null:
+		list.push_front(w.human.job)
+	for t in list:
 		if n >= 3:
 			break
 		if t.fl != view_ent.fl or t.done or not Sim.task_avail(w, t, w.human):

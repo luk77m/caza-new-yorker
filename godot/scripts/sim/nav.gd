@@ -101,3 +101,78 @@ static func ray_dist(f: FloorData, x: float, y: float, ang: float, maxd: float) 
 			return d + 4.0
 		d += 6.0
 	return maxd
+
+## Distancia exacta hasta la primera casilla que tapa la vista (recorrido DDA por la cuadrícula).
+static func ray_exact(f: FloorData, ox: float, oy: float, dx: float, dy: float, maxd: float) -> float:
+	var TS := float(Cfg.TS)
+	var tx := floori(ox / TS)
+	var ty := floori(oy / TS)
+	var sx := 1 if dx > 0 else -1
+	var sy := 1 if dy > 0 else -1
+	var t_max_x := INF
+	var t_max_y := INF
+	var t_dx := INF
+	var t_dy := INF
+	if absf(dx) > 1e-9:
+		t_max_x = ((tx + (1 if dx > 0 else 0)) * TS - ox) / dx
+		t_dx = TS / absf(dx)
+	if absf(dy) > 1e-9:
+		t_max_y = ((ty + (1 if dy > 0 else 0)) * TS - oy) / dy
+		t_dy = TS / absf(dy)
+	var t := 0.0
+	for _i in 256:
+		if t_max_x < t_max_y:
+			t = t_max_x
+			t_max_x += t_dx
+			tx += sx
+		else:
+			t = t_max_y
+			t_max_y += t_dy
+			ty += sy
+		if t >= maxd:
+			return maxd
+		if Cfg.blocks_sight(f.at(tx, ty)):
+			return t
+	return maxd
+
+## Polígono de visión exacto (sin dientes): rayos a las esquinas de las paredes cercanas
+## más un círculo de rayos para el límite de la vista. Devuelve puntos ordenados por ángulo.
+static func vis_poly(f: FloorData, ox: float, oy: float, radius: float) -> PackedVector2Array:
+	var TS := float(Cfg.TS)
+	var angs := {}
+	for i in 72:
+		angs[i * 10000] = TAU * i / 72.0
+	var x0 := floori((ox - radius) / TS)
+	var x1 := floori((ox + radius) / TS)
+	var y0 := floori((oy - radius) / TS)
+	var y1 := floori((oy + radius) / TS)
+	var r2 := radius * radius * 1.1
+	for ty in range(y0, y1 + 1):
+		for tx in range(x0, x1 + 1):
+			if not Cfg.blocks_sight(f.at(tx, ty)):
+				continue
+			if Cfg.blocks_sight(f.at(tx - 1, ty)) and Cfg.blocks_sight(f.at(tx + 1, ty)) and Cfg.blocks_sight(f.at(tx, ty - 1)) and Cfg.blocks_sight(f.at(tx, ty + 1)):
+				continue
+			for c in 4:
+				var cx := (tx + (c & 1)) * TS
+				var cy := (ty + ((c >> 1) & 1)) * TS
+				var ddx := cx - ox
+				var ddy := cy - oy
+				if ddx * ddx + ddy * ddy > r2:
+					continue
+				var a := fposmod(atan2(ddy, ddx), TAU)
+				var key := int(a * 100000.0)
+				if angs.has(key):
+					continue
+				angs[key] = a
+				angs[key - 1] = fposmod(a - 0.0004, TAU)
+				angs[key + 1] = fposmod(a + 0.0004, TAU)
+	var list: Array = angs.values()
+	list.sort()
+	var pts := PackedVector2Array()
+	for a in list:
+		var dx := cos(a)
+		var dy := sin(a)
+		var d := ray_exact(f, ox, oy, dx, dy, radius)
+		pts.append(Vector2(ox + dx * d, oy + dy * d))
+	return pts

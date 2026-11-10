@@ -7,7 +7,7 @@ Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asim�
 
 ## Jugar
 
-- **Versión Godot (v0.5, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
+- **Versión Godot (v0.6, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
 - **Versión web (v0.3):** abre `index.html` en el navegador. No necesita servidor ni dependencias.
 
 ## Estructura
@@ -56,6 +56,7 @@ Flujo recomendado: editar `src/`, `npm run build`, `npm test`, commit. Etiquetar
 |---|---|
 | v0.2 | Mapa de 7 plantas, bots, policía, testigos, carteles de busca, disfraces, menú principal |
 | v0.4 | Port a Godot 4 (GDScript, 2D) con las reglas de la v0.3; datos del mapa exportados a JSON |
+| v0.6 | Godot: HUD nuevo (minimapa, cronómetro, inventario rápido, bloc de notas, mapa, inventario), interacción con pulsar/clic, recompensa con cinemática, alarmas por matar policías hasta el Bluegeddon, visión sin dientes, perspectiva 3/4, azotea con ciudad, menú con música |
 | v0.5 | Godot: economía y tiendas, soplos, munición y cuchillo, ventajas del cazador, ascensor con espera y cizalla, hablar con PNJ, sonido, ajustes y mejoras visuales |
 | v0.3 | Pantalla completa por defecto, 8-10 encargos por corredor, puertas con llave (forzar o llave maestra), denuncias y fichado, sabotajes (apagón, alarma de incendios, ascensores), nombres azules para aliados |
 

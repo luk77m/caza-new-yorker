@@ -4,19 +4,19 @@ extends Node2D
 var w: World
 var mode := "title"          # title, play, over
 var paused := false
-var tab_open := false
-var elev_open := false
-var shop_open := false
 var elev_pend := -1
 var elev_t := 0.0
-var follow: Ent = null       # personaje que sigue la cámara (espectador, tras morir o en el menú)
+var pick_target := 0         # compañero al que se le fuerzan las esposas
+var follow: Ent = null       # personaje que sigue la cámara (espectador, tras caer o en el menú)
 var zoom := 2.0
 var shake := 0.0
-var step_t := {}             # id -> s hasta el siguiente paso
+var no_fire_until := 0       # tras un clic de interacción no se dispara
+var step_t := {}
 var view: WorldView
 var cam: Camera2D
 var hud: Hud
 var sfx: Sfx
+var music: Music
 
 func _ready() -> void:
 	Settings.load_cfg()
@@ -34,6 +34,8 @@ func _ready() -> void:
 	cam.position_smoothing_speed = 9.0
 	sfx = Sfx.new()
 	add_child(sfx)
+	music = Music.new()
+	add_child(music)
 	hud = Hud.new()
 	add_child(hud)
 	hud.start_requested.connect(_start)
@@ -43,6 +45,8 @@ func _ready() -> void:
 	hud.resume_requested.connect(func(): _set_pause(false))
 	hud.menu_requested.connect(_to_menu)
 	hud.settings_changed.connect(_settings_changed)
+	hud.quit_requested.connect(func(): get_tree().quit())
+	hud.minigame_done.connect(_minigame_done)
 	_to_menu()
 
 # ---------------------------------------------------------------- controles
@@ -70,31 +74,34 @@ func _setup_input() -> void:
 	_key("run", [KEY_SHIFT])
 	_key("use", [KEY_E])
 	_key("tab", [KEY_TAB])
+	_key("map", [KEY_M])
+	_key("inv", [KEY_I])
+	_key("equip", [KEY_Q])
 	_key("pause", [KEY_ESCAPE, KEY_P])
 	_key("next", [KEY_SPACE])
 	_key("fullscreen", [KEY_F11])
 	_mouse("aim", MOUSE_BUTTON_RIGHT)
 	_mouse("fire", MOUSE_BUTTON_LEFT)
 
-func _menu_open() -> bool:
-	return tab_open or elev_open or shop_open or elev_pend >= 0 or hud.settings_panel.visible
+func _blocking() -> bool:
+	return hud.elev_panel.visible or hud.shop_panel.visible or hud.pick.visible or hud.settings_panel.visible or elev_pend >= 0
 
 func _read_input() -> Dictionary:
 	var h := w.human
-	if h == null or not h.alive:
+	if h == null or not h.alive or h.escaped:
 		return {}
 	var mv := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var blocked := _menu_open()
+	var blocked := _blocking() or hud.notes_panel.visible or hud.map_panel.visible or hud.inv_panel.visible
 	var m := view.get_global_mouse_position()
-	if elev_pend >= 0 or shop_open:
+	if _blocking():
 		mv = Vector2.ZERO
 	return {
 		"mx": mv.x, "my": mv.y,
 		"run": Input.is_action_pressed("run"),
 		"aim": Input.is_action_pressed("aim") and not blocked,
 		"aim_x": m.x, "aim_y": m.y,
-		"fire": Input.is_action_pressed("fire") and not blocked,
-		"interact": Input.is_action_pressed("use") and not (tab_open or elev_open or shop_open or elev_pend >= 0),
+		"fire": Input.is_action_pressed("fire") and not blocked and Time.get_ticks_msec() > no_fire_until,
+		"interact": Input.is_action_pressed("use") and not _blocking(),
 	}
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -116,51 +123,96 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("pause"):
 		if hud.settings_panel.visible:
 			hud.close_settings()
-		elif shop_open:
-			_close_shop()
-		elif elev_open:
-			_close_elev()
-		elif tab_open:
-			_toggle_tab(false)
+		elif hud.pick.visible:
+			hud.pick.cancel()
+		elif hud.any_panel() and not hud.pause_panel.visible:
+			hud.close_panels()
 		else:
 			_set_pause(not paused)
 		return
 	if paused:
 		return
+	var h := w.human
+	if hud.pick.visible:
+		if ev.is_action_pressed("use"):
+			hud.pick.hit()
+			sfx.play("door", 0.4, 1.6)
+		return
 	if ev.is_action_pressed("tab"):
-		_toggle_tab(not tab_open)
+		hud.toggle(hud.notes_panel, not hud.notes_panel.visible)
 		get_viewport().set_input_as_handled()
 		return
-	if ev.is_action_pressed("next") and (w.role == "spectator" or w.human == null or not w.human.alive):
+	if ev.is_action_pressed("map"):
+		hud.toggle(hud.map_panel, not hud.map_panel.visible)
+		return
+	if ev.is_action_pressed("inv"):
+		hud.toggle(hud.inv_panel, not hud.inv_panel.visible)
+		return
+	if ev.is_action_pressed("next") and (w.role == "spectator" or h == null or not h.alive or h.escaped):
 		_next_follow()
 		return
-	if ev.is_action_pressed("use") and not ev.is_echo():
-		var h := w.human
-		if shop_open:
-			_close_shop()
-			return
-		if h == null or not h.alive or w.hint.is_empty() or elev_pend >= 0 or elev_open:
-			return
-		var ht: String = w.hint["type"]
-		if ht == "elev":
-			if w.time < h.elev_ready:
-				hud.set_status("El ascensor acaba de salir. Espera " + str(ceili(h.elev_ready - w.time)) + " s.")
-			else:
-				elev_open = true
-				hud.open_elev(h.fl, h.cutter)
-				sfx.play("ui", 0.6)
-		elif ht == "elevx":
-			hud.set_status("Ascensor fuera de servicio." + (" Puedes romperlo más con la cizalla." if h.cutter else ""))
-		elif ht == "shop":
-			shop_open = true
-			hud.open_shop(w, h)
-			sfx.play("ui", 0.6)
+	if h == null or not h.alive or h.escaped or not w.cine.is_empty():
 		return
+	if ev.is_action_pressed("equip"):
+		Sim.cycle_equip(h)
+		sfx.play("ui", 0.5)
+		return
+	if ev.is_action_pressed("use") and not ev.is_echo():
+		if hud.shop_panel.visible:
+			hud.close_shop()
+			return
+		if not w.hint.is_empty() and elev_pend < 0 and not hud.elev_panel.visible:
+			_press(w.hint)
+		return
+	# clic sobre algo con lo que se puede interactuar
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and not Input.is_action_pressed("aim") and not _blocking():
+		var hint := Sim.find_interact(w, h, view.get_global_mouse_position())
+		if not hint.is_empty():
+			no_fire_until = Time.get_ticks_msec() + 300
+			if hint["type"] in Sim.PRESS_TYPES:
+				_press(hint)
+			elif h.hold == null:
+				Sim.start_hold(w, h, hint["type"], hint["ref"], hint["dur"])
+				h.hold.auto = true
+			get_viewport().set_input_as_handled()
+			return
 	var kev := ev as InputEventKey
-	if elev_open and kev != null and kev.pressed:
+	if hud.elev_panel.visible and kev != null and kev.pressed:
 		var k: int = kev.physical_keycode
 		if k >= KEY_1 and k <= KEY_7:
 			_elev_choose(k - KEY_1)
+
+## Acciones de pulsar: ascensor, tienda, hablar, sobornar, liberar...
+func _press(hint: Dictionary) -> void:
+	var h := w.human
+	var ht: String = hint["type"]
+	match ht:
+		"elev":
+			if w.time < h.elev_ready:
+				hud.set_status("El ascensor acaba de salir. Espera " + str(ceili(h.elev_ready - w.time)) + " s.")
+			else:
+				hud.open_elev(h.fl, h.cutter)
+				sfx.play("ui", 0.6)
+		"elevx":
+			hud.set_status("Ascensor fuera de servicio." + (" Con la cizalla puedes romperlo más." if h.cutter else ""))
+			if h.cutter:
+				hud.open_elev(h.fl, true)
+		"shop":
+			hud.open_shop(w, h)
+			sfx.play("ui", 0.6)
+		_:
+			var r := Sim.press(w, h, hint)
+			if r == "minigame":
+				var t: Ent = hint["ref"]
+				pick_target = t.id
+				hud.open_minigame()
+
+func _minigame_done(ok: bool) -> void:
+	var t: Ent = w.ent_by_id(pick_target) if w != null else null
+	if ok and t != null and t.cuffed:
+		Alarm.free_prisoner(w, t, "ganzúa")
+	elif not ok:
+		hud.set_status("Lo dejas a medias.")
 
 # ---------------------------------------------------------------- partida y menú
 
@@ -168,9 +220,6 @@ func _start(opt: Dictionary) -> void:
 	w = Sim.new_world(opt)
 	mode = "play"
 	paused = false
-	tab_open = false
-	elev_open = false
-	shop_open = false
 	elev_pend = -1
 	follow = null
 	step_t = {}
@@ -182,53 +231,41 @@ func _start(opt: Dictionary) -> void:
 	hud.set_fade(0)
 	hud.set_status("")
 	zoom = Settings.zoom
+	music.set_playing(false)
 
-## En el menú principal se ve una partida entre bots de fondo.
+## En el menú principal se ve una partida entre bots de fondo y suena la música.
 func _to_menu() -> void:
 	mode = "title"
 	paused = false
-	tab_open = false
-	elev_open = false
-	shop_open = false
 	elev_pend = -1
 	w = Sim.new_world({"role": "spectator", "minutes": 30})
 	view.w = w
 	view.role = "spectator"
 	follow = null
 	_next_follow()
-	zoom = 1.6
+	zoom = 1.7
 	hud.show_title()
+	music.set_playing(true)
 
 func _set_pause(on: bool) -> void:
 	paused = on
 	hud.set_pause(on)
 
-func _toggle_tab(on: bool) -> void:
-	tab_open = on
-	hud.toggle_tab(on)
-
-func _close_elev() -> void:
-	elev_open = false
-	hud.close_elev()
-
-func _close_shop() -> void:
-	shop_open = false
-	hud.close_shop()
-
 func _buy(id: String) -> void:
 	var h := w.human
 	if h == null or not h.alive:
 		return
-	var msg := Sim.buy(w, h, id)
-	if msg != "" and h.money >= 0:
-		hud.set_status("")
+	Sim.buy(w, h, id)
 	hud.refresh_shop(w, h)
 
 func _elev_choose(fl: int) -> void:
 	var h := w.human
-	if not elev_open or h == null or fl == h.fl or fl < 0 or fl >= Hotel.floors.size():
+	if not hud.elev_panel.visible or h == null or fl == h.fl or fl < 0 or fl >= Hotel.floors.size():
 		return
-	_close_elev()
+	if Sim.elev_out(w):
+		hud.set_status("Ascensor fuera de servicio.")
+		return
+	hud.close_elev()
 	elev_pend = fl
 	elev_t = Cfg.ELEV_WAIT
 	hud.set_status("El ascensor viene de camino…")
@@ -238,7 +275,7 @@ func _elev_cut() -> void:
 	var h := w.human
 	if h == null or not h.cutter:
 		return
-	_close_elev()
+	hud.close_elev()
 	Sim.start_hold(w, h, "cut", null, Cfg.HOLD_CUT)
 	h.hold.auto = true
 
@@ -247,7 +284,7 @@ func _settings_changed() -> void:
 	zoom = Settings.zoom
 
 func _next_follow() -> void:
-	var list: Array = w.ents.filter(func(e): return e.alive and (e.role == "runner" or e.role == "hunter"))
+	var list: Array = w.ents.filter(func(e): return e.alive and not e.escaped and (e.role == "runner" or e.role == "hunter"))
 	if list.is_empty():
 		return
 	var i := list.find(follow)
@@ -256,9 +293,9 @@ func _next_follow() -> void:
 func view_ent() -> Ent:
 	if w == null:
 		return null
-	if mode != "title" and w.human != null and w.human.alive and w.role != "spectator":
+	if mode != "title" and w.human != null and w.human.alive and not w.human.escaped and w.role != "spectator":
 		return w.human
-	if follow == null or not follow.alive:
+	if follow == null or not follow.alive or follow.escaped:
 		_next_follow()
 	return follow if follow != null else w.human
 
@@ -270,7 +307,9 @@ func _physics_process(delta: float) -> void:
 	if mode == "title":
 		Sim.step(w, delta, {})
 		if w.is_over() or w.time > 600.0:
-			_to_menu()
+			w = Sim.new_world({"role": "spectator", "minutes": 30})
+			view.w = w
+			follow = null
 		return
 	if mode != "play":
 		return
@@ -287,16 +326,13 @@ func _physics_process(delta: float) -> void:
 			elev_pend = -1
 			hud.set_fade(0)
 			hud.set_status("")
-	if elev_open and (w.hint.is_empty() or w.hint["type"] != "elev"):
-		_close_elev()
-	if shop_open and (w.hint.is_empty() or w.hint["type"] != "shop"):
-		_close_shop()
+	if hud.elev_panel.visible and (w.hint.is_empty() or (w.hint["type"] != "elev" and w.hint["type"] != "elevx")):
+		hud.close_elev()
+	if hud.shop_panel.visible and (w.hint.is_empty() or w.hint["type"] != "shop"):
+		hud.close_shop()
 	Sim.step(w, delta, _read_input())
 	if w.is_over():
 		mode = "over"
-		tab_open = false
-		_close_shop()
-		_close_elev()
 		hud.show_end(w)
 
 func _process(delta: float) -> void:
@@ -327,7 +363,7 @@ func _process(delta: float) -> void:
 	for kind in hud.pump_logs(w):
 		if kind == "call" or kind == "report" or kind == "hunt":
 			sfx.play("call", 0.5)
-	hud.update_hud(w, ve)
+	hud.update_hud(w, ve, delta)
 
 ## Sonidos y sacudidas a partir de los eventos de la simulación.
 func _events(ve: Ent) -> void:

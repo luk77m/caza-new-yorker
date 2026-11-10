@@ -60,6 +60,14 @@ func _draw() -> void:
 		elif me != null and e.role == me.role and (e.role == "runner" or e.role == "hunter"):
 			draw_circle(c, 2.6, Color("#5aa8ff") if e.role == "runner" else Color("#ff9a9a"))
 	var hm := w.human
+	if hm != null and hm.job != null and hm.job.fl == fl:
+		var jc := off + Vector2((hm.job.x + 0.5) * s, (hm.job.y + 0.5) * s)
+		draw_arc(jc, 4.0, 0, TAU, 12, Color("#7ee08a"), 2.0)
+	if hm != null and w.alarm >= 3 and hm.role == "runner":
+		for x in w.exits:
+			if int(x["fl"]) == fl:
+				var xc := off + Vector2((x["x"] + 0.5) * s, (x["y"] + 0.5) * s)
+				draw_rect(Rect2(xc - Vector2(4, 4), Vector2(8, 8)), Color("#7ee08a"), false, 2.0)
 	if hm != null and hm.alive and hm.intel_until > w.time:
 		for e in w.ents:
 			if not e.alive or e.fl != fl:

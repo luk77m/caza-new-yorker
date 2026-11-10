@@ -18,6 +18,7 @@ const STAFF := {
 	"tech": {"coat": "#4a5f6e", "coat_n": "mono de trabajo", "pants": "#4a5f6e", "hat": ["cap", "#d6c58a", "gorra", "crema"], "label": "Técnico"},
 	"waiter": {"coat": "#f1eee4", "coat_n": "chaqueta blanca de camarero", "pants": "#16161b", "hat": ["none", "#000000", "sin sombrero", ""], "label": "Camarero", "bow": true},
 	"recep": {"coat": "#2c3f52", "coat_n": "traje de recepción", "pants": "#1d2a38", "hat": ["none", "#000000", "sin sombrero", ""], "label": "Recepción", "tie": "#c9a24b"},
+	"guard": {"coat": "#3a4150", "coat_n": "uniforme de vigilante", "pants": "#252a33", "hat": ["police", "#2a303b", "gorra de vigilante", "gris"], "label": "Vigilante", "tie": "#1a1a1a"},
 }
 
 static var oid := 0
@@ -117,6 +118,16 @@ static func new_police() -> Outfit:
 	o.coat = Color("#1f2f4a"); o.coat_n = "uniforme de policía"; o.pants = Color("#1a2438"); o.tie = Color("#1a1a1a")
 	o.hat_t = "police"; o.hat_c = Color("#1f2f4a"); o.hat_n = "gorra de policía"; o.hat_cn = "azul"
 	o.hair = Color("#2a2018"); o.skin = Color(Rng.pick(SKINS)); o.key = "police"
+	return o
+
+## Agente federal: traje oscuro y sombrero, todos iguales.
+static func new_fed() -> Outfit:
+	var o := Outfit.new()
+	o.hs = "short"; o.stache = Rng.rnd() < 0.3; o.build = 1.04
+	o.id = _next_id(); o.kind = "suit"
+	o.coat = Color("#15181f"); o.coat_n = "traje de agente federal"; o.pants = Color("#101217"); o.tie = Color("#1d2a38")
+	o.hat_t = "fedora"; o.hat_c = Color("#15181f"); o.hat_n = "sombrero"; o.hat_cn = "negro"
+	o.hair = Color("#2a2018"); o.skin = Color(Rng.pick(SKINS)); o.key = "fed"
 	return o
 
 static func new_under(src: Outfit) -> Outfit:

@@ -90,6 +90,27 @@ static func r(ci: CanvasItem, x: float, y: float, w: float, h: float, col: Color
 
 # ---------------------------------------------------------------- planta
 
+# ---------------------------------------------------------------- texturas opcionales
+# Si pones PNG de 32x32 en res://assets/tiles/<nombre>.png o res://assets/furniture/<tipo>.png
+# se usan en lugar del dibujo por código.
+const TILE_NAMES := {1: "wall", 2: "marble", 3: "carpet", 4: "conc", 5: "door", 6: "elev", 7: "stairs", 8: "stairs", 10: "roof", 11: "wood", 12: "terrace", 13: "rail", 14: "hall"}
+static var _tex := {}
+
+static func tex(path: String) -> Texture2D:
+	if not _tex.has(path):
+		_tex[path] = load(path) if ResourceLoader.exists(path) else null
+	return _tex[path]
+
+## Papel pintado del muro según la planta (perspectiva 3/4: cara frontal alta).
+static func wall_paper(fi: int) -> Color:
+	match fi:
+		0: return Color("#4a4f55")
+		1: return Color("#5b4632")
+		2: return Color("#4a2a2e")
+		3, 4: return Color("#3e2c2a")
+		5: return Color("#2f3a46")
+	return Color("#5a4a3e")
+
 static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, y1: int) -> void:
 	for ty in range(maxi(y0, 0), mini(y1 + 1, Cfg.H)):
 		for tx in range(maxi(x0, 0), mini(x1 + 1, Cfg.W)):
@@ -99,20 +120,35 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 			var px := tx * TS
 			var py := ty * TS
 			var c := tile_color(t)
+			var tt := tex("res://assets/tiles/" + str(TILE_NAMES.get(t, "x")) + ".png")
 			if t == Cfg.T_WALL:
-				r(ci, px, py, TS, TS, c)
-				r(ci, px, py, TS, 2, c.lightened(0.08))
-				# cara del muro (art déco) si debajo hay suelo
 				var below := f.at(tx, ty + 1)
-				if below != Cfg.T_WALL and below != Cfg.T_VOID:
-					r(ci, px, py + TS - 16, TS, 16, Color("#3b2b22"))
-					r(ci, px, py + TS - 16, TS, 2, GOLD2.darkened(0.15))
-					r(ci, px, py + TS - 9, TS, 1, GOLD2.darkened(0.45))
-					if tx % 2 == 0:
-						poly(ci, [Vector2(px + 16, py + TS - 14), Vector2(px + 21, py + TS - 9), Vector2(px + 16, py + TS - 4), Vector2(px + 11, py + TS - 9)], GOLD2.darkened(0.35))
-					r(ci, px, py + TS - 2, TS, 2, Color(0, 0, 0, 0.45))
+				var face := below != Cfg.T_WALL and below != Cfg.T_VOID
+				if tt != null:
+					ci.draw_texture_rect(tt, Rect2(px, py, TS, TS), false)
+				else:
+					# remate superior del muro
+					r(ci, px, py, TS, TS, c)
+					r(ci, px, py, TS, 3, c.lightened(0.1))
+					if face:
+						# cara frontal alta con papel pintado, zócalo y moldura dorada
+						var wp := wall_paper(f.fi)
+						r(ci, px, py + 6, TS, TS - 6, wp)
+						for k in 4:
+							r(ci, px + k * 8 + 3, py + 8, 2, TS - 18, wp.lightened(0.07))
+						r(ci, px, py + 6, TS, 2, GOLD2.darkened(0.1))
+						r(ci, px, py + TS - 10, TS, 10, wp.darkened(0.35))
+						r(ci, px, py + TS - 11, TS, 1, GOLD2.darkened(0.3))
+						if tx % 3 == 0:
+							poly(ci, [Vector2(px + 16, py + 11), Vector2(px + 21, py + 16), Vector2(px + 16, py + 21), Vector2(px + 11, py + 16)], GOLD2.darkened(0.25))
+				if face:
+					r(ci, px, py + TS - 2, TS, 2, Color(0, 0, 0, 0.5))
 				continue
-			r(ci, px, py, TS, TS, c)
+			if tt != null:
+				ci.draw_texture_rect(tt, Rect2(px, py, TS, TS), false)
+				t = -1
+			else:
+				r(ci, px, py, TS, TS, c)
 			match t:
 				3:
 					if (tx + ty) % 2 == 0:
@@ -154,6 +190,13 @@ static func draw_furn(ci: CanvasItem, o: Dictionary) -> void:
 	var w: float = o["w"] * TS
 	var h: float = o["h"] * TS
 	var c := furn_color(k)
+	var ft := tex("res://assets/furniture/" + k + ".png")
+	if ft != null:
+		ci.draw_texture_rect(ft, Rect2(px, py, w, h), false)
+		return
+	# sombra en el suelo para dar volumen
+	if k != "rug":
+		r(ci, px + 3, py + h - 3, w - 2, 5, Color(0, 0, 0, 0.28))
 	match k:
 		"rug":
 			r(ci, px + 2, py + 2, w - 4, h - 4, c)
@@ -183,9 +226,12 @@ static func draw_furn(ci: CanvasItem, o: Dictionary) -> void:
 			r(ci, px + 4, py + 6, w - 8, h - 12, c)
 			r(ci, px + 8, py + 10, w - 16, h - 20, Color("#7d8b96"))
 		_:
-			r(ci, px + 1, py + 1, w - 2, h - 2, c)
-			r(ci, px + 1, py + 1, w - 2, 3, c.lightened(0.2))
-			r(ci, px + 1, py + h - 4, w - 2, 3, c.darkened(0.3))
+			# tapa y frente (perspectiva 3/4)
+			var front := minf(10.0, h * 0.35)
+			r(ci, px + 1, py + 1, w - 2, h - 2 - front, c.lightened(0.06))
+			r(ci, px + 1, py + 1, w - 2, 2, c.lightened(0.25))
+			r(ci, px + 1, py + h - 1 - front, w - 2, front, c.darkened(0.28))
+			r(ci, px + 1, py + h - 1 - front, w - 2, 1, c.lightened(0.15))
 
 static func draw_pick(ci: CanvasItem, p: Items.Pick, time: float) -> void:
 	var x := (p.x + 0.5) * TS
@@ -198,6 +244,16 @@ static func draw_pick(ci: CanvasItem, p: Items.Pick, time: float) -> void:
 	elif p.kind == "badge":
 		poly(ci, [Vector2(x, y - 7), Vector2(x + 6, y - 2), Vector2(x + 4, y + 6), Vector2(x - 4, y + 6), Vector2(x - 6, y - 2)], GOLD2)
 		r(ci, x - 2, y - 2, 4, 5, Color("#8c2f39"))
+	elif p.kind == "cuffkey":
+		ci.draw_circle(Vector2(x - 3, y), 3.5, Color("#c0c4c8"))
+		r(ci, x, y - 1, 8, 2, Color("#c0c4c8"))
+		ci.draw_arc(Vector2(x + 5, y + 4), 3.0, 0, TAU, 8, Color("#9aa0a6"), 1.2)
+	elif p.kind == "rope":
+		ci.draw_arc(Vector2(x, y), 6.0, 0, TAU, 12, Color("#b08a52"), 2.5)
+		ci.draw_arc(Vector2(x, y), 3.0, 0, TAU, 10, Color("#8a6a3a"), 2.0)
+	elif p.kind == "dockkey":
+		ci.draw_circle(Vector2(x - 4, y), 4.5, Color("#7fa0b8"))
+		r(ci, x, y - 1.5, 10, 3, Color("#7fa0b8"))
 	elif p.kind == "cash":
 		r(ci, x - 7, y - 4, 14, 8, Color("#5b7a4a"))
 		r(ci, x - 5, y - 2, 10, 4, Color("#8fb07a"))
@@ -383,3 +439,99 @@ static func draw_bubble(ci: CanvasItem, x: float, y: float, s: String) -> void:
 	r(ci, bx, by, w + 12, bh, Color("#f4efe2"))
 	poly(ci, [Vector2(x - 4, by + bh), Vector2(x + 4, by + bh), Vector2(x, by + bh + 5)], Color("#f4efe2"))
 	ci.draw_multiline_string(f, Vector2(bx + 6, by + 4 + size), s, HORIZONTAL_ALIGNMENT_LEFT, w + 2, size, -1, Color("#1a1408"))
+
+
+# ---------------------------------------------------------------- azotea: ciudad de noche y letrero
+
+static func _hash(i: int) -> float:
+	var x := (i * 374761393 + 668265263) & 0x7fffffff
+	x = ((x ^ (x >> 13)) * 1274126177) & 0x7fffffff
+	return float(x % 10000) / 10000.0
+
+## Manhattan de noche vista desde lo alto: azoteas con ventanas encendidas, depósitos de agua
+## y calles con faros de coches, y el Empire State asomando.
+static func draw_city(ci: CanvasItem, rect: Rect2, time: float) -> void:
+	r(ci, rect.position.x, rect.position.y, rect.size.x, rect.size.y, Color("#070b14"))
+	var bw := 230.0
+	var bh := 170.0
+	var st := 40.0
+	var gx0 := floori(rect.position.x / bw) - 1
+	var gx1 := floori(rect.end.x / bw) + 1
+	var gy0 := floori(rect.position.y / bh) - 1
+	var gy1 := floori(rect.end.y / bh) + 1
+	for gy in range(gy0, gy1 + 1):
+		for gx in range(gx0, gx1 + 1):
+			var bx := gx * bw
+			var by := gy * bh
+			var seed_i := gx * 7919 + gy * 104729
+			# edificios de la manzana
+			var n := 2 + int(_hash(seed_i) * 3)
+			var cw := (bw - st) / n
+			for i in n:
+				var hh := _hash(seed_i + i * 31)
+				var ex := bx + st / 2 + i * cw + 2
+				var ey := by + st / 2 + hh * 18
+				var ew := cw - 4
+				var eh := bh - st - hh * 30
+				var roof := Color(0.09 + hh * 0.06, 0.1 + hh * 0.05, 0.13 + hh * 0.05)
+				r(ci, ex + 6, ey + 6, ew, eh, Color(0, 0, 0, 0.5))
+				r(ci, ex, ey, ew, eh, roof)
+				r(ci, ex, ey, ew, 2, roof.lightened(0.15))
+				# ventanas encendidas en el borde (vista muy inclinada)
+				var wx := ex + 4.0
+				var k := 0
+				while wx < ex + ew - 6:
+					if _hash(seed_i + i * 97 + k) < 0.45:
+						var flick := 0.75 + 0.25 * sin(time * 0.7 + k + i)
+						r(ci, wx, ey + eh - 7, 4, 3, Color(1.0, 0.82, 0.45, 0.8 * flick))
+					wx += 9
+					k += 1
+				if hh > 0.6:
+					ci.draw_circle(Vector2(ex + ew * 0.7, ey + eh * 0.3), 7, Color("#3a2e22"))
+					ci.draw_circle(Vector2(ex + ew * 0.7, ey + eh * 0.3), 5, Color("#4f3d2c"))
+			# coches por las calles
+			for c in 2:
+				var ph := fmod(time * (40.0 + c * 25.0) + _hash(seed_i + c) * bw, bw)
+				var cy := by + (8.0 if c == 0 else st - 10.0)
+				ci.draw_circle(Vector2(bx + ph, cy), 1.6, Color(1, 0.95, 0.7, 0.9) if c == 0 else Color(1, 0.25, 0.2, 0.9))
+				ci.draw_circle(Vector2(bx + ph + 4, cy), 1.6, Color(1, 0.95, 0.7, 0.9) if c == 0 else Color(1, 0.25, 0.2, 0.9))
+	# el Empire State, al sur-oeste
+	var es := Vector2(-260, 1180)
+	if rect.grow(400).has_point(es):
+		for k in 6:
+			var sz := 200.0 - k * 30.0
+			r(ci, es.x - sz / 2, es.y - sz / 2 - k * 6, sz, sz, Color(0.12 + k * 0.02, 0.13 + k * 0.02, 0.17 + k * 0.02))
+		ci.draw_circle(es + Vector2(0, -40), 6, Color(1, 0.2, 0.2, 0.6 + 0.4 * sin(time * 3.0)))
+
+## Letrero luminoso del hotel sobre la azotea.
+static func draw_sign(ci: CanvasItem, x: float, y: float, w: float, time: float) -> void:
+	var f := font()
+	var on := 0.85 + 0.15 * sin(time * 9.0) * (1.0 if fmod(time, 7.0) < 0.4 else 0.0)
+	r(ci, x, y, w, 52, Color("#1c1a1a"))
+	for k in int(w / 16):
+		r(ci, x + 6 + k * 16, y + 44, 3, 12, Color("#3a3434"))
+	var txt := "NEW YORKER"
+	var fs := 40
+	var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var p := Vector2(x + (w - tw) / 2.0, y + 40)
+	ci.draw_string_outline(f, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 10, Color(0.9, 0.1, 0.1, 0.25 * on))
+	ci.draw_string_outline(f, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(1, 0.3, 0.3, 0.6 * on))
+	ci.draw_string(f, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 0.75, 0.7, on))
+	var t2 := "HOTEL"
+	var tw2 := f.get_string_size(t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+	ci.draw_string(f, Vector2(x + (w - tw2) / 2.0, y + 14), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.85, 0.6, on))
+
+## Esposas, grilletes y café sobre un personaje.
+static func draw_extras(ci: CanvasItem, e: Ent) -> void:
+	if e.cuffed:
+		ci.draw_arc(Vector2(e.x - 4, e.y + 1), 2.5, 0, TAU, 8, Color("#c0c4c8"), 1.2)
+		ci.draw_arc(Vector2(e.x + 4, e.y + 1), 2.5, 0, TAU, 8, Color("#c0c4c8"), 1.2)
+		ci.draw_line(Vector2(e.x - 2, e.y + 1), Vector2(e.x + 2, e.y + 1), Color("#c0c4c8"), 1.0)
+		if e.shackled:
+			ci.draw_line(Vector2(e.x - 6, e.y + 11), Vector2(e.x + 6, e.y + 11), Color("#9aa0a6"), 1.5)
+			ci.draw_arc(Vector2(e.x - 6, e.y + 11), 2.0, 0, TAU, 8, Color("#9aa0a6"), 1.2)
+			ci.draw_arc(Vector2(e.x + 6, e.y + 11), 2.0, 0, TAU, 8, Color("#9aa0a6"), 1.2)
+	if e.coffee:
+		r(ci, e.x + 8, e.y - 6, 5, 6, Color("#efe9d9"))
+		r(ci, e.x + 8, e.y - 6, 5, 1, Color("#5a3b28"))
+		ci.draw_line(Vector2(e.x + 10, e.y - 9), Vector2(e.x + 11, e.y - 13), Color(1, 1, 1, 0.35), 1.0)

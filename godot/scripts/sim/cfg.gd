@@ -90,15 +90,15 @@ const AMMO_PERK := 12           # con la ventaja "munición extra"
 const KNIFE_RANGE := 34.0       # alcance del cuchillo del cazador
 const KNIFE_CD := 1.4
 const SILENCER_PERK := 0.7      # radio de testigos de tus disparos con "silenciador mejorado"
-const MONEY_RUNNER := 30        # dinero inicial
+const MONEY_RUNNER := 40        # dinero inicial
 const MONEY_HUNTER := 120
 const MONEY_RICH := 150         # extra con la ventaja "fondos reservados"
-const MONEY_TASK := 40          # por encargo terminado
+const MONEY_TASK := 0           # los encargos ya no se pagan (ver trabajos extra)
 const MONEY_TARGET := 100       # por objetivo eliminado
 const MONEY_REPORT := 20        # a los cazadores, por cada denuncia contra un corredor
 const MONEY_SNITCH := 60        # por dar la descripción de un cazador a la policía
 const SCRAP_PRICE := 15         # por pieza vendida (una vez hecha la llave inglesa)
-const CASH_SPOTS := 6           # carteras sueltas por el hotel
+const CASH_SPOTS := 2           # carteras sueltas por el hotel (raro encontrarlas)
 const INTEL_DUR := 25.0         # s que dura un chivatazo o un rastro
 const ELEV_WAIT := 2.0          # s hasta que llega el ascensor
 const ELEV_CD := 5.0            # s de espera entre viajes
@@ -107,6 +107,30 @@ const HOLD_CUT := 3.5
 const HOLD_TALK := 1.0
 const TALK_CD := 25.0           # s antes de que un PNJ vuelva a darte información
 const RUMOR_CHANCE := 0.4
+const TALK_RANGE := 58.0        # distancia para hablar o comprar (sin mantener)
+const TASK_RANGE := 46.0
+
+# v0.6: trabajos extra, recompensa y alarmas
+const JOB_PAY_MIN := 50
+const JOB_PAY_MAX := 90
+const HOLD_JOB := 2.5
+const BONUS_AMMO := 6           # balas de la pistola que recibe el primer corredor en terminar
+const BONUS_INTEL := 45.0       # s que ve al cazador delatado
+const COP_EVENT_CHANCE := 0.15  # evento raro: el policía del café
+const BRIBE_COP := 250          # soborno para soltar a un detenido
+const CUFF_TIME := 90.0         # s esposado antes de quedar fuera de la partida
+const CUFF_SPEED := 70.0        # velocidad esposado sin vigilancia
+const FRISK_RANGE := 6.0        # casillas a las que un policía decide cachearte
+const UNLOCK_PINS := 5          # aciertos del minijuego de la ganzúa
+const HOLD_UNLOCK_BOT := 12.0
+const ALARM_L2 := 2             # policías muertos para el nivel 2
+const ALARM_L3 := 4             # y para el Bluegeddon
+const REINFORCE := 2            # refuerzos en el nivel 1
+const FED_COUNT := 6            # agentes federales en el nivel 2
+const BLUE_COUNT := 16          # policías en el Bluegeddon
+const ALARM_TIME_SHIFT := 90.0  # s que el nivel 2 adelanta o retrasa al cliente
+const HOLD_ESCAPE := 3.0
+const SPEED_FED := 120.0
 
 static func is_solid(t: int) -> bool:
 	return t == T_VOID or t == T_WALL or t == T_RAIL or t == T_ELEV

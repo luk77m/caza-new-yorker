@@ -65,6 +65,27 @@ var intel_until := 0.0    # chivatazo (corredor) o rastro (cazador) activo hasta
 var talk_cd := -99.0      # PNJ: cuándo vuelve a dar información
 var shop := ""            # PNJ: "runner" o "hunter" si vende material a ese bando
 var elev_ready := 0.0     # jugador: cuándo puede volver a usar el ascensor
+# v0.6
+var gun := false          # pistola (cazador siempre; corredor como recompensa)
+var knife := false
+var equip := "fist"       # fist, gun, knife, wrench, tool
+var undercover := false   # corredor con placa de policía (evento raro)
+var hunter_mark := 0      # id del cazador delatado por la recompensa
+var job: Task = null      # trabajo extra del vendedor
+var cuffed := false
+var cuff_t := 0.0
+var shackled := false
+var frisked := false
+var escaped := false
+var cuffkey := false
+var rope := false
+var dockkey := false
+var coffee := false       # PNJ: el policía del café
+var deliver_to := 0       # PNJ: a quién entrega la recompensa
+var frisk_id := 0         # policía: a quién va a cachear
+var chase_id := 0         # policía: a quién persigue
+var is_fed := false
+var sweep: Array = []     # federales: habitaciones por revisar
 # PNJ
 var staff := false
 var tiles: Array = []

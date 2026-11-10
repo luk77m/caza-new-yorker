@@ -6,6 +6,7 @@ const PATH := "user://ajustes.cfg"
 
 static var volume := 0.8      # volumen general (0-1)
 static var steps := 0.4       # volumen de los pasos (0-1)
+static var music := 0.6       # volumen de la música del menú (0-1)
 static var zoom := 2.0        # zoom inicial de la cámara
 static var arrows := true     # flechas hacia los encargos
 static var shake := true      # sacudida de cámara con los disparos
@@ -18,6 +19,7 @@ static func load_cfg() -> void:
 		return
 	volume = float(c.get_value("audio", "volumen", volume))
 	steps = float(c.get_value("audio", "pasos", steps))
+	music = float(c.get_value("audio", "musica", music))
 	zoom = float(c.get_value("video", "zoom", zoom))
 	arrows = bool(c.get_value("juego", "flechas", arrows))
 	shake = bool(c.get_value("video", "sacudida", shake))
@@ -28,6 +30,7 @@ static func save_cfg() -> void:
 	var c := ConfigFile.new()
 	c.set_value("audio", "volumen", volume)
 	c.set_value("audio", "pasos", steps)
+	c.set_value("audio", "musica", music)
 	c.set_value("video", "zoom", zoom)
 	c.set_value("juego", "flechas", arrows)
 	c.set_value("video", "sacudida", shake)

@@ -10,6 +10,7 @@ class Pick:
 	var y := 0
 	var nm := ""
 	var value := 0
+	var job_owner := 0
 
 class Corpse:
 	var id := 0
