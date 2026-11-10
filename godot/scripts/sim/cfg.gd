@@ -132,8 +132,29 @@ const ALARM_TIME_SHIFT := 90.0  # s que el nivel 2 adelanta o retrasa al cliente
 const HOLD_ESCAPE := 3.0
 const SPEED_FED := 120.0
 
+# v0.7
+const HP := 3                   # impactos de bala de la policía que aguanta un jugador
+const HP_REGEN := 30.0          # s para recuperar un punto de salud
+const POLICE_FIRE_CD := 0.85    # s entre disparos de un policía
+const POLICE_SPREAD := 0.12     # rad de dispersión de la policía
+const BULLET_SPEED := 900.0
+const PUNCH_RANGE := 32.0
+const PUNCH_CD := 0.9
+const KO_TIME := 4.0            # s noqueado tras un puñetazo
+const KO_POLICE := 3.0
+const CUFF_RANGE := 34.0
+const CUFF_CD := 20.0           # s entre intentos de esposar
+const QTE_TIME := 3.0           # s para meter la combinación y zafarse
+const QTE_LEN := 4
+const QTE_BOT_ESCAPE := 0.45    # probabilidad de que un bot corredor se zafe
+const ARREST_AWAY := 10.0       # s fuera de la partida tras ser esposado por un cazador
+const CUFF_INTEL := 10.0        # s que el cazador ve a todos los corredores
+const HEARSE_AFTER := 35.0      # s desde la muerte hasta que el coche fúnebre se lleva el cuerpo
+const STREET_Y := 28.4          # fila (en casillas) del carril de la calle frente al hotel
+
 static func is_solid(t: int) -> bool:
 	return t == T_VOID or t == T_WALL or t == T_RAIL or t == T_ELEV
 
+## Los ascensores ya no tapan la vista (antes quedaban siempre en sombra).
 static func blocks_sight(t: int) -> bool:
-	return t == T_VOID or t == T_WALL or t == T_ELEV
+	return t == T_VOID or t == T_WALL

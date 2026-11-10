@@ -20,7 +20,7 @@ const NPC_SPECS := [
 	{"f": 5, "home": "pub"}, {"f": 5, "home": "pub"},
 	{"f": 1, "staff": "guard", "home": "fixed", "at": Vector2i(24, 25)},
 ]
-const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock"]
+const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock", "task", "force", "job"]
 
 static var _lockm := PackedByteArray()
 
@@ -164,7 +164,11 @@ static func new_world(opt: Dictionary) -> World:
 		var cp := _mk_pick(pid, "cash", Vector3i(cf, ct.x, ct.y), "cartera")
 		cp.value = Rng.ri(2, 5) * 10
 		w.picks.append(cp)
+	if opt.get("tutorial", false):
+		_setup_tutorial(w)
 	refresh_tasks(w)
+	if w.tutorial:
+		return w
 	if w.role == "runner":
 		var me := w.human
 		wlog(w, "Tu cartel de corredor: " + str(task_units(me).y) + " encargos propios. Tu habitación es la " + me.room.split(" ")[me.room.split(" ").size() - 1] + ". Las demás puertas están cerradas: fuerza la cerradura (mantén la tecla de interactuar) o busca la llave maestra, pero si alguien te ve te denunciará.")
@@ -177,6 +181,37 @@ static func new_world(opt: Dictionary) -> World:
 	else:
 		wlog(w, "Observas una partida entre bots.")
 	return w
+
+## Tutorial: sin cazadores activos ni reloj, y un encargo de práctica cerca.
+static func _setup_tutorial(w: World) -> void:
+	w.tutorial = true
+	w.limit = 1e6
+	for e in w.ents:
+		if e.role == "hunter":
+			e.type = "frozen"
+			e.fl = 0
+			e.x = 6.5 * TS
+			e.y = 9.5 * TS
+	var me := w.human
+	if me == null:
+		return
+	var f := fdat(me.fl)
+	var mt := me.tile()
+	var best: Vector2i = f.tiles_pub[0]
+	var bd := 1e9
+	for t in f.tiles_pub:
+		var d := absf(Vector2(t.x - mt.x, t.y - mt.y).length() - 7.0)
+		if d < bd:
+			bd = d
+			best = t
+	var tk := Task.new()
+	tk.id = "practica"
+	tk.nm = "Encargo de práctica"
+	tk.fl = me.fl
+	tk.x = best.x
+	tk.y = best.y
+	tk.dur = 3.0
+	me.tasks.push_front(tk)
 
 static func _mk_pick(id: int, kind: String, s: Vector3i, nm: String) -> Items.Pick:
 	var p := Items.Pick.new()
@@ -198,7 +233,8 @@ static func apply_perk(e: Ent) -> void:
 	e.money = Cfg.MONEY_HUNTER + (Cfg.MONEY_RICH if e.perk == "rich" else 0)
 	e.masterkey = e.perk == "master"
 	e.gun = true
-	e.knife = true
+	e.knife = false
+	e.cuffs = true
 	e.equip = "gun"
 
 ## Evento para sonidos y efectos (la escena los consume y vacía la lista).
@@ -534,7 +570,7 @@ static func civils_seeing(w: World, a: Ent, b: Ent, rad: float) -> Array:
 	var out: Array = []
 	var f := fdat(a.fl)
 	for c in w.ents:
-		if not c.alive or c.role != "civil" or c.fl != a.fl:
+		if not c.alive or c.role != "civil" or c.fl != a.fl or c.ko_t > 0:
 			continue
 		if (dist(c.x, c.y, a.x, a.y) <= rad and Nav.los(f, c.x, c.y, a.x, a.y)) or (b != null and dist(c.x, c.y, b.x, b.y) <= rad and Nav.los(f, c.x, c.y, b.x, b.y)):
 			out.append(c)
@@ -602,8 +638,12 @@ static func report_runner(w: World, ctx: Dictionary) -> void:
 		if r != w.human:
 			wlog(w, r.nm + " queda fichado.", "team", r.id)
 
+## La policía llega en coche: aparca delante del hotel y entra por la puerta.
 static func spawn_police(w: World, d: Dictionary) -> void:
-	var sp := [Vector2i(21, 24), Vector2i(23, 24), Vector2i(22, 23)]
+	Combat.add_car(w, "police", Combat.park_slot(w), d)
+
+static func spawn_police_now(w: World, d: Dictionary, car_x: float) -> void:
+	var sp := [Vector2i(21, 25), Vector2i(23, 25), Vector2i(22, 24)]
 	for i in Cfg.POLICE_COUNT:
 		var p := new_ent(w)
 		p.nm = "Policía"; p.type = "police"; p.role = "police"; p.fl = 1
@@ -611,7 +651,7 @@ static func spawn_police(w: World, d: Dictionary) -> void:
 		p.target = Vector3i(d["fl"], d["x"], d["y"]); p.ai_mode = "go"; p.ai_t = 0
 		p.stay_until = w.time + float(d.get("stay", Cfg.POLICE_STAY))
 		w.ents.append(p)
-	wlog(w, "La policía ha llegado al hotel.", "alarm")
+	wlog(w, "Un coche de policía aparca en la puerta: los agentes entran en el hotel.", "alarm")
 
 # ---------------------------------------------------------------- acciones
 
@@ -701,7 +741,7 @@ static func try_shoot(w: World, e: Ent) -> bool:
 	if e.ammo <= 0:
 		e.cd = 0.4
 		ev(w, "empty", e.fl, e.x, e.y)
-		var nm := "Sin balas. Usa el cuchillo (clic izquierdo sin apuntar) o compra munición en recepción."
+		var nm := "Sin balas. Usa las esposas o los puños (Q) o compra munición al vigilante de la entrada."
 		if e == w.human and (w.logs.is_empty() or w.logs[w.logs.size() - 1].msg != nm):
 			wlog(w, nm)
 		return false
@@ -725,6 +765,7 @@ static func try_shoot(w: World, e: Ent) -> bool:
 	w.fx.append({"type": "flash", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "t": 0.08})
 	w.fx.append({"type": "tracer", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "x2": tx, "y2": ty, "t": 0.12, "loud": false})
 	ev(w, "shot", e.fl, e.x, e.y)
+	Combat.muzzle(w, e)
 	if best != null:
 		kill(w, e, best, "gun")
 		return true
@@ -1167,6 +1208,18 @@ static func choose_task(w: World, e: Ent) -> Task:
 			best = t
 	return best
 
+## El jugador ha superado el minijuego de un encargo, cerradura o trabajo.
+static func complete_action(w: World, e: Ent, hint: Dictionary) -> void:
+	var h := Hold.new()
+	h.type = hint["type"]
+	h.ref = hint["ref"]
+	h.dur = 0.0
+	if not hold_valid(w, e, h):
+		return
+	if h.type == "task":
+		h.ref.busy = 0
+	finish_hold(w, e, h)
+
 ## Corredor dueño de un encargo.
 static func task_owner(w: World, t: Task) -> Ent:
 	for e in w.ents:
@@ -1195,7 +1248,7 @@ static func press(w: World, e: Ent, hint: Dictionary) -> String:
 			e.cuffkey = false
 			Alarm.free_prisoner(w, hint["ref"], "llave de las esposas")
 			return "ok"
-		"unlock":
+		"unlock", "task", "force", "job":
 			return "minigame"
 	return ""
 
@@ -1262,6 +1315,10 @@ static func runner_ai(w: World, e: Ent, dt: float) -> void:
 			var danger: bool = h.aim or e.knows.has(h.outfit.id) or poster_known(w, h)
 			if not danger:
 				continue
+			if not e.gun and not e.melee and d < 1.1 * TS and e.cd <= 0 and h.ko_t <= 0:
+				cancel_hold(w, e)
+				e.aim_x = h.x; e.aim_y = h.y; e.dir = dir_of(h.x - e.x, h.y - e.y)
+				Combat.punch(w, e)
 			if e.gun and e.ammo > 0 and d < 6 * TS and e.cd <= 0:
 				cancel_hold(w, e)
 				e.aim_x = h.x; e.aim_y = h.y - 2; e.dir = dir_of(h.x - e.x, h.y - e.y)
@@ -1412,7 +1469,7 @@ static func hunter_ai(w: World, e: Ent, dt: float) -> void:
 			return
 		var d := dist(e.x, e.y, tg.x, tg.y)
 		var vis := tg.fl == e.fl and Nav.los(fdat(e.fl), e.x, e.y, tg.x, tg.y)
-		var reach := 5.5 * TS if e.ammo > 0 else Cfg.KNIFE_RANGE - 6.0
+		var reach := 5.5 * TS if e.ammo > 0 else Cfg.CUFF_RANGE - 6.0
 		if not vis or d > reach:
 			e.aim = false; e.ai_aim_t = 0
 			if tg.fl == e.fl:
@@ -1426,8 +1483,8 @@ static func hunter_ai(w: World, e: Ent, dt: float) -> void:
 		if safe or e.ai_patience >= Cfg.BOT_PATIENCE:
 			if e.ammo <= 0:
 				e.aim_x = tg.x; e.aim_y = tg.y
-				if e.cd <= 0:
-					try_knife(w, e)
+				if e.cd <= 0 and e.cuffs_cd <= 0:
+					Combat.try_cuff(w, e)
 					e.ai_mode = "patrol"; e.goal = null; e.ai_wait = 1.5; e.ai_patience = 0
 				return
 			e.aim = true; e.aim_x = tg.x; e.aim_y = tg.y - 2; e.ai_aim_t += dt
@@ -1436,6 +1493,14 @@ static func hunter_ai(w: World, e: Ent, dt: float) -> void:
 				e.aim = false; e.ai_aim_t = 0; e.ai_mode = "patrol"; e.goal = null; e.ai_wait = 1.5; e.ai_patience = 0
 		else:
 			e.aim = false; e.ai_aim_t = 0; e.ai_patience += dt
+		return
+	# sin balas: ir a comprar al vigilante de la entrada
+	if e.ammo <= 0 and e.money >= 60:
+		if e.goal == null or e.goal.fl != 1:
+			nav_to(w, e, 1, 23, 24)
+		if nav_update(w, e, dt, Cfg.SPEED_BOT) and e.fl == 1:
+			buy(w, e, "balas")
+			e.goal = null
 		return
 	# patrulla
 	e.aim = false
@@ -1542,7 +1607,7 @@ static func perceive(w: World, dt: float) -> void:
 					wlog(w, "Te han visto donde no debes: alguien va a avisar a seguridad.", "report", r.id)
 	# policía
 	for p in w.ents:
-		if p.role != "police" or not p.alive:
+		if p.role != "police" or not p.alive or p.ko_t > 0:
 			continue
 		var spotted: Ent = null
 		var spot_r: Ent = null
@@ -1582,8 +1647,7 @@ static func perceive(w: World, dt: float) -> void:
 			p.freeze = true; p.dir = dir_of(spotted.x - p.x, spotted.y - p.y)
 			p.spot[spotted.id] = float(p.spot.get(spotted.id, 0.0)) + dt; p.spotting = true
 			if p.spot[spotted.id] >= Cfg.POLICE_REACT:
-				kill(w, p, spotted, "police")
-				p.spot = {}; p.freeze = false; p.spotting = false
+				Combat.police_fire(w, p, spotted)
 				p.stay_until = maxf(p.stay_until, w.time + 20)
 		elif spot_r != null:
 			p.freeze = true; p.dir = dir_of(spot_r.x - p.x, spot_r.y - p.y)
@@ -1598,7 +1662,7 @@ static func perceive(w: World, dt: float) -> void:
 	if w.acc2 >= 0.5:
 		w.acc2 = 0
 		for c in w.corpses:
-			if c.found:
+			if c.found or c.chalk:
 				continue
 			for n in civils:
 				if n.fl != c.fl or not n.alive or n.state == "call" or n.state == "calling":
@@ -1710,7 +1774,7 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 				cand.call("escape", null, (x["x"] + 0.5) * TS, (x["y"] + 0.5) * TS, Cfg.TASK_RANGE, str(x["name"]), Cfg.HOLD_ESCAPE)
 	if e.role == "hunter":
 		for c in w.corpses:
-			if c.fl == e.fl and not c.stripped and c.outfit.kind != "under":
+			if c.fl == e.fl and not c.stripped and not c.chalk and c.outfit.kind != "under":
 				cand.call("strip", c, c.x, c.y, 44.0, "Coger su ropa", Cfg.HOLD_STRIP)
 		for wd in f.wards:
 			if not wd.looted:
@@ -1807,6 +1871,8 @@ static func equip_list(e: Ent) -> Array:
 	var out: Array = ["fist"]
 	if e.gun:
 		out.append("gun")
+	if e.cuffs:
+		out.append("cuffs")
 	if e.knife:
 		out.append("knife")
 	if e.melee:
@@ -1876,6 +1942,10 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 		cancel_hold(w, e)
 	if inp.get("fire", false) and not e.cuffed and w.cine.is_empty():
 		match e.equip:
+			"fist":
+				Combat.punch(w, e)
+			"cuffs":
+				Combat.try_cuff(w, e)
 			"gun":
 				if e.aim:
 					try_shoot(w, e)
@@ -1893,16 +1963,24 @@ static func step(w: World, dt: float, inp: Dictionary) -> void:
 	var h := w.human
 	Reward.update(w, dt)
 	Alarm.update(w, dt)
+	Combat.update(w, dt)
 	if h != null and h.alive and h.arrest > 0:
 		h.arrest -= dt; h.moving = false; h.aim = false; h.hold = null; w.hint = {}
-	elif h != null and h.alive and not h.escaped and not inp.is_empty():
+	elif h != null and h.alive and (h.ko_t > 0 or h.qte_t > 0):
+		h.moving = false; h.aim = false; w.hint = {}
+		if h.hold != null:
+			cancel_hold(w, h)
+	elif h != null and h.alive and not h.escaped and h.away_t <= 0 and not inp.is_empty():
 		human_control(w, h, dt, inp)
 	for e in w.ents:
 		if e.bt > 0:
 			e.bt -= dt
 			if e.bt <= 0:
 				e.bubble = ""
-		if not e.alive or e.type == "frozen" or e.escaped:
+		if not e.alive or e.type == "frozen" or e.escaped or e.away_t > 0:
+			continue
+		if (e.ko_t > 0 or e.qte_t > 0) and e.type != "human":
+			e.moving = false
 			continue
 		if e.cuffed and e.type != "human":
 			e.moving = false

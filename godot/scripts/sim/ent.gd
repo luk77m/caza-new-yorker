@@ -86,6 +86,16 @@ var frisk_id := 0         # policía: a quién va a cachear
 var chase_id := 0         # policía: a quién persigue
 var is_fed := false
 var sweep: Array = []     # federales: habitaciones por revisar
+# v0.7
+var hp := 3
+var hp_t := 0.0           # s hasta recuperar salud
+var ko_t := 0.0           # s noqueado
+var fire_cd := 0.0        # policía
+var cuffs := false        # cazador: lleva esposas
+var cuffs_cd := 0.0
+var qte_t := 0.0          # bloqueado mientras se resuelve un intento de esposar
+var away_t := 0.0         # s fuera de la partida (esposado por un cazador)
+var intel_kind := ""      # hunters, targets o runners
 # PNJ
 var staff := false
 var tiles: Array = []

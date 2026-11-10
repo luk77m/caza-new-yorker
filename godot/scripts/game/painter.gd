@@ -151,21 +151,53 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 				r(ci, px, py, TS, TS, c)
 			match t:
 				3:
+					# moqueta con medallón art déco y cenefa junto a la pared
 					if (tx + ty) % 2 == 0:
-						poly(ci, [Vector2(px + 16, py + 6), Vector2(px + 26, py + 16), Vector2(px + 16, py + 26), Vector2(px + 6, py + 16)], c.lightened(0.08))
+						poly(ci, [Vector2(px + 16, py + 5), Vector2(px + 27, py + 16), Vector2(px + 16, py + 27), Vector2(px + 5, py + 16)], c.lightened(0.09))
+						poly(ci, [Vector2(px + 16, py + 11), Vector2(px + 21, py + 16), Vector2(px + 16, py + 21), Vector2(px + 11, py + 16)], GOLD2.darkened(0.45))
+					else:
+						ci.draw_circle(Vector2(px + 16, py + 16), 2, GOLD2.darkened(0.5))
+					if f.at(tx, ty - 1) == Cfg.T_WALL or f.at(tx, ty + 1) == Cfg.T_WALL:
+						r(ci, px, py + (2 if f.at(tx, ty - 1) == Cfg.T_WALL else TS - 6), TS, 4, GOLD2.darkened(0.35))
 				14:
-					poly(ci, [Vector2(px + 16, py + 4), Vector2(px + 28, py + 16), Vector2(px + 16, py + 28), Vector2(px + 4, py + 16)], c.lightened(0.07))
+					# pasillo: alfombra central con bordes dorados
+					r(ci, px, py + 3, TS, 2, GOLD2.darkened(0.2))
+					r(ci, px, py + TS - 5, TS, 2, GOLD2.darkened(0.2))
+					poly(ci, [Vector2(px + 16, py + 8), Vector2(px + 24, py + 16), Vector2(px + 16, py + 24), Vector2(px + 8, py + 16)], c.lightened(0.1))
+					ci.draw_circle(Vector2(px + 16, py + 16), 2.5, GOLD2.darkened(0.1))
 				2:
+					# mármol con vetas e incrustaciones
 					if (tx + ty) % 2 == 0:
-						r(ci, px, py, TS, TS, Color(1, 1, 1, 0.05))
+						r(ci, px, py, TS, TS, Color(1, 1, 1, 0.06))
+					ci.draw_line(Vector2(px + 3, py + (tx * 7 + ty * 3) % 28 + 2), Vector2(px + 29, py + (tx * 5 + ty * 11) % 28 + 2), Color(1, 1, 1, 0.07), 1.0)
+					if tx % 4 == 0 and ty % 4 == 0:
+						poly(ci, [Vector2(px, py - 4), Vector2(px + 4, py), Vector2(px, py + 4), Vector2(px - 4, py)], GOLD2.darkened(0.2))
+					r(ci, px, py, TS, 1, Color(0, 0, 0, 0.12))
+					r(ci, px, py, 1, TS, Color(0, 0, 0, 0.12))
 				11:
+					# parqué en espiga
 					for k in 4:
-						r(ci, px, py + k * 8 + 7, TS, 1, Color(0, 0, 0, 0.18))
+						var off := 8 if (tx + k) % 2 == 0 else 0
+						r(ci, px, py + k * 8 + 7, TS, 1, Color(0, 0, 0, 0.2))
+						r(ci, px + off + 4, py + k * 8, 1, 8, Color(0, 0, 0, 0.16))
+						r(ci, px + off + 20, py + k * 8, 1, 8, Color(0, 0, 0, 0.16))
 				5:
-					r(ci, px + 3, py + 3, TS - 6, TS - 6, c.darkened(0.25))
+					# puerta de madera con marco y pomo de latón
+					r(ci, px + 2, py + 1, TS - 4, TS - 2, Color("#5a3a22"))
+					r(ci, px + 4, py + 3, TS - 8, TS - 6, Color("#7a5232"))
+					r(ci, px + 7, py + 6, TS - 14, 9, Color("#6a4529"))
+					r(ci, px + 7, py + 18, TS - 14, 9, Color("#6a4529"))
+					ci.draw_circle(Vector2(px + TS - 8, py + 17), 2, GOLD)
 				6:
-					r(ci, px + 2, py + 2, TS - 4, TS - 4, Color("#3a2f1a"))
-					r(ci, px + TS / 2.0 - 1, py + 2, 2, TS - 4, GOLD2)
+					# puertas del ascensor de latón con indicador
+					r(ci, px + 1, py + 1, TS - 2, TS - 2, Color("#2a2112"))
+					r(ci, px + 3, py + 5, TS / 2.0 - 4, TS - 7, Color("#b8923f"))
+					r(ci, px + TS / 2.0 + 1, py + 5, TS / 2.0 - 4, TS - 7, Color("#b8923f"))
+					r(ci, px + TS / 2.0 - 1, py + 5, 2, TS - 7, Color("#2a2112"))
+					for k in 3:
+						r(ci, px + 5, py + 9 + k * 7, TS / 2.0 - 8, 1, Color("#e8c76a"))
+						r(ci, px + TS / 2.0 + 3, py + 9 + k * 7, TS / 2.0 - 8, 1, Color("#e8c76a"))
+					poly(ci, [Vector2(px + 16, py + 1), Vector2(px + 19, py + 4), Vector2(px + 13, py + 4)], Color("#ffd27a"))
 				7, 8:
 					for k in 4:
 						r(ci, px, py + k * 8, TS, 4, Color(0, 0, 0, 0.22))
@@ -210,15 +242,57 @@ static func draw_furn(ci: CanvasItem, o: Dictionary) -> void:
 			ci.draw_circle(Vector2(px + w / 2, py + h / 2), minf(w, h) * 0.3, c.lightened(0.12))
 		"bed":
 			r(ci, px + 2, py + 2, w - 4, h - 4, Color("#4a2f22"))
-			r(ci, px + 4, py + 4, w - 8, h - 8, c)
+			r(ci, px + 2, py + 2, w - 4, 6, Color("#5e3d24"))
+			r(ci, px + 4, py + 6, w - 8, h - 10, c)
+			r(ci, px + 7, py + 9, w * 0.5 - 9, 9, Color("#fbf7ec"))
+			r(ci, px + w * 0.5 + 2, py + 9, w * 0.5 - 9, 9, Color("#fbf7ec"))
 			r(ci, px + 4, py + h * 0.45, w - 8, h * 0.55 - 4, Color("#7a2b37"))
-			r(ci, px + 6, py + 6, w - 12, 8, Color("#f4efe2"))
+			r(ci, px + 4, py + h * 0.45, w - 8, 4, Color("#efe4cf"))
+			for j in 3:
+				r(ci, px + 6, py + h * 0.55 + j * 8, w - 12, 1, Color(0, 0, 0, 0.15))
 		"phone":
 			r(ci, px + 8, py + 8, 16, 14, c)
 			r(ci, px + 10, py + 6, 12, 4, Color("#33333a"))
 		"piano":
 			r(ci, px + 1, py + 1, w - 2, h - 2, c)
-			r(ci, px + 3, py + h - 9, w - 6, 6, Color("#e9e4d6"))
+			r(ci, px + 4, py + 3, w - 8, h - 16, Color("#1d1d24"))
+			r(ci, px + 3, py + h - 11, w - 6, 8, Color("#e9e4d6"))
+			var nk := int((w - 6) / 4)
+			for j in nk:
+				if j % 7 != 2 and j % 7 != 6:
+					r(ci, px + 5 + j * 4, py + h - 11, 2, 5, Color("#111116"))
+		"table":
+			r(ci, px + 1, py + 1, w - 2, h - 2, Color("#f1ece0"))
+			r(ci, px + 1, py + h - 6, w - 2, 5, Color("#d8cfba"))
+			ci.draw_circle(Vector2(px + w / 2, py + h / 2 - 2), minf(w, h) * 0.12, Color("#c9a24b"))
+			ci.draw_circle(Vector2(px + w / 2, py + h / 2 - 2), minf(w, h) * 0.06, Color("#fff2c0"))
+		"desk", "recdesk":
+			r(ci, px + 1, py + 1, w - 2, h - 2, c.lightened(0.05))
+			r(ci, px + 1, py + h - 9, w - 2, 8, c.darkened(0.3))
+			r(ci, px + 6, py + 5, 10, 7, Color("#efe9d9"))
+			ci.draw_circle(Vector2(px + w - 10, py + 9), 5, Color("#3d6b3f"))
+			ci.draw_circle(Vector2(px + w - 10, py + 9), 2.5, Color("#ffe6a0"))
+		"sofa":
+			r(ci, px + 1, py + 1, w - 2, h - 2, c.darkened(0.2))
+			r(ci, px + 4, py + 4, w - 8, h - 12, c)
+			var ncu := maxi(1, int(w / 32))
+			for j in ncu:
+				r(ci, px + 5 + j * (w - 10) / ncu, py + 6, (w - 10) / ncu - 2, h - 16, c.lightened(0.08))
+		"bar":
+			r(ci, px + 1, py + 1, w - 2, h - 2, c)
+			r(ci, px + 1, py + 1, w - 2, 5, Color("#8a5c37"))
+			var bcs := [Color("#2f6b3a"), Color("#8c2f39"), Color("#c9a24b")]
+			for j in int(w / 14):
+				r(ci, px + 6 + j * 14, py + 3, 3, 8, bcs[j % 3])
+		"shelf":
+			r(ci, px + 1, py + 1, w - 2, h - 2, c.darkened(0.2))
+			var bks := [Color("#7a2b37"), Color("#2f4a6b"), Color("#3d6b3f"), Color("#8a7a4a")]
+			for j in int(w / 5):
+				r(ci, px + 3 + j * 5, py + 4, 4, h - 10, bks[(j * 7) % 4])
+		"crate":
+			r(ci, px + 1, py + 1, w - 2, h - 2, c)
+			ci.draw_rect(Rect2(px + 3, py + 3, w - 6, h - 6), c.darkened(0.3), false, 1.5)
+			ci.draw_line(Vector2(px + 3, py + 3), Vector2(px + w - 3, py + h - 3), c.darkened(0.3), 1.5)
 		"washer":
 			r(ci, px + 2, py + 2, w - 4, h - 4, c)
 			ci.draw_circle(Vector2(px + w / 2, py + h / 2), minf(w, h) * 0.3, Color("#3d4a55"))
@@ -347,8 +421,8 @@ static func draw_actor(ci: CanvasItem, x: float, y: float, o: Outfit, dir: Strin
 		var ex := sx + cos(aim_ang) * 11.5
 		var ey := sy + sin(aim_ang) * 11.5
 		ci.draw_line(Vector2(sx, sy), Vector2(ex, ey), arm_c, 4.2)
+		draw_gun(ci, Vector2(ex, ey), aim_ang, 0.55)
 		ci.draw_circle(Vector2(ex, ey), 2.3, skin)
-		ci.draw_circle(Vector2(ex + cos(aim_ang) * 2.8, ey + sin(aim_ang) * 2.8), 1.6, Color(0.07, 0.07, 0.09))
 		if not side:
 			r(ci, -10.4, -21.4, 3.4, 10.4 - sw * 0.3, arm_c)
 			r(ci, -10.2, -11, 3, 2.6, skin)
@@ -535,3 +609,106 @@ static func draw_extras(ci: CanvasItem, e: Ent) -> void:
 		r(ci, e.x + 8, e.y - 6, 5, 6, Color("#efe9d9"))
 		r(ci, e.x + 8, e.y - 6, 5, 1, Color("#5a3b28"))
 		ci.draw_line(Vector2(e.x + 10, e.y - 9), Vector2(e.x + 11, e.y - 13), Color(1, 1, 1, 0.35), 1.0)
+
+
+## Pistola de los años 30 con silenciador largo, en la dirección de apuntado.
+static func draw_gun(ci: CanvasItem, p: Vector2, ang: float, k: float) -> void:
+	var d := Vector2(cos(ang), sin(ang))
+	var n := Vector2(-d.y, d.x)
+	if d.x < 0:
+		n = -n
+	var steel := Color("#2a2d33")
+	var hi := Color("#5b6068")
+	var q := func(a: float, b: float, c: float, e: float) -> PackedVector2Array:
+		return PackedVector2Array([p + d * a * k + n * c * k, p + d * b * k + n * c * k, p + d * b * k + n * e * k, p + d * a * k + n * e * k])
+	# empuñadura de madera
+	ci.draw_colored_polygon(PackedVector2Array([p + d * -4 * k + n * 1 * k, p + d * 4 * k + n * 1 * k, p + d * 1 * k + n * 11 * k, p + d * -7 * k + n * 10 * k]), Color("#6b4a2a"))
+	# armazón y corredera
+	ci.draw_colored_polygon(q.call(-6, 14, -4, 2), steel)
+	ci.draw_colored_polygon(q.call(-6, 14, -4, -2.5), hi)
+	# guardamonte
+	ci.draw_arc(p + d * 5 * k + n * 3 * k, 3.0 * k, 0, TAU, 8, steel, 1.0)
+	# silenciador largo con anillas
+	ci.draw_colored_polygon(q.call(14, 40, -3.5, 1.5), Color("#3a3d44"))
+	for i in 4:
+		var a := 17.0 + i * 6.0
+		ci.draw_colored_polygon(q.call(a, a + 1.2, -3.6, 1.6), Color("#55595f"))
+
+## Coche visto desde arriba: policía (blanco y negro con sirena), fúnebre (largo y negro),
+## federal (negro) o aparcado (color clásico).
+static func draw_car(ci: CanvasItem, kind: String, x: float, y: float, time: float, tint: Color = Color("#5a2a2a")) -> void:
+	var l := 92.0 if kind == "hearse" else 72.0
+	var w := 30.0
+	var body := tint
+	match kind:
+		"police":
+			body = Color("#15161a")
+		"hearse", "fed":
+			body = Color("#0e0f12")
+	var x0 := x - l / 2
+	var y0 := y - w / 2
+	r(ci, x0 + 4, y0 + 5, l, w, Color(0, 0, 0, 0.35))
+	r(ci, x0, y0, l, w, body)
+	r(ci, x0 + 2, y0, l - 4, 2, body.lightened(0.25))
+	if kind == "police":
+		r(ci, x0 + l * 0.32, y0, l * 0.36, w, Color("#efeee8"))
+	# capó redondeado, parabrisas y techo
+	ci.draw_circle(Vector2(x0 + l - 4, y), w / 2 - 1, body)
+	r(ci, x0 + l * 0.55, y0 + 4, 6, w - 8, Color(0.55, 0.68, 0.8, 0.8))
+	r(ci, x0 + l * (0.18 if kind == "hearse" else 0.25), y0 + 4, l * (0.36 if kind == "hearse" else 0.28), w - 8, body.lightened(0.12))
+	if kind == "hearse":
+		r(ci, x0 + 6, y0 + 3, l * 0.5, 1.5, Color("#c9c9c9"))
+		r(ci, x0 + 6, y0 + w - 4.5, l * 0.5, 1.5, Color("#c9c9c9"))
+		ci.draw_arc(Vector2(x0 + l * 0.3, y), 5, -1.2, 1.2, 8, Color("#c9c9c9"), 1.2)
+	# ruedas, faros y pilotos
+	for k in 2:
+		r(ci, x0 + 10 + k * (l - 30), y0 - 3, 12, 4, Color("#111111"))
+		r(ci, x0 + 10 + k * (l - 30), y0 + w - 1, 12, 4, Color("#111111"))
+	ci.draw_circle(Vector2(x0 + l + 1, y0 + 6), 2.5, Color("#fff4c8"))
+	ci.draw_circle(Vector2(x0 + l + 1, y0 + w - 6), 2.5, Color("#fff4c8"))
+	r(ci, x0 - 1, y0 + 4, 2, 4, Color("#c0392b"))
+	r(ci, x0 - 1, y0 + w - 8, 2, 4, Color("#c0392b"))
+	if kind == "police":
+		var on := fmod(time, 0.5) < 0.25
+		ci.draw_circle(Vector2(x0 + l * 0.5, y), 3.5, Color("#ff3030") if on else Color("#801010"))
+
+## Exterior del vestíbulo: acera, farolas, calle y coches aparcados.
+static func draw_street(ci: CanvasItem, w: World, time: float) -> void:
+	var y_side := 27.0 * TS
+	var y_road := y_side + 14.0
+	r(ci, -400, y_side, Cfg.W * TS + 800, 14, Color("#5a5650"))
+	r(ci, -400, y_side + 13, Cfg.W * TS + 800, 2, Color("#2a2826"))
+	r(ci, -400, y_road, Cfg.W * TS + 800, 200, Color("#1d1f22"))
+	var x := -380.0
+	while x < Cfg.W * TS + 400:
+		r(ci, x, y_road + 44, 26, 3, Color("#8a8470"))
+		x += 60.0
+	# toldo del hotel sobre la entrada
+	r(ci, 19.5 * TS, y_side - 2, 5 * TS, 10, Color("#7a2b37"))
+	for k in 10:
+		r(ci, 19.5 * TS + k * 16, y_side + 6, 8, 3, Color("#7a2b37") if k % 2 == 0 else Color("#efe4cf"))
+	# farolas
+	for fx in [8, 15, 29, 36]:
+		ci.draw_circle(Vector2(fx * TS, y_side + 6), 3, Color("#2a2a2a"))
+		ci.draw_circle(Vector2(fx * TS, y_side + 6), 9, Color(1.0, 0.85, 0.5, 0.18))
+	# coches aparcados de los huéspedes
+	var parked := [[4.0, Color("#5a2a2a")], [9.0, Color("#2a3a5a")], [33.0, Color("#3a4a2a")], [38.0, Color("#6a5a3a")]]
+	for pc in parked:
+		draw_car(ci, "parked", pc[0] * TS, (Cfg.STREET_Y + 1.2) * TS, time, pc[1])
+	for c in w.cars:
+		draw_car(ci, str(c["kind"]), c["x"], c["y"], time)
+
+## Silueta de tiza donde estuvo un cadáver.
+static func draw_chalk(ci: CanvasItem, c: Items.Corpse) -> void:
+	ci.draw_set_transform(Vector2(c.x, c.y + 4), c.ang, Vector2.ONE)
+	var col := Color(0.95, 0.95, 0.92, 0.75)
+	ci.draw_arc(Vector2(-15, 0), 6, 0, TAU, 14, col, 1.2)
+	ci.draw_polyline(PackedVector2Array([Vector2(-9, -4), Vector2(-4, -12), Vector2(0, -6), Vector2(8, -9), Vector2(18, -5), Vector2(10, -2), Vector2(18, 3), Vector2(8, 7), Vector2(0, 5), Vector2(-4, 12), Vector2(-9, 4)]), col, 1.2)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## Estrellitas sobre alguien noqueado.
+static func draw_ko(ci: CanvasItem, e: Ent, time: float) -> void:
+	for i in 3:
+		var a := time * 4.0 + i * TAU / 3.0
+		var p := Vector2(e.x + cos(a) * 9, e.y - 36 + sin(a) * 3)
+		poly(ci, [p + Vector2(0, -3), p + Vector2(1, -1), p + Vector2(3, 0), p + Vector2(1, 1), p + Vector2(0, 3), p + Vector2(-1, 1), p + Vector2(-3, 0), p + Vector2(-1, -1)], Color("#ffe17a"))

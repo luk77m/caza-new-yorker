@@ -25,6 +25,7 @@ class Corpse:
 	var t := 0.0
 	var victim_id := 0
 	var ang := 0.0
+	var chalk := false
 
 class Poster:
 	var outfit_id := ""

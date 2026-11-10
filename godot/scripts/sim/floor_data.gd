@@ -26,6 +26,14 @@ var tiles_pub: Array = []      # Vector2i
 var room_tiles := {}           # nombre -> Array[Vector2i]
 var lock_at := {}              # índice de casilla de puerta -> Room
 
+var open_from := 999          # filas desde las que se ve "hacia fuera" (la calle del vestíbulo)
+
+## ¿Tapa la vista esta casilla?
+func blocks(tx: int, ty: int) -> bool:
+	if ty >= open_from:
+		return false
+	return Cfg.blocks_sight(at(tx, ty))
+
 func at(tx: int, ty: int) -> int:
 	if tx < 0 or ty < 0 or tx >= Cfg.W or ty >= Cfg.H:
 		return Cfg.T_VOID

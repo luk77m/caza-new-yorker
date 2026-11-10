@@ -12,6 +12,7 @@ signal elev_cut
 signal settings_changed
 signal quit_requested
 signal minigame_done(ok: bool)
+signal tutorial_requested
 
 const FL_SHORT := ["Sót.", "PB", "P2", "P10", "P20", "P30", "Azotea"]
 const C_BG := Color(0.03, 0.05, 0.07, 0.86)
@@ -22,8 +23,8 @@ const C_MUT := Color("#a9b2b8")
 const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
-const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor · E mantenido: encargos y cerraduras\nQ: cambiar lo que llevas en la mano · clic derecho: apuntar · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
-const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y un cuchillo (Q para cambiar). Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
+const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · clic derecho: apuntar · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
+const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
 
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4, "perk": "silencer"}
 var root: Control
@@ -88,6 +89,14 @@ var perk_row: HBoxContainer
 var role_buttons := {}
 var last_log := 0
 var log_list: Array = []
+var tut_box: PanelContainer
+var tut_label: Label
+var tut_step: Label
+var qte_box: PanelContainer
+var qte_view: Control
+var qte_combo: Array = []
+var qte_idx := 0
+var qte_bar: ProgressBar
 
 func _ready() -> void:
 	layer = 10
@@ -170,8 +179,8 @@ func _btn(t: String, cb: Callable, fs: int = 16) -> Button:
 
 func _menu_btn(t: String, cb: Callable) -> Button:
 	var b := _btn(t, cb, 20)
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.custom_minimum_size = Vector2(300, 46)
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.custom_minimum_size = Vector2(320, 44)
 	b.add_theme_stylebox_override("normal", _sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12))
 	var hv := _sb(Color(0.92, 0.82, 0.54, 0.12), C_GOLD, 0, 12)
 	hv.border_width_left = 3
@@ -325,6 +334,41 @@ func _build_play() -> void:
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toasts.add_theme_constant_override("separation", 4)
 	play_root.add_child(toasts)
+	# tutorial
+	tut_box = _deco_panel(14)
+	tut_box.visible = false
+	tut_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tut_box.position = Vector2(14, 200)
+	var tv := VBoxContainer.new()
+	tut_box.add_child(tv)
+	tut_step = _lbl("TUTORIAL", 13, C_GOLD)
+	tv.add_child(tut_step)
+	tut_label = _lbl("", 16, C_TEXT)
+	tut_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	tut_label.custom_minimum_size = Vector2(320, 0)
+	tv.add_child(tut_label)
+	play_root.add_child(tut_box)
+	# combinación para zafarse de las esposas
+	qte_box = _deco_panel(16)
+	qte_box.visible = false
+	qte_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var qv := VBoxContainer.new()
+	qte_box.add_child(qv)
+	qv.add_child(_lbl("¡TE ESTÁN ESPOSANDO! Mete la combinación (flechas o WASD)", 15, C_RED))
+	qte_view = Control.new()
+	qte_view.custom_minimum_size = Vector2(420, 64)
+	qte_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	qte_view.draw.connect(_draw_qte)
+	qv.add_child(qte_view)
+	qte_bar = ProgressBar.new()
+	qte_bar.max_value = 1.0
+	qte_bar.step = 0.0
+	qte_bar.show_percentage = false
+	qte_bar.custom_minimum_size = Vector2(420, 8)
+	qte_bar.add_theme_stylebox_override("background", _sb(Color(0, 0, 0, 0.5), C_LINE, 1, 0))
+	qte_bar.add_theme_stylebox_override("fill", _sb(C_RED, C_RED, 0, 0))
+	qv.add_child(qte_bar)
+	play_root.add_child(qte_box)
 	# rótulo grande (alarma, Bluegeddon)
 	big_label = _lbl("", 64, C_BLUE)
 	big_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -499,47 +543,49 @@ func _build_title() -> void:
 	title_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	title_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(title_panel)
-	var shade := TextureRect.new()
-	var g := Gradient.new()
-	g.set_color(0, Color(0.02, 0.03, 0.05, 0.94))
-	g.set_color(1, Color(0.02, 0.03, 0.05, 0.25))
-	var gt := GradientTexture2D.new()
-	gt.gradient = g
-	gt.fill_from = Vector2(0, 0.5)
-	gt.fill_to = Vector2(1, 0.5)
-	shade.texture = gt
-	shade.stretch_mode = TextureRect.STRETCH_SCALE
-	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_panel.add_child(shade)
-	var left := VBoxContainer.new()
-	left.position = Vector2(70, 70)
-	left.add_theme_constant_override("separation", 6)
-	title_panel.add_child(left)
-	var t0 := _lbl("HOTEL NEW YORKER · 1930", 14, C_MUT)
-	left.add_child(t0)
+	var art := TitleArt.new()
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	title_panel.add_child(art)
+	var cc := CenterContainer.new()
+	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_panel.add_child(cc)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	cc.add_child(col)
+	var t0 := _lbl("HOTEL NEW YORKER · NUEVA YORK · 1930", 14, C_MUT)
+	t0.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(t0)
 	var t1 := _lbl("CAZA EN EL", 30, C_GOLD)
-	left.add_child(t1)
-	var t2 := _lbl("NEW YORKER", 64, C_GOLD)
-	t2.add_theme_constant_override("outline_size", 8)
-	left.add_child(t2)
-	var line := ColorRect.new()
-	line.color = C_GOLD
-	line.custom_minimum_size = Vector2(380, 2)
-	left.add_child(line)
-	left.add_child(_lbl("", 10))
+	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(t1)
+	var t2 := _lbl("NEW YORKER", 72, C_GOLD)
+	t2.add_theme_constant_override("outline_size", 10)
+	t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(t2)
+	var orn := ColorRect.new()
+	orn.color = C_GOLD
+	orn.custom_minimum_size = Vector2(440, 2)
+	var oc := CenterContainer.new()
+	oc.add_child(orn)
+	col.add_child(oc)
+	col.add_child(_lbl("", 8))
 	menu_box = VBoxContainer.new()
 	menu_box.add_theme_constant_override("separation", 2)
-	left.add_child(menu_box)
+	menu_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	var mc := CenterContainer.new()
+	mc.add_child(menu_box)
+	col.add_child(mc)
 	menu_box.add_child(_menu_btn("Partida rápida", func(): start_requested.emit(opt.duplicate())))
 	menu_box.add_child(_menu_btn("Nueva partida", func(): _open_title_panel(lobby_panel)))
+	menu_box.add_child(_menu_btn("Tutorial", func(): tutorial_requested.emit()))
 	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
 	menu_box.add_child(_menu_btn("Ajustes", func(): open_settings()))
-	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.6 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos y sonido generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y música en [b]assets/music/menu.ogg[/b].")))
+	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.7 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
 	menu_box.add_child(_menu_btn("Salir", func(): quit_requested.emit()))
-	var ver := _lbl("Prototipo v0.6 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
-	ver.position = Vector2(70, 0)
+	var ver := _lbl("Prototipo v0.7 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	ver.position = Vector2(40, 0)
 	ver.name = "Version"
 	title_panel.add_child(ver)
 	_build_lobby()
@@ -648,7 +694,7 @@ func _pick_role(key: String) -> void:
 		perk_row.visible = key == "hunter"
 	var txt := {
 		"runner": "Mafia contratada. Tienes 8-10 encargos en tu bloc de notas. Las habitaciones ajenas están cerradas y si te ven forzarlas te denuncian. El primero en acabar recibe una pistola y el chivatazo de un cazador.",
-		"hunter": "Policía secreta infiltrada. Elimina a los dos corredores de tu cartel sin testigos. Tienes " + str(Cfg.AMMO) + " balas y un cuchillo; el vigilante de la entrada te vende material.",
+		"hunter": "Policía secreta infiltrada. Elimina a los dos corredores de tu cartel sin testigos. Tienes " + str(Cfg.AMMO) + " balas y unas esposas; el vigilante de la entrada te vende material.",
 		"spectator": "Mira una partida completa entre bots, sin niebla. Espacio cambia el personaje al que sigues.",
 	}
 	var rt := lobby_panel.find_child("RoleText", true, false) as Label
@@ -780,9 +826,9 @@ func open_elev(cur_fl: int, has_cutter: bool = false) -> void:
 func close_elev() -> void:
 	elev_panel.visible = false
 
-func open_minigame() -> void:
+func open_minigame(mode: String = "timing", ttl: String = "Forzar las esposas", pins: int = 3) -> void:
 	close_panels()
-	pick.start()
+	pick.start(mode, ttl, pins)
 	_center(pick)
 
 func show_end(w: World) -> void:
@@ -801,6 +847,22 @@ func show_end(w: World) -> void:
 
 func set_fade(a: float) -> void:
 	fade.color = Color(0, 0, 0, a)
+
+func _draw_qte() -> void:
+	for i in qte_combo.size():
+		var c := Vector2(60 + i * 100, 32)
+		qte_view.draw_rect(Rect2(c - Vector2(28, 28), Vector2(56, 56)), Color("#1a1f27"))
+		PickGame.draw_arrow(qte_view, c, str(qte_combo[i]), 20.0, Color("#7ee08a") if i < qte_idx else Color("#efe8d4"))
+
+func set_tutorial(on: bool, step: int, total: int, txt: String) -> void:
+	tut_box.visible = on
+	if on:
+		tut_step.text = "TUTORIAL · PASO " + str(mini(step + 1, total)) + " DE " + str(total)
+		if tut_label.text != txt:
+			tut_label.text = txt
+			tut_box.reset_size()
+		var pulse := 0.85 + 0.15 * sin(Time.get_ticks_msec() / 200.0)
+		tut_box.modulate = Color(pulse, pulse, pulse, 1.0)
 
 func set_status(t: String) -> void:
 	status_lbl.text = t
@@ -826,11 +888,11 @@ func _layout() -> void:
 	bar_bot.position = Vector2(0, vs.y - bar_bot.size.y)
 	var ver := title_panel.find_child("Version", true, false) as Label
 	if ver != null:
-		ver.position = Vector2(70, vs.y - 34)
+		ver.position = Vector2(40, vs.y - 40)
 	for p in [lobby_panel, info_panel]:
 		if p.visible:
 			p.reset_size()
-			p.position = Vector2(maxf(480.0, (vs.x - p.size.x) / 2.0 + 160), (vs.y - p.size.y) / 2.0)
+			p.position = (vs - p.size) / 2.0
 	for p in [notes_panel, map_panel, inv_panel, elev_panel, pause_panel, end_panel, shop_panel, settings_panel, pick]:
 		if p.visible:
 			_center(p)
@@ -992,6 +1054,9 @@ func _inventory(w: World) -> void:
 	var arms: Array = []
 	if hm.gun:
 		arms.append("Pistola (" + str(hm.ammo) + "/" + str(hm.ammo_max) + " balas)")
+	if hm.cuffs:
+		arms.append("Esposas" + (" (listas en " + str(ceili(hm.cuffs_cd)) + " s)" if hm.cuffs_cd > 0 else ""))
+	arms.append("Puños: noquean unos segundos")
 	if hm.knife:
 		arms.append("Cuchillo")
 	if hm.melee:
@@ -1080,6 +1145,8 @@ func update_hud(w: World, view: Ent, delta: float) -> void:
 		if hm.intel_until > w.time:
 			if role == "runner":
 				_set_badge("intel", "Cazadores en " + Sim.floor_list(w, "hunter") + " · " + _fmt(hm.intel_until - w.time))
+			elif hm.intel_kind == "runners":
+				_set_badge("intel", "Corredores en " + Sim.floor_list(w, "runner") + " · " + _fmt(hm.intel_until - w.time))
 			else:
 				_set_badge("intel", "Objetivos en " + Sim.floor_list(w, w.targets) + " · " + _fmt(hm.intel_until - w.time))
 		else:
@@ -1144,7 +1211,19 @@ func update_hud(w: World, view: Ent, delta: float) -> void:
 		quick.current = hm.equip
 		quick.ammo = hm.ammo if hm.gun else -1
 		quick.money = hm.money
+		quick.hp = hm.hp
+		quick.cuffs_cd = hm.cuffs_cd
 		quick.queue_redraw()
+	# combinación de flechas
+	var q := Combat.qte_for(w, hm.id) if hm != null else {}
+	qte_box.visible = not q.is_empty()
+	if qte_box.visible:
+		qte_combo = q["combo"]
+		qte_idx = int(q["idx"])
+		qte_view.queue_redraw()
+		qte_bar.value = float(q["t"]) / Cfg.QTE_TIME
+		qte_box.reset_size()
+		qte_box.position = Vector2((vs.x - qte_box.size.x) / 2.0, vs.y * 0.62)
 	# acción
 	var ht := ""
 	var hv := -1.0

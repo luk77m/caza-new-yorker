@@ -86,7 +86,7 @@ static func los(f: FloorData, x0: float, y0: float, x1: float, y1: float) -> boo
 	for i in range(1, n):
 		var tx := floori((x0 + sx * i) / Cfg.TS)
 		var ty := floori((y0 + sy * i) / Cfg.TS)
-		if Cfg.blocks_sight(f.at(tx, ty)):
+		if f.blocks(tx, ty):
 			return false
 	return true
 
@@ -97,7 +97,7 @@ static func ray_dist(f: FloorData, x: float, y: float, ang: float, maxd: float) 
 	while d < maxd:
 		var tx := floori((x + c * d) / Cfg.TS)
 		var ty := floori((y + s * d) / Cfg.TS)
-		if Cfg.blocks_sight(f.at(tx, ty)):
+		if f.blocks(tx, ty):
 			return d + 4.0
 		d += 6.0
 	return maxd
@@ -131,7 +131,7 @@ static func ray_exact(f: FloorData, ox: float, oy: float, dx: float, dy: float, 
 			ty += sy
 		if t >= maxd:
 			return maxd
-		if Cfg.blocks_sight(f.at(tx, ty)):
+		if f.blocks(tx, ty):
 			return t
 	return maxd
 
@@ -149,9 +149,9 @@ static func vis_poly(f: FloorData, ox: float, oy: float, radius: float) -> Packe
 	var r2 := radius * radius * 1.1
 	for ty in range(y0, y1 + 1):
 		for tx in range(x0, x1 + 1):
-			if not Cfg.blocks_sight(f.at(tx, ty)):
+			if not f.blocks(tx, ty):
 				continue
-			if Cfg.blocks_sight(f.at(tx - 1, ty)) and Cfg.blocks_sight(f.at(tx + 1, ty)) and Cfg.blocks_sight(f.at(tx, ty - 1)) and Cfg.blocks_sight(f.at(tx, ty + 1)):
+			if f.blocks(tx - 1, ty) and f.blocks(tx + 1, ty) and f.blocks(tx, ty - 1) and f.blocks(tx, ty + 1):
 				continue
 			for c in 4:
 				var cx := (tx + (c & 1)) * TS

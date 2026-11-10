@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.6, 2D)
+# Caza en el New Yorker · versión Godot (v0.7, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,25 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.7
+
+- **Minijuegos** en encargos, cerraduras y trabajos (en vez de mantener E): secuencia de flechas, parar la aguja,
+  mantener el equilibrio y conectar cables. Dificultad media, unos 3-8 s.
+- **Puños:** noquean a cualquiera unos segundos (a la policía, menos). Sirven para escapar a los dos bandos.
+- **Esposas del cazador** (adiós al cuchillo): esposas a un corredor por sorpresa y este tiene 3 s para meter una
+  combinación de 4 flechas y zafarse. Si no, desaparece 10 s y reaparece en otro sitio, tú ves dónde están todos
+  los corredores 10 s y los corredores reciben el aviso.
+- **Policía:** dispara balas visibles con dispersión; los jugadores aguantan 3 impactos y recuperan salud poco a poco.
+- **Pistola de los años 30 con silenciador**, chispas y humo al disparar, y el fogonazo se ve en pleno apagón.
+- **Calle frente al vestíbulo:** acera, farolas, toldo y coches aparcados; se ve a través de las puertas. La
+  policía llega en coche, aparca y entra. Un coche fúnebre de la policía se lleva los cadáveres descubiertos y deja
+  la silueta de tiza.
+- **Interior:** moquetas con medallones, mármol con vetas, parqué en espiga, puertas de madera, ascensores de latón
+  y muebles con detalle (camas, pianos, bar con botellas, estanterías con libros...). Los ascensores ya no quedan
+  en sombra.
+- **Reloj** con las agujas en el sentido correcto. **Menú** art déco con rayos dorados, skyline y galería de
+  personajes, y **tutorial** guiado de 7 pasos.
 
 ## Novedades de la v0.6
 

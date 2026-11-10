@@ -46,6 +46,7 @@ static func set_level(w: World, lvl: int, culprit: Ent) -> void:
 	if lvl >= 1 and prev < 1:
 		for i in Cfg.REINFORCE:
 			spawn_cop(w, 1, Vector2i(21 + i, 24), "go", Vector3i(culprit.fl, ct.x, ct.y))
+		Combat.add_car(w, "police", Combat.park_slot(w))
 		announce(w, "ALARMA 1", "Refuerzos en camino: la policía cachea a todo el que se cruce", "#f0b04a")
 		Sim.wlog(w, "Alarma 1: la policía cachea a todo el mundo. Si llevas algo encima, te esposan.", "alarm")
 	if lvl >= 2 and prev < 2:
@@ -67,6 +68,8 @@ static func set_level(w: World, lvl: int, culprit: Ent) -> void:
 			# cada agente empieza por un sitio distinto de la lista
 			var k := order.size() * i / Cfg.FED_COUNT
 			f.sweep = order.slice(k) + order.slice(0, k)
+		Combat.add_car(w, "fed", Combat.park_slot(w))
+		Combat.add_car(w, "fed", Combat.park_slot(w))
 		announce(w, "ALARMA 2", "Llegan los federales · causante: " + str(SIDE_NAME[w.alarm_side]), "#ff5a64")
 		Sim.wlog(w, "Alarma 2: los federales registran habitación por habitación. " + ("El cliente llegará antes." if w.alarm_side == "hunters" else "El cliente se retrasa."), "alarm")
 	if lvl >= 3 and prev < 3:
@@ -82,6 +85,8 @@ static func spawn_cop(w: World, fl: int, t: Vector2i, mode: String, target: Vect
 	return p
 
 static func bluegeddon(w: World) -> void:
+	for i in 4:
+		Combat.add_car(w, "police", Combat.park_slot(w))
 	announce(w, "BLUEGEDDON", "La policía toma el hotel y dispara a cualquier sospechoso", "#3d7dff", 6.0)
 	Sim.wlog(w, "BLUEGEDDON: todos los huéspedes huyen y la policía dispara a cualquiera de los dos bandos.", "alarm")
 	for c in w.ents:

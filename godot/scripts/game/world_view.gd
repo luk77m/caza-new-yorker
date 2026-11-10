@@ -16,6 +16,7 @@ var base: Node2D
 var glow: Node2D
 var top: Node2D
 var light_tex: GradientTexture2D
+var tut_target := Vector3(-1, 0, 0)
 var _poly_key := ""
 var _poly := PackedVector2Array()
 
@@ -96,6 +97,8 @@ func _draw_base() -> void:
 			var sy := fmod(i * 53.71, 960.0)
 			var tw := 0.4 + 0.4 * sin(anim * 1.5 + i)
 			ci.draw_rect(Rect2(sx, sy, 2, 2), Color(1, 1, 0.9, tw * 0.6))
+	if f.fi == 1:
+		Painter.draw_street(ci, w, anim)
 	Painter.draw_floor(ci, f, x0, y0, x1, y1)
 	for o in f.furn:
 		if o["k"] == "rug":
@@ -111,6 +114,9 @@ func _draw_base() -> void:
 			Painter.draw_pick(ci, p, anim)
 	for c in w.corpses:
 		if can_see(f, c.x, c.y, c.fl):
+			if c.chalk:
+				Painter.draw_chalk(ci, c)
+				continue
 			var age: float = w.time - c.t
 			Painter.ellipse(ci, c.x + 4, c.y + 6, minf(8.0 + age * 5.0, 26.0), minf(5.0 + age * 3.0, 15.0), Color(0.38, 0.02, 0.05, 0.75))
 			Painter.draw_corpse(ci, c)
@@ -118,6 +124,8 @@ func _draw_base() -> void:
 	for e in _visible_ents(f):
 		Painter.draw_actor(ci, e.x, e.y, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
 		Painter.draw_extras(ci, e)
+		if e.ko_t > 0:
+			Painter.draw_ko(ci, e, anim)
 		if e.fx_swing > 0:
 			var a := atan2(e.aim_y - e.y, e.aim_x - e.x)
 			ci.draw_arc(Vector2(e.x, e.y - 6), 20, a - 0.9, a + 0.9, 10, Color(1, 1, 1, 0.7), 3)
@@ -144,10 +152,22 @@ func _draw_base() -> void:
 					var r2 := fmod(k * 7.3 + anim * 60.0, 26.0)
 					var sp := fp + Vector2(cos(a2), sin(a2)) * r2
 					ci.draw_line(sp, sp + Vector2(cos(a2), sin(a2) + 0.6) * 5, Color(1, 0.8, 0.3, clampf(fx["t"], 0, 1)), 1.5)
+			"spark":
+				var age2: float = float(fx["t0"]) - float(fx["t"])
+				var sp2 := fp + Vector2(fx["vx"], fx["vy"]) * age2
+				ci.draw_line(sp2, sp2 - Vector2(fx["vx"], fx["vy"]) * 0.02, Color(1, 0.85, 0.4, clampf(fx["t"] * 5.0, 0, 1)), 1.5)
+			"smoke":
+				var k2: float = 1.0 - float(fx["t"]) / float(fx["t0"])
+				ci.draw_circle(fp + Vector2(0, -k2 * 10), 4.0 + k2 * 9.0, Color(0.75, 0.75, 0.75, 0.35 * (1.0 - k2)))
 			"blood":
 				for k in 6:
 					var a3 := k * 1.05
 					ci.draw_circle(fp + Vector2(cos(a3), sin(a3)) * (10.0 * (1.0 - fx["t"] / 0.6) + 3), 2.4, Color(0.6, 0.04, 0.08, 0.85))
+	for b in w.bullets:
+		if int(b["fl"]) == view_ent.fl:
+			var bp := Vector2(b["x"], b["y"])
+			var bv := Vector2(b["vx"], b["vy"]).normalized()
+			ci.draw_line(bp - bv * 14, bp, Color(1, 0.9, 0.55, 0.95), 2.0)
 	# oscuridad ambiente (las luces de la capa glow la compensan)
 	var amb := 0.72 if bo else (0.18 if f.roof else clampf(0.2 + f.dark * 0.7, 0.22, 0.5))
 	ci.draw_rect(cam_rect.grow(64), Color(0.012, 0.016, 0.04, amb))
@@ -176,12 +196,20 @@ func _draw_glow() -> void:
 		for o in f.furn:
 			if o["k"] == "sign":
 				_light(ci, Vector2((o["x"] + o["w"] / 2.0) * Cfg.TS, o["y"] * Cfg.TS + 14), 260.0, Color(0.55, 0.08, 0.06))
+	if f.fi == 1:
+		for lx in [8, 15, 29, 36]:
+			_light(ci, Vector2(lx * Cfg.TS, 27.0 * Cfg.TS + 6), 110.0, Color(0.4, 0.32, 0.16))
+		for c in w.cars:
+			if c["kind"] == "police" and fmod(anim, 0.5) < 0.25:
+				_light(ci, Vector2(c["x"], c["y"]), 90.0, Color(0.6, 0.05, 0.05))
 	# luz propia (linterna en el apagón)
 	_light(ci, Vector2(view_ent.x, view_ent.y - 8), 70.0 if bo else 110.0, Color(0.22, 0.2, 0.16) if bo else Color(0.16, 0.15, 0.12))
 	if w.sab_alarm > w.time:
 		_light(ci, Vector2(view_ent.x, view_ent.y), 900.0, Color(0.25 * (0.5 + 0.5 * sin(anim * 7.0)), 0.0, 0.02))
 	for fx in w.fx:
 		if fx["fl"] == view_ent.fl and (fx["type"] == "flash" or fx["type"] == "sparks"):
+			if fx["type"] == "flash" and w.sab_blackout > w.time:
+				_light(ci, Vector2(fx["x"], fx["y"]), 220.0, Color(1.0, 0.85, 0.5))
 			var big: bool = fx.get("big", false)
 			_light(ci, Vector2(fx["x"], fx["y"]), 160.0 if big else 70.0, Color(0.9, 0.7, 0.35) * clampf(fx["t"] * 5.0, 0.0, 1.0))
 
@@ -196,6 +224,12 @@ func _draw_top() -> void:
 	if not see_all() and not f.roof:
 		_draw_fog(ci, f)
 	_draw_marks_top(ci, f)
+	for fx in w.fx:
+		if fx["fl"] == view_ent.fl and fx["type"] == "flash":
+			var big: bool = fx.get("big", false)
+			var fp2 := Vector2(fx["x"], fx["y"])
+			ci.draw_circle(fp2, (10.0 if big else 6.0), Color(1, 0.95, 0.7, 0.9))
+			ci.draw_circle(fp2, (22.0 if big else 14.0), Color(1, 0.8, 0.4, 0.25))
 	for e in list:
 		if e != view_ent and (e.role == "runner" or e.role == "hunter") and (see_all() or e.role == role):
 			Painter.text(ci, e.x, e.y - 30, e.nm, 10, Painter.BLUE if e.role == "runner" else Color("#ff9a9a"))
@@ -210,6 +244,12 @@ func _draw_top() -> void:
 		ci.draw_arc(hp, 15 + sin(anim * 5.0) * 2, 0, TAU, 24, Color(0.92, 0.82, 0.54, 0.8), 1.5)
 	if Settings.arrows:
 		_draw_arrows(ci)
+	# objetivo del tutorial: anillo y flecha que rebota
+	if int(tut_target.x) == view_ent.fl:
+		var tp := Vector2(tut_target.y, tut_target.z)
+		var bob := sin(anim * 5.0) * 5.0
+		ci.draw_arc(tp, 18 + sin(anim * 4.0) * 3, 0, TAU, 28, Color(0.92, 0.82, 0.54, 0.9), 3.0)
+		Painter.poly(ci, [tp + Vector2(0, -26 + bob), tp + Vector2(-9, -40 + bob), tp + Vector2(9, -40 + bob)], Painter.GOLD)
 	# mira del cazador
 	if view_ent == w.human and view_ent.aim:
 		var m := ci.get_global_mouse_position()
@@ -260,6 +300,10 @@ func _draw_marks_top(ci: CanvasItem, f: FloorData) -> void:
 		if h != null and h.alive and h.fl == f.fi:
 			ci.draw_arc(Vector2(h.x, h.y - 10), 22, 0, TAU, 24, Color(1, 0.25, 0.25, pulse), 2.5)
 			Painter.text(ci, h.x, h.y - 48, "CAZADOR", 10, Color(1, 0.4, 0.4))
+	if hm.role == "hunter" and hm.intel_kind == "runners" and hm.intel_until > w.time:
+		for r in w.ents:
+			if r.role == "runner" and r.alive and r.fl == f.fi:
+				ci.draw_arc(Vector2(r.x, r.y - 10), 20, 0, TAU, 24, Color(1, 0.3, 0.3, pulse), 2.0)
 	if hm.job != null and hm.job.fl == f.fi:
 		var jp := Vector2((hm.job.x + 0.5) * Cfg.TS, (hm.job.y + 0.5) * Cfg.TS)
 		ci.draw_arc(jp, 14, 0, TAU, 20, Color(0.45, 0.85, 0.5, pulse), 2.0)

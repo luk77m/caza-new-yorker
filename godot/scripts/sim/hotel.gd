@@ -71,6 +71,8 @@ static func load_data(path: String = "res://data/hotel.json") -> void:
 			f.room_tiles[k] = arr
 		for k in fd["lockAt"]:
 			f.lock_at[int(k)] = f.room_by(fd["lockAt"][k])
+		if fi == 1:
+			f.open_from = 27
 		floors.append(f)
 		fi += 1
 	task_defs.clear()

@@ -39,6 +39,11 @@ var cine := {}              # cinemática en curso del jugador
 var announce := {}          # {text, color, t} rótulo grande en pantalla
 var exits: Array = []       # salidas del Bluegeddon {fl, x, y, item, name}
 var bench := Vector3i(1, 15, 23)   # banco de detenidos (planta baja)
+var bullets: Array = []     # {fl, x, y, vx, vy, t, owner}
+var qtes: Array = []        # intentos de esposar en curso {hunter, runner, t, combo, idx, human}
+var cars: Array = []        # coches de la calle {kind, x, y, tx, state, t, payload}
+var tutorial := false
+var flags := {}             # cosas que ha hecho el jugador (para el tutorial)
 var stats := {"kills": 0, "civ_kills": 0, "calls": 0, "tasks": 0, "reports": 0, "arrests": 0, "forced": 0}
 
 func is_over() -> bool:

@@ -7,6 +7,8 @@ var paused := false
 var elev_pend := -1
 var elev_t := 0.0
 var pick_target := 0         # compañero al que se le fuerzan las esposas
+var pend_hint := {}          # acción que espera al minijuego
+var tut: Tutorial = null
 var follow: Ent = null       # personaje que sigue la cámara (espectador, tras caer o en el menú)
 var zoom := 2.0
 var shake := 0.0
@@ -47,6 +49,7 @@ func _ready() -> void:
 	hud.settings_changed.connect(_settings_changed)
 	hud.quit_requested.connect(func(): get_tree().quit())
 	hud.minigame_done.connect(_minigame_done)
+	hud.tutorial_requested.connect(_start_tutorial)
 	_to_menu()
 
 # ---------------------------------------------------------------- controles
@@ -133,10 +136,16 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if paused:
 		return
 	var h := w.human
+	var key := _key_name(ev)
 	if hud.pick.visible:
-		if ev.is_action_pressed("use"):
-			hud.pick.hit()
-			sfx.play("door", 0.4, 1.6)
+		if key != "":
+			hud.pick.press(key)
+			sfx.play("ui", 0.4, 1.4)
+		return
+	if h != null and not Combat.qte_for(w, h.id).is_empty():
+		if key != "" and key != "use":
+			Combat.qte_input(w, key)
+			sfx.play("ui", 0.5, 1.2)
 		return
 	if ev.is_action_pressed("tab"):
 		hud.toggle(hud.notes_panel, not hud.notes_panel.visible)
@@ -155,6 +164,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	if ev.is_action_pressed("equip"):
 		Sim.cycle_equip(h)
+		w.flags["equip"] = true
 		sfx.play("ui", 0.5)
 		return
 	if ev.is_action_pressed("use") and not ev.is_echo():
@@ -202,21 +212,82 @@ func _press(hint: Dictionary) -> void:
 			sfx.play("ui", 0.6)
 		_:
 			var r := Sim.press(w, h, hint)
+			if r == "ok" and ht == "talk":
+				w.flags["talked"] = true
 			if r == "minigame":
-				var t: Ent = hint["ref"]
-				pick_target = t.id
-				hud.open_minigame()
+				pend_hint = hint
+				if ht == "unlock":
+					var t: Ent = hint["ref"]
+					pick_target = t.id
+					hud.open_minigame("timing", "Forzar las esposas de " + t.nm, Cfg.UNLOCK_PINS)
+				else:
+					var m := _mode_for(hint)
+					hud.open_minigame(m[0], str(hint["label"]), m[1])
+
+## Qué minijuego toca a cada acción (siempre el mismo para el mismo encargo).
+func _mode_for(hint: Dictionary) -> Array:
+	var ht: String = hint["type"]
+	if ht == "force":
+		return ["timing", 2 if w.human.lockpick else 3]
+	if ht == "job":
+		return ["balance", 0]
+	var t: Task = hint["ref"]
+	if t.sab != "":
+		return ["wires", 0]
+	var modes := ["sequence", "timing", "balance", "wires"]
+	return [modes[absi(hash(t.id)) % modes.size()], 3]
+
+func _key_name(ev: InputEvent) -> String:
+	var k := ev as InputEventKey
+	if k == null or not k.pressed or k.echo:
+		return ""
+	match k.physical_keycode:
+		KEY_E, KEY_SPACE, KEY_ENTER:
+			return "use"
+		KEY_UP, KEY_W:
+			return "up"
+		KEY_DOWN, KEY_S:
+			return "down"
+		KEY_LEFT, KEY_A:
+			return "left"
+		KEY_RIGHT, KEY_D:
+			return "right"
+		KEY_1:
+			return "1"
+		KEY_2:
+			return "2"
+		KEY_3:
+			return "3"
+	return ""
 
 func _minigame_done(ok: bool) -> void:
-	var t: Ent = w.ent_by_id(pick_target) if w != null else null
-	if ok and t != null and t.cuffed:
-		Alarm.free_prisoner(w, t, "ganzúa")
-	elif not ok:
-		hud.set_status("Lo dejas a medias.")
+	if w == null:
+		return
+	var hint := pend_hint
+	pend_hint = {}
+	var h := w.human
+	if hint.is_empty() or h == null:
+		return
+	if not ok:
+		hud.set_status("Inténtalo otra vez.")
+		return
+	hud.set_status("")
+	if hint["type"] == "unlock":
+		var t: Ent = w.ent_by_id(pick_target)
+		if t != null and t.cuffed:
+			Alarm.free_prisoner(w, t, "ganzúa")
+	else:
+		Sim.complete_action(w, h, hint)
 
 # ---------------------------------------------------------------- partida y menú
 
+func _start_tutorial() -> void:
+	_start({"role": "runner", "hunters": 1, "runners": 2, "minutes": 60, "tutorial": true})
+	tut = Tutorial.new()
+	tut.begin(w)
+
 func _start(opt: Dictionary) -> void:
+	tut = null
 	w = Sim.new_world(opt)
 	mode = "play"
 	paused = false
@@ -238,6 +309,7 @@ func _to_menu() -> void:
 	mode = "title"
 	paused = false
 	elev_pend = -1
+	tut = null
 	w = Sim.new_world({"role": "spectator", "minutes": 30})
 	view.w = w
 	view.role = "spectator"
@@ -293,7 +365,7 @@ func _next_follow() -> void:
 func view_ent() -> Ent:
 	if w == null:
 		return null
-	if mode != "title" and w.human != null and w.human.alive and not w.human.escaped and w.role != "spectator":
+	if mode != "title" and w.human != null and w.human.alive and not w.human.escaped and w.human.away_t <= 0 and w.role != "spectator":
 		return w.human
 	if follow == null or not follow.alive or follow.escaped:
 		_next_follow()
@@ -364,6 +436,13 @@ func _process(delta: float) -> void:
 		if kind == "call" or kind == "report" or kind == "hunt":
 			sfx.play("call", 0.5)
 	hud.update_hud(w, ve, delta)
+	if tut != null:
+		tut.update(w, hud)
+		hud.set_tutorial(true, tut.step, Tutorial.STEPS.size(), tut.text())
+		view.tut_target = tut.target
+	else:
+		hud.set_tutorial(false, 0, 0, "")
+		view.tut_target = Vector3(-1, 0, 0)
 
 ## Sonidos y sacudidas a partir de los eventos de la simulación.
 func _events(ve: Ent) -> void:
@@ -385,6 +464,12 @@ func _events(ve: Ent) -> void:
 					shake = maxf(shake, 0.9)
 			"swing", "stab":
 				sfx.play(t, near)
+			"punch":
+				sfx.play("stab", near, 1.3)
+				if same and d < 4 * Cfg.TS:
+					shake = maxf(shake, 0.25)
+			"cuff":
+				sfx.play("door", near, 1.8)
 			"task":
 				if e.get("who", 0) == (w.human.id if w.human != null else -1):
 					sfx.play("task", 0.8)

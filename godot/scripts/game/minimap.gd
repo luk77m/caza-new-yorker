@@ -72,7 +72,7 @@ func _draw() -> void:
 		for e in w.ents:
 			if not e.alive or e.fl != fl:
 				continue
-			var show: bool = (hm.role == "runner" and e.role == "hunter") or (hm.role == "hunter" and e.id in w.targets)
+			var show: bool = (hm.role == "runner" and e.role == "hunter") or (hm.role == "hunter" and (e.id in w.targets or (hm.intel_kind == "runners" and e.role == "runner")))
 			if show:
 				var c := off + Vector2(e.x / Cfg.TS * s, e.y / Cfg.TS * s)
 				draw_arc(c, 5.0, 0, TAU, 16, Color("#ff5a64"), 2.0)

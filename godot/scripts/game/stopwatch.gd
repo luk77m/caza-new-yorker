@@ -29,9 +29,10 @@ func _draw() -> void:
 		var a := -PI / 2 + TAU * i / 60.0
 		var l := 7.0 if i % 5 == 0 else 3.0
 		draw_line(c + Vector2(cos(a), sin(a)) * (r - 2), c + Vector2(cos(a), sin(a)) * (r - 2 - l), Color("#2a1e0a"), 2.0 if i % 5 == 0 else 1.0)
-	# aguja de minutos restantes (vuelta = 15 min) y de segundos
-	var am := -PI / 2 + TAU * fmod(left / 900.0, 1.0)
-	var as_ := -PI / 2 + TAU * fmod(left, 60.0) / 60.0
+	# las agujas avanzan en el sentido del reloj con el tiempo transcurrido
+	var elapsed := maxf(total - left, 0.0)
+	var am := -PI / 2 + TAU * clampf(elapsed / maxf(total, 1.0), 0.0, 1.0)
+	var as_ := -PI / 2 + TAU * fmod(elapsed, 60.0) / 60.0
 	draw_line(c, c + Vector2(cos(am), sin(am)) * (r * 0.55), Color("#2a1e0a"), 4.0)
 	draw_line(c, c + Vector2(cos(as_), sin(as_)) * (r * 0.85), Color("#8c2f39"), 1.6)
 	draw_circle(c, 3.5, Color("#2a1e0a"))
