@@ -1,0 +1,6 @@
+# generados por build.py / mktest.py (index.html sí se versiona: es el juego)
+bundle.js
+index_test.html
+# capturas de las pruebas de interfaz
+shots/
+node_modules/
