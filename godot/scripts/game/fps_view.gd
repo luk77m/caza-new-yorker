@@ -220,7 +220,7 @@ void fragment() {
 """
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage = Control.new()
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -289,9 +289,10 @@ func update_view(world: World, ent: Ent, delta: float, lean_in: float, shake_in:
 	var f: FloorData = Hotel.floors[e.fl]
 	if f.fi != _fi:
 		_build_floor(f)
-	vs = size
-	if vs.x < 10:
-		return
+	# tamaño de la pantalla (el del Control puede quedarse a 0 dentro de un CanvasLayer)
+	vs = get_viewport_rect().size
+	position = Vector2.ZERO
+	size = vs
 	cx = vs.x / 2.0
 	proj = cx / tan(FOV * 0.5)
 	colw = maxf(3.0, vs.x / 420.0)
