@@ -754,21 +754,23 @@ static func try_shoot(w: World, e: Ent) -> bool:
 	e.ammo -= 1
 	var tx := e.aim_x
 	var ty := e.aim_y
+	var ox := e.x + e.lean_x    # se dispara desde donde te asomas
+	var oy := e.y + e.lean_y
 	var best: Ent = null
 	var bd := 20.0
 	for v in w.ents:
 		if v == e or not v.alive or v.fl != e.fl or v.escaped:
 			continue
 		var d := dist(v.x, v.y - 2, e.aim_x, e.aim_y)
-		if d < bd and dist(e.x, e.y, v.x, v.y) <= Cfg.KILL_RANGE * TS and Nav.los(fdat(e.fl), e.x, e.y, v.x, v.y):
+		if d < bd and dist(ox, oy, v.x, v.y) <= Cfg.KILL_RANGE * TS and Nav.los(fdat(e.fl), ox, oy, v.x, v.y):
 			bd = d
 			best = v
 	if best != null:
 		tx = best.x
 		ty = best.y - 10
-	var a := atan2(ty - (e.y - 14), tx - e.x)
-	w.fx.append({"type": "flash", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "t": 0.08})
-	w.fx.append({"type": "tracer", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "x2": tx, "y2": ty, "t": 0.12, "loud": false})
+	var a := atan2(ty - (oy - 14), tx - ox)
+	w.fx.append({"type": "flash", "fl": e.fl, "x": ox + cos(a) * 14, "y": oy - 14 + sin(a) * 14, "t": 0.08})
+	w.fx.append({"type": "tracer", "fl": e.fl, "x": ox + cos(a) * 14, "y": oy - 14 + sin(a) * 14, "x2": tx, "y2": ty, "t": 0.12, "loud": false})
 	ev(w, "shot", e.fl, e.x, e.y)
 	Combat.muzzle(w, e)
 	if best != null:
@@ -1903,6 +1905,21 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 		e.equip = "fist"
 	e.aim_x = inp.get("aim_x", e.x); e.aim_y = inp.get("aim_y", e.y)
 	e.aim = e.gun and e.equip == "gun" and inp.get("aim", false) and e.hold == null and not e.cuffed
+	# asomarse (solo apuntando): el ojo y el cañón se desplazan un poco, nunca a través de un muro
+	var lx: float = inp.get("lean_x", 0.0)
+	var ly: float = inp.get("lean_y", 0.0)
+	var ll := Vector2(lx, ly).length()
+	if not e.aim or ll < 0.5:
+		lx = 0.0
+		ly = 0.0
+	elif ll > Cfg.LEAN_PX:
+		lx *= Cfg.LEAN_PX / ll
+		ly *= Cfg.LEAN_PX / ll
+	if (lx != 0.0 or ly != 0.0) and (f.blocks(floori((e.x + lx) / TS), floori((e.y + ly) / TS)) or not Nav.los(f, e.x, e.y, e.x + lx, e.y + ly)):
+		lx = 0.0
+		ly = 0.0
+	e.lean_x = lx
+	e.lean_y = ly
 	var mx: float = inp.get("mx", 0.0)
 	var my: float = inp.get("my", 0.0)
 	var can_move := true

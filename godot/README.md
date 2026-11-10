@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.8, 2D)
+# Caza en el New Yorker · versión Godot (v0.9, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,19 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.9
+
+- **Primera persona al apuntar**: con la pistola en la mano, mantén el clic derecho y la cámara pasa a los ojos del personaje.
+  El ratón mira, el clic izquierdo dispara, WASD se mueve respecto a la mirada y **Q / E** te asoman a izquierda y derecha
+  (ladea la cabeza y desplaza el ojo y el cañón sin atravesar muros, así puedes disparar desde una esquina).
+  Al soltar el clic derecho vuelves a la vista cenital mirando hacia el mismo sitio.
+- La vista es un raycaster sobre el mismo mapa: suelos con mármol, alfombras y parqué por shader, techos con casetones,
+  luz de las lámparas, muros con zócalo, moldura dorada, papel pintado, cuadros, apliques y ventanas a la ciudad,
+  dinteles en las puertas, muebles en 3D, arañas de luz, coches en la calle y el skyline desde la azotea.
+- Mano con una pistola con silenciador de los años 30: retroceso, corredera que se abre al quedarse sin balas,
+  fogonazo pequeño, humo, casquillos, mira que se pone roja con un objetivo en alcance y marca de impacto.
+- Se puede desactivar (o cambiar la sensibilidad del ratón) en Ajustes.
 
 ## Novedades de la v0.8
 

@@ -133,7 +133,8 @@ func _draw_base() -> void:
 			Painter.draw_corpse(ci, c)
 	_draw_task_marks(ci, f)
 	for e in _visible_ents(f):
-		Painter.draw_actor(ci, e.x, e.y, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
+		# quien se asoma en primera persona se ve desplazado hacia ese lado
+		Painter.draw_actor(ci, e.x + e.lean_x * 0.7, e.y + e.lean_y * 0.7, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
 		Painter.draw_extras(ci, e)
 		if e.ko_t > 0:
 			Painter.draw_ko(ci, e, anim)

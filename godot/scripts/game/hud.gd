@@ -23,7 +23,7 @@ const C_MUT := Color("#a9b2b8")
 const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
-const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · clic derecho: apuntar · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
+const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · clic derecho: apuntar (con la pistola, en primera persona; Q/E: asomarse) · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
 const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
 
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4, "perk": "silencer"}
@@ -739,6 +739,8 @@ func _build_settings() -> void:
 	_slider(grid, "Opacidad de la niebla", 0.6, 1.0, Settings.fog, func(x): Settings.fog = x)
 	_check(grid, "Flechas hacia los encargos", Settings.arrows, func(x): Settings.arrows = x)
 	_check(grid, "Sacudida de cámara", Settings.shake, func(x): Settings.shake = x)
+	_check(grid, "Primera persona al apuntar", Settings.fps_aim, func(x): Settings.fps_aim = x)
+	_slider(grid, "Sensibilidad del ratón (1.ª persona)", 0.3, 2.5, Settings.sens, func(x): Settings.sens = x)
 	_check(grid, "Pantalla completa (F11)", Settings.fullscreen, func(x): Settings.fullscreen = x)
 	v.add_child(_btn("Guardar y cerrar", func(): close_settings(), 16))
 
