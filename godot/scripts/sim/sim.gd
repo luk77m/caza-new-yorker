@@ -688,6 +688,8 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 	c.id = w.next_id; w.next_id += 1
 	c.x = victim.x; c.y = victim.y; c.fl = victim.fl; c.outfit = victim.outfit; c.nm = victim.nm; c.role = victim.role
 	c.t = w.time; c.victim_id = victim.id; c.ang = fmod(victim.id * 1.7, 6.28)
+	c.killer_id = killer.id
+	c.killer_role = killer.role
 	w.corpses.append(c)
 	if victim.role == "civil":
 		w.stats["civ_kills"] += 1
@@ -710,6 +712,9 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 		var wit: Array = civils_seeing(w, killer, victim, wr).filter(func(x): return x != victim)
 		if not wit.is_empty():
 			killer.sus = 100
+			if victim.role == "civil":
+				c.found = true
+				Alarm.innocent_found(w, c)
 			var kt := killer.tile()
 			for x in wit:
 				alert_npc(w, x, killer.outfit.id, "crime", killer.fl, kt.x, kt.y)
@@ -1669,6 +1674,7 @@ static func perceive(w: World, dt: float) -> void:
 					continue
 				if dist(n.x, n.y, c.x, c.y) <= 6 * TS and Nav.los(fdat(c.fl), n.x, n.y, c.x, c.y):
 					c.found = true
+					Alarm.innocent_found(w, c)
 					alert_npc(w, n, "", "body", c.fl, floori(c.x / TS), floori(c.y / TS))
 					break
 	# carteles de busca y captura (solo con policía en el hotel y la descripción ya dada)

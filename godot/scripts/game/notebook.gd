@@ -6,7 +6,7 @@ var title := "Encargos"
 var lines: Array = []   # {text, done, note, hl}
 
 func _draw() -> void:
-	var f := ThemeDB.fallback_font
+	var f := Painter.font()
 	# hoja de papel con sombra y anillas
 	draw_rect(Rect2(Vector2(8, 10), size - Vector2(8, 10)), Color(0, 0, 0, 0.45))
 	draw_rect(Rect2(Vector2.ZERO, size - Vector2(8, 10)), Color("#eee3c6"))

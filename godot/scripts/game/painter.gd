@@ -10,8 +10,33 @@ const BLUE := Color("#6fb8ff")
 const RED := Color("#ff6a78")
 const INK := Color(0.01, 0.02, 0.04, 0.9)
 
+static var _font: Font = null
+static var _deco: Font = null
+
+## Fuente del juego: MSDF para que se vea nítida a cualquier zoom. Usa assets/fonts/ui.ttf si existe
+## o una fuente del sistema.
 static func font() -> Font:
-	return ThemeDB.fallback_font
+	if _font == null:
+		_font = _make_font("res://assets/fonts/ui.ttf", ["Josefin Sans", "Montserrat", "Noto Sans", "DejaVu Sans", "Liberation Sans", "sans-serif"])
+	return _font
+
+## Fuente de los títulos (art déco si pones assets/fonts/deco.ttf; si no, una con serifa del sistema).
+static func deco_font() -> Font:
+	if _deco == null:
+		_deco = _make_font("res://assets/fonts/deco.ttf", ["Poiret One", "Limelight", "Playfair Display", "Cinzel", "Noto Serif", "DejaVu Serif", "Liberation Serif", "serif"])
+	return _deco
+
+static func _make_font(path: String, names: Array) -> Font:
+	if ResourceLoader.exists(path):
+		var ff = load(path)
+		if ff is FontFile:
+			(ff as FontFile).multichannel_signed_distance_field = true
+			return ff
+	var sf := SystemFont.new()
+	sf.font_names = PackedStringArray(names)
+	sf.multichannel_signed_distance_field = true
+	sf.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+	return sf
 
 static func tile_color(t: int) -> Color:
 	match t:
@@ -139,7 +164,29 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 						r(ci, px, py + 6, TS, 2, GOLD2.darkened(0.1))
 						r(ci, px, py + TS - 10, TS, 10, wp.darkened(0.35))
 						r(ci, px, py + TS - 11, TS, 1, GOLD2.darkened(0.3))
-						if tx % 3 == 0:
+						var hsh := (tx * 73 + ty * 151 + f.fi * 37) % 11
+						if f.at(tx, ty - 1) == Cfg.T_VOID and ty > 0:
+							# ventana a la calle con la ciudad de noche
+							r(ci, px + 5, py + 9, 22, 13, Color("#13203a"))
+							r(ci, px + 7, py + 11, 3, 2, Color(1.0, 0.85, 0.5, 0.7))
+							r(ci, px + 19, py + 15, 2, 2, Color(1.0, 0.85, 0.5, 0.6))
+							r(ci, px + 15, py + 9, 2, 13, Color("#2a2112"))
+							r(ci, px + 5, py + 15, 22, 1, Color("#2a2112"))
+							r(ci, px + 3, py + 8, 4, 15, Color("#7a2b37"))
+							r(ci, px + 25, py + 8, 4, 15, Color("#7a2b37"))
+						elif hsh == 0:
+							# cuadro con marco dorado
+							r(ci, px + 7, py + 9, 18, 12, GOLD2)
+							var canv: Color = [Color("#2f4a6b"), Color("#6b4a2a"), Color("#3d5a3a"), Color("#6a2a30")][(tx + f.fi) % 4]
+							r(ci, px + 9, py + 11, 14, 8, canv)
+							r(ci, px + 9, py + 16, 14, 3, canv.darkened(0.3))
+							ci.draw_circle(Vector2(px + 19, py + 13), 1.6, Color("#f0d690"))
+						elif hsh == 5:
+							# aplique de pared con su bombilla
+							r(ci, px + 14, py + 14, 4, 6, GOLD2)
+							ci.draw_circle(Vector2(px + 16, py + 12), 3.0, Color("#ffe6a0"))
+							ci.draw_circle(Vector2(px + 16, py + 14), 9.0, Color(1.0, 0.85, 0.5, 0.12))
+						elif tx % 3 == 0:
 							poly(ci, [Vector2(px + 16, py + 11), Vector2(px + 21, py + 16), Vector2(px + 16, py + 21), Vector2(px + 11, py + 16)], GOLD2.darkened(0.25))
 				if face:
 					r(ci, px, py + TS - 2, TS, 2, Color(0, 0, 0, 0.5))
@@ -364,21 +411,40 @@ static func draw_actor(ci: CanvasItem, x: float, y: float, o: Outfit, dir: Strin
 	ci.draw_set_transform(Vector2(x, y + 11), 0.0, Vector2(sc * bd, sc * (0.97 + (bd - 0.92) * 0.3)))
 	ellipse(ci, 0, 0, 9.5, 3.6, Color(0, 0, 0, 0.34))
 	# piernas y calzado
+	# al andar de frente o de espaldas, cada pie se levanta por turnos;
+	# de lado, las piernas dan zancadas y la puntera mira hacia donde camina
+	var lift0 := maxf(0.0, sw) * 0.6
+	var lift1 := maxf(0.0, -sw) * 0.6
+	var shoe := Color("#8a8478") if under else Color("#121216")
 	if dress:
-		r(ci, -3.6, -7, 2.6, 6 + sw * 0.25, skin)
-		r(ci, 1, -7, 2.6, 6 - sw * 0.25, skin)
-		r(ci, -4.2, -1.8 + sw * 0.25, 3.8, 2.2, Color("#15151a"))
-		r(ci, 0.4, -1.8 - sw * 0.25, 3.8, 2.2, Color("#15151a"))
+		shoe = Color("#15151a")
+		if side:
+			var st := sw * 0.5 * fl
+			r(ci, -1.6 + st, -7, 2.6, 5.4, skin)
+			r(ci, -1.0 - st, -7, 2.6, 5.4, skin.darkened(0.12))
+			r(ci, -1.6 + st + (0.0 if fl > 0 else -1.4), -1.8, 4.0, 2.2, shoe)
+			r(ci, -1.0 - st + (0.0 if fl > 0 else -1.4), -1.8, 4.0, 2.2, shoe)
+		else:
+			r(ci, -3.6, -7, 2.6, 5.4 - lift0, skin)
+			r(ci, 1.0, -7, 2.6, 5.4 - lift1, skin)
+			r(ci, -4.0, -1.8 - lift0, 3.4, 2.2, shoe)
+			r(ci, 0.6, -1.8 - lift1, 3.4, 2.2, shoe)
+	elif side:
+		var st2 := sw * 0.9 * fl
+		r(ci, -2.4 - st2, -11, 4.4, 9.4, o.pants.darkened(0.15))
+		r(ci, -2.0 + st2, -11, 4.4, 9.4, o.pants)
+		# zapatos: más largos por delante (dirección de la marcha)
+		var toe := 2.6 * fl
+		r(ci, -2.4 - st2 + minf(toe, 0.0), -1.8, 4.4 + absf(toe), 2.3, shoe)
+		r(ci, -2.0 + st2 + minf(toe, 0.0), -1.8, 4.4 + absf(toe), 2.3, shoe)
 	else:
-		var lw := 4.2 if side else 5.0
-		var a := sw * fl * 0.6 if side else 0.0
-		var lx0 := -2.8 if side else -6.0
-		var lx1 := -0.4 if side else 1.0
-		var shoe := Color("#8a8478") if under else Color("#121216")
-		r(ci, lx0 + a, -11, lw, 9.6 + sw * 0.4, o.pants)
-		r(ci, lx1 - a, -11, lw, 9.6 - sw * 0.4, o.pants)
-		r(ci, lx0 + a, -1.8 + sw * 0.4, lw + 1, 2.3, shoe)
-		r(ci, lx1 - a, -1.8 - sw * 0.4, lw + 1, 2.3, shoe)
+		r(ci, -5.8, -11, 4.8, 9.4 - lift0, o.pants)
+		r(ci, 1.0, -11, 4.8, 9.4 - lift1, o.pants)
+		r(ci, -6.0, -1.9 - lift0, 5.2, 2.4, shoe)
+		r(ci, 0.8, -1.9 - lift1, 5.2, 2.4, shoe)
+		if not back and not under:
+			r(ci, -5.2, -1.6 - lift0, 1.6, 0.6, Color(1, 1, 1, 0.3))
+			r(ci, 1.6, -1.6 - lift1, 1.6, 0.6, Color(1, 1, 1, 0.3))
 	# torso
 	var tw := 10.5 if side else 16.5
 	var tx := -tw / 2.0

@@ -11,7 +11,7 @@ var cuffs_cd := 0.0
 const NAMES := {"fist": "Puños (noquear)", "gun": "Pistola con silenciador", "knife": "Cuchillo", "wrench": "Llave inglesa", "tool": "Herramienta", "cuffs": "Esposas"}
 
 func _draw() -> void:
-	var f := ThemeDB.fallback_font
+	var f := Painter.font()
 	var x := 0.0
 	var y := size.y - 58
 	for it in items:

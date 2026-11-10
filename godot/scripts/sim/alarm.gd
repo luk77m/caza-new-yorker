@@ -113,6 +113,33 @@ static func bluegeddon(w: World) -> void:
 		w.picks.append(p)
 	Sim.wlog(w, "Para escapar: una cuerda (azotea) o la llave del muelle de carga (sótano). Están en el mapa.", "team")
 
+# ---------------------------------------------------------------- inocentes
+
+## Un civil asesinado por un jugador se descubre: cuantos más, más sube la alarma.
+static func innocent_found(w: World, c: Items.Corpse) -> void:
+	if c.counted or c.role != "civil" or (c.killer_role != "hunter" and c.killer_role != "runner"):
+		return
+	c.counted = true
+	w.innocents += 1
+	var killer := w.ent_by_id(c.killer_id)
+	if killer == null:
+		killer = Ent.new()
+		killer.role = c.killer_role
+		killer.fl = c.fl
+		killer.x = c.x
+		killer.y = c.y
+	w.cop_killers[c.killer_id] = true
+	var lvl := 0
+	if w.innocents >= Cfg.INNOCENT_L3:
+		lvl = 3
+	elif w.innocents >= Cfg.INNOCENT_L2:
+		lvl = 2
+	elif w.innocents >= Cfg.INNOCENT_L1:
+		lvl = 1
+	Sim.wlog(w, "Ya hay " + str(w.innocents) + " inocente" + ("s" if w.innocents != 1 else "") + " muerto" + ("s" if w.innocents != 1 else "") + ". " + ("¡La ciudad entera viene a por el hotel!" if lvl == 3 else "La policía se lo toma cada vez más en serio."), "alarm")
+	if lvl > w.alarm:
+		set_level(w, lvl, killer)
+
 # ---------------------------------------------------------------- cacheos y esposas
 
 static func frisk(w: World, p: Ent, t: Ent) -> void:

@@ -13,6 +13,11 @@ El juego dibuja todo por código, pero si pones aquí ficheros con estos nombres
 `stove`, `safe`, `column`, `bench`, `recdesk`, `night`, `mail`, `stage`, `cart`, `gen`, `steel`, `vent`,
 `antenna`, `scope`, `phone`, `rug`
 
+## Fuentes — `fonts/ui.ttf` y `fonts/deco.ttf`
+
+Fuente del juego y fuente de los títulos. Por ejemplo, de Google Fonts (licencia OFL): Josefin Sans para `ui.ttf`
+y Poiret One o Limelight para `deco.ttf`. Si no están, se usan fuentes del sistema.
+
 ## Música del menú — `music/menu.ogg`
 
 Si existe, suena en lugar de la pieza generada por código (se repite en bucle).

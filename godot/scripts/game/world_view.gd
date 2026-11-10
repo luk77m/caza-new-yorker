@@ -109,6 +109,17 @@ func _draw_base() -> void:
 		elif o["k"] != "rug":
 			Painter.draw_furn(ci, o)
 	_draw_plates(ci, f)
+	# placas de latón con el nombre de las salas
+	for rm in f.rooms:
+		if rm.zone == Cfg.ZONE_ROOM or rm.w < 5 or rm.nm == "Núcleo de ascensores" or rm.nm == "Azotea" or rm.nm == "Vestíbulo":
+			continue
+		var nm: String = rm.nm.to_upper()
+		var cx: float = (rm.x + rm.w / 2.0) * Cfg.TS
+		var cy: float = (rm.y + 1) * Cfg.TS + 12
+		var tw := Painter.font().get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+		ci.draw_rect(Rect2(cx - tw / 2 - 6, cy - 10, tw + 12, 14), Color("#8f7330"))
+		ci.draw_rect(Rect2(cx - tw / 2 - 5, cy - 9, tw + 10, 12), Color("#d9b862"))
+		Painter.text(ci, cx, cy, nm, 9, Color("#2a1e0a"), 0)
 	for p in w.picks:
 		if p.fl == view_ent.fl and can_see(f, (p.x + 0.5) * TS, (p.y + 0.5) * TS, p.fl):
 			Painter.draw_pick(ci, p, anim)

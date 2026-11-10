@@ -36,7 +36,7 @@ func _draw() -> void:
 	draw_line(c, c + Vector2(cos(am), sin(am)) * (r * 0.55), Color("#2a1e0a"), 4.0)
 	draw_line(c, c + Vector2(cos(as_), sin(as_)) * (r * 0.85), Color("#8c2f39"), 1.6)
 	draw_circle(c, 3.5, Color("#2a1e0a"))
-	var f := ThemeDB.fallback_font
+	var f := Painter.font()
 	var s := maxi(0, ceili(left))
 	var txt := str(s / 60) + ":" + ("%02d" % (s % 60))
 	var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x

@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.7, 2D)
+# Caza en el New Yorker · versión Godot (v0.8, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,18 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.8
+
+- Menú nuevo con la **torre del Hotel New Yorker en 3D** como símbolo (bloques art déco con ventanas encendidas,
+  letrero rojo, antena y focos), título y menú a la derecha, fondo nocturno con skyline.
+- **Nitidez:** fuente MSDF (se ve definida a cualquier zoom), filtrado lineal y antialias. Si pones
+  `assets/fonts/ui.ttf` o `assets/fonts/deco.ttf` (por ejemplo Josefin Sans o Poiret One, licencia OFL) se usan.
+- **Pies** corregidos: de frente cada pie se levanta por turnos y de lado la puntera mira hacia donde caminas.
+- **Matar inocentes tiene consecuencias:** cada civil muerto que se descubre (por testigos o al encontrar el
+  cuerpo) cuenta. 2 = alarma 1, 4 = alarma 2 y 5 = Bluegeddon directo.
+- **Salas con más detalle:** cuadros, apliques, ventanas a la ciudad en los muros exteriores y placas de latón con
+  el nombre de cada sala.
 
 ## Novedades de la v0.7
 

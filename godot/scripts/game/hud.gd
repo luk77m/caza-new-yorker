@@ -103,6 +103,10 @@ func _ready() -> void:
 	root = Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var th := Theme.new()
+	th.default_font = Painter.font()
+	th.default_font_size = 15
+	root.theme = th
 	add_child(root)
 	_build_vignette()
 	_build_play()
@@ -546,10 +550,20 @@ func _build_title() -> void:
 	var art := TitleArt.new()
 	art.set_anchors_preset(Control.PRESET_FULL_RECT)
 	title_panel.add_child(art)
+	# la torre del hotel en 3D, símbolo del juego, a la izquierda; el título y el menú a la derecha
+	var split := HBoxContainer.new()
+	split.set_anchors_preset(Control.PRESET_FULL_RECT)
+	split.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_panel.add_child(split)
+	var tower := TowerView.new()
+	tower.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tower.size_flags_stretch_ratio = 1.0
+	split.add_child(tower)
 	var cc := CenterContainer.new()
-	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cc.size_flags_stretch_ratio = 1.1
 	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_panel.add_child(cc)
+	split.add_child(cc)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -558,9 +572,11 @@ func _build_title() -> void:
 	t0.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(t0)
 	var t1 := _lbl("CAZA EN EL", 30, C_GOLD)
+	t1.add_theme_font_override("font", Painter.deco_font())
 	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(t1)
 	var t2 := _lbl("NEW YORKER", 72, C_GOLD)
+	t2.add_theme_font_override("font", Painter.deco_font())
 	t2.add_theme_constant_override("outline_size", 10)
 	t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(t2)
@@ -582,9 +598,9 @@ func _build_title() -> void:
 	menu_box.add_child(_menu_btn("Tutorial", func(): tutorial_requested.emit()))
 	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
 	menu_box.add_child(_menu_btn("Ajustes", func(): open_settings()))
-	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.7 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
+	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.8 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
 	menu_box.add_child(_menu_btn("Salir", func(): quit_requested.emit()))
-	var ver := _lbl("Prototipo v0.7 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	var ver := _lbl("Prototipo v0.8 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
 	ver.position = Vector2(40, 0)
 	ver.name = "Version"
 	title_panel.add_child(ver)
@@ -1125,6 +1141,8 @@ func update_hud(w: World, view: Ent, delta: float) -> void:
 		_set_badge("alarm", "Alarma 2 · " + str(Alarm.SIDE_NAME.get(w.alarm_side, "")))
 	elif w.alarm == 1:
 		_set_badge("alarm", "Alarma 1 · cacheos")
+	elif w.innocents > 0:
+		_set_badge("alarm", "Inocentes muertos " + str(w.innocents) + "/" + str(Cfg.INNOCENT_L3))
 	else:
 		_set_badge("alarm", "")
 	if hm != null and role != "spectator":

@@ -21,6 +21,9 @@ var sfx: Sfx
 var music: Music
 
 func _ready() -> void:
+	# nitidez: filtrado lineal (luces y degradados suaves) y antialias en 2D
+	get_viewport().canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	get_viewport().msaa_2d = Viewport.MSAA_4X
 	Settings.load_cfg()
 	Settings.apply()
 	zoom = Settings.zoom
@@ -298,6 +301,7 @@ func _start(opt: Dictionary) -> void:
 		_next_follow()
 	view.w = w
 	view.role = w.role
+	view.visible = true
 	hud.show_play(w)
 	hud.set_fade(0)
 	hud.set_status("")
@@ -316,6 +320,7 @@ func _to_menu() -> void:
 	follow = null
 	_next_follow()
 	zoom = 1.7
+	view.visible = false
 	hud.show_title()
 	music.set_playing(true)
 
@@ -377,11 +382,6 @@ func _physics_process(delta: float) -> void:
 	if w == null or paused:
 		return
 	if mode == "title":
-		Sim.step(w, delta, {})
-		if w.is_over() or w.time > 600.0:
-			w = Sim.new_world({"role": "spectator", "minutes": 30})
-			view.w = w
-			follow = null
 		return
 	if mode != "play":
 		return

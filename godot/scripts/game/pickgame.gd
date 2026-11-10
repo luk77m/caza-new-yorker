@@ -183,7 +183,7 @@ func _end(ok: bool, msg: String) -> void:
 	result_t = 0.6
 
 func _draw() -> void:
-	var f := ThemeDB.fallback_font
+	var f := Painter.font()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.04, 0.06, 0.09, 0.97))
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#ebd08a"), false, 2.0)
 	draw_string(f, Vector2(18, 30), title.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 36, 18, Color("#ebd08a"))

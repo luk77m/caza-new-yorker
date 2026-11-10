@@ -150,6 +150,9 @@ const QTE_BOT_ESCAPE := 0.45    # probabilidad de que un bot corredor se zafe
 const ARREST_AWAY := 10.0       # s fuera de la partida tras ser esposado por un cazador
 const CUFF_INTEL := 10.0        # s que el cazador ve a todos los corredores
 const HEARSE_AFTER := 35.0      # s desde la muerte hasta que el coche fúnebre se lleva el cuerpo
+const INNOCENT_L1 := 2         # inocentes muertos y descubiertos para cada nivel de alarma
+const INNOCENT_L2 := 4
+const INNOCENT_L3 := 5          # Bluegeddon del tirón
 const STREET_Y := 28.4          # fila (en casillas) del carril de la calle frente al hotel
 
 static func is_solid(t: int) -> bool:

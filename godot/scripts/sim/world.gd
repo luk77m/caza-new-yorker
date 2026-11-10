@@ -31,6 +31,7 @@ var targets: Array = []     # ids de los dos retratados
 var events: Array = []      # {type, fl, x, y} para sonidos y efectos; la escena los vacía
 var snitched := {}          # trajes de cazador ya delatados
 var cop_kills := 0
+var innocents := 0          # civiles muertos cuyo cuerpo o asesinato se ha descubierto
 var alarm := 0              # 0-3 (3 = Bluegeddon)
 var alarm_side := ""        # "hunters" o "runners": quién provocó el nivel 2
 var cop_killers := {}       # id -> true: la policía dispara a estos en cuanto los ve
