@@ -18,7 +18,7 @@ static func bfs(f: FloorData, sx: int, sy: int, tx: int, ty: int, avoid: PackedB
 		_q.resize(W * H); _prev.resize(W * H); _seen.resize(W * H)
 	var target := ty * W + tx
 	var start := sy * W + sx
-	if tx < 0 or ty < 0 or tx >= W or ty >= H or f.pass[target] == 0:
+	if tx < 0 or ty < 0 or tx >= W or ty >= H or f.walkable[target] == 0:
 		# si el destino está ocupado, usar la casilla libre más cercana
 		var best := -1
 		var bd := 99
@@ -28,7 +28,7 @@ static func bfs(f: FloorData, sx: int, sy: int, tx: int, ty: int, avoid: PackedB
 				var ny := ty + j
 				if nx < 0 or ny < 0 or nx >= W or ny >= H:
 					continue
-				if f.pass[ny * W + nx] != 0 and absi(i) + absi(j) < bd:
+				if f.walkable[ny * W + nx] != 0 and absi(i) + absi(j) < bd:
 					bd = absi(i) + absi(j)
 					best = ny * W + nx
 		if best < 0:
@@ -54,9 +54,9 @@ static func bfs(f: FloorData, sx: int, sy: int, tx: int, ty: int, avoid: PackedB
 			if ax < 0 or ay < 0 or ax >= W or ay >= H:
 				continue
 			var ni := ay * W + ax
-			if _seen[ni] != 0 or f.pass[ni] == 0 or (has_avoid and avoid[ni] != 0):
+			if _seen[ni] != 0 or f.walkable[ni] == 0 or (has_avoid and avoid[ni] != 0):
 				continue
-			if d >= 4 and (f.pass[cy * W + ax] == 0 or f.pass[ay * W + cx] == 0):
+			if d >= 4 and (f.walkable[cy * W + ax] == 0 or f.walkable[ay * W + cx] == 0):
 				continue
 			_seen[ni] = 1
 			_prev[ni] = cur

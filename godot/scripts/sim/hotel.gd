@@ -43,7 +43,7 @@ static func load_data(path: String = "res://data/hotel.json") -> void:
 		var f := FloorData.new()
 		f.fi = fi
 		f.label = fd["label"]; f.sub = fd["sub"]; f.dark = float(fd["dark"]); f.sky = fd["sky"]; f.roof = fd["roof"]
-		f.g = _bytes(fd["g"]); f.blk = _bytes(fd["blk"]); f.zone = _bytes(fd["zone"]); f.pass = _bytes(fd["pass"])
+		f.g = _bytes(fd["g"]); f.blk = _bytes(fd["blk"]); f.zone = _bytes(fd["zone"]); f.walkable = _bytes(fd["pass"])
 		for rd in fd["rooms"]:
 			var r := Room.new()
 			r.nm = rd["name"]; r.x = int(rd["x"]); r.y = int(rd["y"]); r.w = int(rd["w"]); r.h = int(rd["h"])

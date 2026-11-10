@@ -45,5 +45,10 @@ ent = members['Ent']
 for f in files:
     for m in set(re.findall(r'\.(ai_\w+)', open(f, encoding='utf-8').read())):
         if m not in ent: problems.append(f'{f}: Ent.{m} no existe')
+KW = {'pass','when','super','trait','namespace','yield','breakpoint','assert','await','preload','self','signal','match','class','enum','const','static','var','func','break','continue','return','extends','is','as','in','not','and','or','void'}
+for f in files:
+    for i, L in enumerate(open(f, encoding='utf-8'), 1):
+        for kw in re.findall(r'(?:\bvar|\.)\s*(\w+)', L.split('#')[0]):
+            if kw in KW: problems.append(f'{f}:{i}: palabra reservada usada como nombre: {kw}')
 print('\n'.join(problems) or 'sin problemas')
 print(len(files), 'ficheros:', ', '.join(sorted(classes)))
