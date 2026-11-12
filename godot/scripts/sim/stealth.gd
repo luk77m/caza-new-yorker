@@ -362,7 +362,7 @@ static func perceive(w: World, dt: float) -> void:
 				add += CLEAN_RATE
 		if add <= 0.0 or seer == null:
 			continue
-		p.sus = clampf(p.sus + add * Life.rate_mul(w) * dt, 0.0, 100.0)
+		p.sus = clampf(p.sus + add * Life.rate_mul(w) * Heat.sus_mul(p) * dt, 0.0, 100.0)
 		if w.time - seer.last_warn > 7.0:
 			if staff_seer != null:
 				staff_seer.last_warn = w.time

@@ -20,6 +20,8 @@ var hud: Hud
 var sfx: Sfx
 var music: Music
 var fps: FpsView                # primera persona al apuntar
+var overlays: Overlays          # central, interrogatorio, registro y presentación de la ronda
+var practice := ""              # rol de la partida de práctica en curso
 
 func _ready() -> void:
 	# nitidez: filtrado lineal (luces y degradados suaves) y antialias en 2D
@@ -59,7 +61,12 @@ func _ready() -> void:
 	hud.settings_changed.connect(_settings_changed)
 	hud.quit_requested.connect(func(): get_tree().quit())
 	hud.minigame_done.connect(_minigame_done)
-	hud.tutorial_requested.connect(_start_tutorial)
+	hud.tutorial_requested.connect(func(): _start_tutorial("runner"))
+	hud.pick.pick_broken.connect(_pick_broken)
+	overlays = Overlays.new()
+	hud.root.add_child(overlays)
+	hud.root.move_child(overlays, hud.fade.get_index())
+	overlays.sound.connect(func(nm: String): sfx.play(nm, 0.7))
 	_to_menu()
 
 # ---------------------------------------------------------------- controles
@@ -91,6 +98,7 @@ func _setup_input() -> void:
 	_key("inv", [KEY_I])
 	_key("equip", [KEY_Q])
 	_key("drag", [KEY_F])
+	_key("loot", [KEY_R])
 	_key("pause", [KEY_ESCAPE, KEY_P])
 	_key("next", [KEY_SPACE])
 	_key("fullscreen", [KEY_F11])
@@ -98,7 +106,7 @@ func _setup_input() -> void:
 	_mouse("fire", MOUSE_BUTTON_LEFT)
 
 func _blocking() -> bool:
-	return hud.elev_panel.visible or hud.shop_panel.visible or hud.pick.visible or hud.settings_panel.visible or elev_pend >= 0
+	return hud.elev_panel.visible or hud.shop_panel.visible or hud.pick.visible or hud.settings_panel.visible or elev_pend >= 0 or overlays.modal()
 
 func _read_input() -> Dictionary:
 	var h := w.human
@@ -155,6 +163,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("pause"):
 		if hud.settings_panel.visible:
 			hud.close_settings()
+		elif overlays.loot_key != "":
+			overlays.close_loot()
+			w.flags["loot_closed"] = true
+		elif overlays.modal():
+			pass
 		elif hud.pick.visible:
 			hud.pick.cancel()
 		elif hud.any_panel() and not hud.pause_panel.visible:
@@ -166,6 +179,21 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	var h := w.human
 	var key := _key_name(ev)
+	if overlays.modal():
+		if ev.is_action_pressed("loot"):
+			overlays.close_loot()
+			w.flags["loot_closed"] = true
+		elif key != "":
+			overlays.key(key)
+		get_viewport().set_input_as_handled()
+		return
+	var ek := ev as InputEventKey
+	if tut != null and tut.done() and ek != null and ek.pressed and ek.physical_keycode == KEY_ENTER:
+		if practice == "runner":
+			_start_tutorial("hunter")
+		else:
+			_to_menu()
+		return
 	if hud.pick.visible:
 		if key != "":
 			hud.pick.press(key)
@@ -193,6 +221,15 @@ func _unhandled_input(ev: InputEvent) -> void:
 		return
 	if fps.visible and (ev.is_action_pressed("equip") or ev.is_action_pressed("use")):
 		return   # Q/E sirven para asomarse
+	if ev.is_action_pressed("loot") and not hud.any_panel():
+		# R: registrar el mueble o el cadáver que tengas al lado
+		var near := Loot.nearest(w, h)
+		if not near.is_empty():
+			Sim.cancel_hold(w, h)
+			overlays.open_loot(near)
+			w.flags["loot_open"] = true
+			sfx.play("ui", 0.5, 0.9)
+		return
 	if ev.is_action_pressed("drag") and not h.hidden and not h.cuffed and h.ko_t <= 0:
 		# F: arrastrar el cuerpo más cercano o soltarlo
 		if h.dragging != null:
@@ -251,6 +288,7 @@ func _press(hint: Dictionary) -> void:
 			if h.cutter:
 				hud.open_elev(h.fl, true)
 		"shop":
+			w.flags["shop"] = true
 			hud.open_shop(w, h)
 			sfx.play("ui", 0.6)
 		_:
@@ -271,7 +309,10 @@ func _press(hint: Dictionary) -> void:
 func _mode_for(hint: Dictionary) -> Array:
 	var ht: String = hint["type"]
 	if ht == "force":
-		return ["timing", 2 if w.human.lockpick else 3]
+		if w.human.picks_n > 0:
+			hud.pick.tough = 2.0 if w.human.rperk == "cerrajero" else 1.0
+			return ["lockpick", w.human.picks_n]
+		return ["timing", 4]     # sin ganzúa: a lo bruto
 	if ht == "vent":
 		return ["timing", 4]     # los cuatro tornillos de la rejilla
 	if ht == "job":
@@ -279,6 +320,10 @@ func _mode_for(hint: Dictionary) -> Array:
 	var t: Task = hint["ref"]
 	if t.sab != "":
 		return ["wires", 0]
+	if t.nm.contains("micrófono"):
+		return ["mic", 0]        # colocarlo sin que te vean y conectarlo
+	if t.kind == "drop" or t.nm.begins_with("Esconder") or t.nm.begins_with("Dejar"):
+		return ["stash", 2]      # esconderlo debajo de un mueble
 	var modes := ["sequence", "timing", "balance", "wires"]
 	return [modes[absi(hash(t.id)) % modes.size()], 3]
 
@@ -326,14 +371,30 @@ func _minigame_done(ok: bool) -> void:
 
 # ---------------------------------------------------------------- partida y menú
 
-func _start_tutorial() -> void:
-	_start({"role": "runner", "hunters": 1, "runners": 2, "minutes": 60, "tutorial": true})
+## Partida de práctica: primero de corredor y después de cazador.
+func _start_tutorial(role: String) -> void:
+	_start({"role": role, "hunters": 1, "runners": 2, "minutes": 60, "tutorial": true, "practice": role})
+	practice = role
 	tut = Tutorial.new()
-	tut.begin(w)
+	tut.begin(w, role)
+
+## Se ha roto una ganzúa en el minijuego.
+func _pick_broken() -> void:
+	if w == null or w.human == null:
+		return
+	var h := w.human
+	h.picks_n = maxi(0, h.picks_n - 1)
+	h.lockpick = h.picks_n > 0
+	if not (h.equip in Sim.equip_list(h)):
+		h.equip = "fist"
+	sfx.play("snap", 0.8)
+	Sim.wlog(w, "Se te ha roto una ganzúa. Te quedan " + str(h.picks_n) + (". El vendedor de tu bando tiene más." if h.picks_n == 0 else "."), "report", h.id)
 
 func _start(opt: Dictionary) -> void:
 	tut = null
+	practice = ""
 	w = Sim.new_world(opt)
+	overlays.begin(w, w.role != "spectator" and not w.tutorial)
 	mode = "play"
 	paused = false
 	elev_pend = -1
@@ -358,6 +419,8 @@ func _to_menu() -> void:
 	paused = false
 	elev_pend = -1
 	tut = null
+	practice = ""
+	overlays.stop()
 	w = Sim.new_world({"role": "spectator", "minutes": 30})
 	view.w = w
 	view.role = "spectator"
@@ -431,6 +494,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if mode != "play":
 		return
+	if overlays.intro_t > 0.0:
+		return     # presentación de los equipos: la partida aún no ha empezado
 	if elev_pend >= 0:
 		elev_t -= delta
 		hud.set_fade(clampf(1.0 - elev_t / 0.5, 0.0, 1.0))
@@ -483,9 +548,10 @@ func _process(delta: float) -> void:
 		if kind == "call" or kind == "report" or kind == "hunt":
 			sfx.play("call", 0.5)
 	hud.update_hud(w, ve, delta)
+	overlays.quiet = hud.any_panel() or paused or fps.visible or mode != "play"
 	if tut != null:
 		tut.update(w, hud)
-		hud.set_tutorial(true, tut.step, Tutorial.STEPS.size(), tut.text())
+		hud.set_tutorial(true, tut.step, tut.steps.size(), tut.text())
 		view.tut_target = tut.target
 	else:
 		hud.set_tutorial(false, 0, 0, "")
@@ -495,7 +561,7 @@ func _process(delta: float) -> void:
 func _update_fps(delta: float) -> void:
 	var h := w.human
 	var want := mode == "play" and not paused and Settings.fps_aim and h != null and h.alive and not h.escaped \
-		and h.away_t <= 0 and h.aim and w.cine.is_empty() and Input.is_action_pressed("aim") and not hud.any_panel() \
+		and h.away_t <= 0 and h.aim and w.cine.is_empty() and Input.is_action_pressed("aim") and not hud.any_panel() and not overlays.modal() \
 		and Combat.qte_for(w, h.id).is_empty()
 	if want and not fps.visible:
 		fps.begin(w, h)
@@ -559,6 +625,9 @@ func _events(ve: Ent) -> void:
 				sfx.play("blackout", 0.8)
 			"sab_elev":
 				sfx.play("sparks", 0.4)
+			"radio":
+				if e.get("fl", -9) == ve.fl:
+					sfx.play("radio", 0.7)
 	w.events.clear()
 
 ## Pasos muy bajos: los tuyos y los de quien tengas cerca.

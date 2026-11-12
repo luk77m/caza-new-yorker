@@ -21,8 +21,11 @@ func _draw() -> void:
 	if frac > 0:
 		var pts := PackedVector2Array([c])
 		var n := 48
+		# lo que queda va desde la aguja hasta las doce, en el sentido del reloj:
+		# la aguja avanza y se va comiendo el sombreado
+		var a0 := -PI / 2 + TAU * (1.0 - frac)
 		for i in n + 1:
-			var a := -PI / 2 + TAU * frac * i / n
+			var a := a0 + TAU * frac * i / n
 			pts.append(c + Vector2(cos(a), sin(a)) * (r - 4))
 		draw_colored_polygon(pts, Color(0.86, 0.71, 0.33, 0.35) if left > 60 else Color(0.85, 0.2, 0.2, 0.35))
 	for i in 60:

@@ -147,6 +147,52 @@ vec3 outside(vec2 tc) {
 	return vec3(0.02, 0.025, 0.03);
 }
 
+bool is_void(vec2 wp) {
+	vec2 cell = floor(wp / ts);
+	if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= grid.x || cell.y >= grid.y) return true;
+	return texture(tiles, (cell + 0.5) / grid).a * 255.0 < 0.5;
+}
+
+// La ciudad vista desde la azotea, treinta pisos más abajo: calles con farolas y coches, y azoteas con ventanas.
+vec3 city(vec2 wp) {
+	vec2 c = wp / 260.0;
+	vec2 cell = floor(c);
+	vec2 f = fract(c);
+	float h = hash(cell);
+	vec3 col;
+	if (f.x < 0.16 || f.y < 0.16) {
+		col = vec3(0.075, 0.07, 0.065);
+		vec2 lc = floor(c * 7.0);
+		vec2 lf = fract(c * 7.0);
+		if (hash(lc) > 0.5 && length(lf - 0.5) < 0.2) col += vec3(0.95, 0.72, 0.36) * 0.6;
+		float car = fract(c.x * 2.0 + time * 0.05 * (h > 0.5 ? 1.0 : -1.0));
+		if (f.y < 0.16 && f.y > 0.05 && car < 0.025) col += vec3(0.9, 0.86, 0.7) * 0.7;
+		float car2 = fract(c.y * 2.0 + time * 0.04 * (h > 0.5 ? -1.0 : 1.0));
+		if (f.x < 0.16 && f.x > 0.05 && car2 < 0.025) col += vec3(0.8, 0.2, 0.15) * 0.7;
+	} else {
+		col = vec3(0.03, 0.036, 0.055) * (0.55 + 0.9 * h);
+		vec2 wc = floor(c * 9.0);
+		vec2 wf = fract(c * 9.0);
+		if (hash(wc + 3.0) > 0.8 && wf.x > 0.25 && wf.y > 0.25) col += vec3(0.85, 0.65, 0.3) * 0.4;
+		if (h > 0.8 && length(f - 0.6) < 0.1) col = vec3(0.09, 0.07, 0.06);
+	}
+	return col;
+}
+
+float solid_at(vec2 tc) {
+	vec2 cell = floor(tc);
+	if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= grid.x || cell.y >= grid.y) return 0.0;
+	float ty = floor(texture(tiles, (cell + 0.5) / grid).a * 255.0 + 0.5);
+	return ty == 1.0 ? 1.0 : 0.0;
+}
+
+// Sombra de contacto: el suelo y el techo se oscurecen al pie de los muros.
+float ao(vec2 tc) {
+	float o = solid_at(tc + vec2(0.14, 0.0)) + solid_at(tc - vec2(0.14, 0.0)) + solid_at(tc + vec2(0.0, 0.14)) + solid_at(tc - vec2(0.0, 0.14));
+	float o2 = solid_at(tc + vec2(0.34, 0.0)) + solid_at(tc - vec2(0.34, 0.0)) + solid_at(tc + vec2(0.0, 0.34)) + solid_at(tc - vec2(0.0, 0.34));
+	return 1.0 - 0.13 * min(o, 2.0) - 0.08 * min(o2, 2.0);
+}
+
 vec3 floor_col(vec2 wp) {
 	vec2 tc = wp / ts;
 	vec2 cell = floor(tc);
@@ -197,11 +243,25 @@ void fragment() {
 	if (dy > 0.0) {
 		float d = eye_h * proj / max(dy, 0.001);
 		vec2 wp = eye + rd * d;
-		col = floor_col(wp) * lit(wp, length(wp - eye));
+		if (sky > 0.5 && is_void(wp)) {
+			// más allá del borde de la azotea no hay suelo: se ve la ciudad muy abajo
+			float d2 = (eye_h + 1500.0) * proj / max(dy, 0.001);
+			vec2 wp2 = eye + rd * d2;
+			float haze = clamp(dy / 240.0, 0.0, 1.0);
+			col = mix(vec3(0.13, 0.11, 0.17), city(wp2), haze);
+		} else {
+			col = floor_col(wp) * lit(wp, length(wp - eye)) * ao(wp / ts);
+		}
 	} else if (sky > 0.5) {
 		float k = clamp(-dy / 380.0, 0.0, 1.0);
-		col = mix(vec3(0.13, 0.12, 0.22), vec3(0.012, 0.02, 0.055), k);
+		col = mix(vec3(0.15, 0.12, 0.2), vec3(0.012, 0.02, 0.055), k);
+		col += vec3(0.26, 0.15, 0.08) * exp(dy / 55.0);
 		float a = atan(rd.y, rd.x);
+		// luna
+		float da = atan(sin(a + 2.2), cos(a + 2.2));
+		float mr = length(vec2(da * proj, -dy - 310.0));
+		col += vec3(0.25, 0.26, 0.32) * exp(-mr / 70.0) * 0.5;
+		col = mix(col, vec3(0.93, 0.9, 0.78), 1.0 - smoothstep(24.0, 27.0, mr));
 		vec2 sp = vec2(floor(a * 160.0), floor(-dy / 4.0));
 		float s = hash(sp);
 		if (s > 0.988 && dy < -40.0) col += vec3(0.75) * (0.6 + 0.4 * sin(time * 2.0 + s * 60.0));
@@ -214,7 +274,7 @@ void fragment() {
 		if (min(g.x, g.y) < 0.05) c *= 0.68;
 		vec3 li = texture(lamps, tc / grid).rgb * 2.0 * lamp_mul;
 		c += li * li * 0.5;
-		col = c * lit(wp, length(wp - eye));
+		col = c * lit(wp, length(wp - eye)) * ao(tc);
 	}
 	COLOR = vec4(col, 1.0);
 }
@@ -342,7 +402,7 @@ func update_view(world: World, ent: Ent, delta: float, lean_in: float, shake_in:
 	_update_parts(delta)
 	# luz
 	_blackout = w.sab_blackout > w.time
-	_sight = Cfg.SIGHT_PX * (Cfg.BLACKOUT_SIGHT if _blackout else 1.0)
+	_sight = Cfg.SIGHT_PX * (Cfg.BLACKOUT_SIGHT if _blackout else 1.0) * (2.4 if f.sky else 1.0)   # al aire libre se ve lejos
 	var ov := 0.72 if _blackout else (0.18 if f.roof else clampf(0.2 + f.dark * 0.7, 0.22, 0.5))
 	var a := (1.0 - ov) * 0.8
 	_amb = Color(a, a, a * 1.05)
@@ -430,8 +490,8 @@ func _build_floor(f: FloorData) -> void:
 		lamps.append([Vector2(l["x"], l["y"]), float(l["r"]) * 1.1, tint])
 	if f.roof:
 		for o in f.furn:
-			if o["k"] == "sign":
-				lamps.append([Vector2((o["x"] + o["w"] / 2.0) * TS, o["y"] * TS + 14), 260.0, Color(0.55, 0.08, 0.06)])
+			if o["k"] == "mast":
+				lamps.append([Vector2((o["x"] + o["w"] / 2.0) * TS, (o["y"] + o["h"] / 2.0) * TS), 170.0, Color(0.32, 0.05, 0.04)])
 	if f.fi == 1:
 		for lx in [8, 15, 29, 36]:
 			lamps.append([Vector2(lx * TS, 27.0 * TS + 6), 120.0, Color(0.4, 0.32, 0.16)])
@@ -489,9 +549,16 @@ func _fog(d: float) -> float:
 	return clampf((_sight - d) / (_sight * 0.3), 0.0, 1.0) * (1.0 - 0.3 * clampf(d / _sight, 0.0, 1.0))
 
 func _mult(wx: float, wy: float, d: float) -> Color:
-	var tx := clampi(floori(wx / Cfg.TS), 0, Cfg.W - 1)
-	var ty := clampi(floori(wy / Cfg.TS), 0, Cfg.H - 1)
-	var l: Color = _light[ty * Cfg.W + tx]
+	# luz interpolada entre las cuatro casillas vecinas: sin escalones de una casilla a otra
+	var gx := clampf(wx / Cfg.TS - 0.5, 0.0, Cfg.W - 1.001)
+	var gy := clampf(wy / Cfg.TS - 0.5, 0.0, Cfg.H - 1.001)
+	var ix := floori(gx)
+	var iy := floori(gy)
+	var l00: Color = _light[iy * Cfg.W + ix]
+	var l10: Color = _light[iy * Cfg.W + ix + 1]
+	var l01: Color = _light[(iy + 1) * Cfg.W + ix]
+	var l11: Color = _light[(iy + 1) * Cfg.W + ix + 1]
+	var l: Color = l00.lerp(l10, gx - ix).lerp(l01.lerp(l11, gx - ix), gy - iy)
 	var o := _own * maxf(0.0, 1.0 - d / _own_r)
 	var k := _fog(d)
 	return Color((_amb.r + l.r * _lamp + o) * k, (_amb.g + l.g * _lamp + o) * k, (_amb.b + l.b * _lamp + o) * k, 1.0)
@@ -549,6 +616,9 @@ func _cast(f: FloorData) -> void:
 			if tt == Cfg.T_VOID and f.sky:
 				kind = 2
 				break
+			if tt == Cfg.T_ELEV:
+				kind = 4     # puertas del ascensor
+				break
 			if tt == Cfg.T_WALL or tt == Cfg.T_VOID:
 				kind = 1
 				break
@@ -576,7 +646,11 @@ func _cast(f: FloorData) -> void:
 		_wx[c] = 1 if (kind == 1 and f.fi > 0 and bt == Cfg.T_VOID and by < f.open_from) else 0
 		var fx := mx - (stx if side == 0 else 0)
 		var fy := my - (sty if side == 1 else 0)
-		_wm[c] = _mult((fx + 0.5) * TS, (fy + 0.5) * TS, d * rl)
+		# la luz se toma en el punto del muro (un poco hacia quien mira), no en el centro de la casilla
+		var dl := maxf(d - 9.0, 0.0)
+		_wm[c] = _mult(eye.x + rd.x * dl, eye.y + rd.y * dl, d * rl)
+		if (fx + fy) < -9999:
+			pass
 		if door > 0.0:
 			_dd[c] = door * TS
 			_du[c] = door_u - floorf(door_u)
@@ -600,6 +674,9 @@ func _draw_col(ci: CanvasItem, c: int) -> void:
 		return
 	if k == 3:
 		_draw_door(ci, c, x, cw)
+		return
+	if k == 4:
+		_draw_elev(ci, c, x, cw)
 		return
 	if k != 1:
 		return
@@ -647,6 +724,47 @@ func _draw_col(ci: CanvasItem, c: int) -> void:
 		_seg(ci, x, cw, 32, 36, d, _lit(Color("#b8923f"), m))
 		var glow := Color("#ffe6a8") if not _blackout else Color("#3a3226")
 		_seg(ci, x, cw, 36, 40, d, glow * (0.4 + 0.6 * _fog(d)))
+	# sombra en el encuentro con el techo y con el suelo: da volumen al muro
+	_seg(ci, x, cw, WALL_H - 5.0, WALL_H, d, Color(0, 0, 0, 0.2))
+	_seg(ci, x, cw, WALL_H - 2.0, WALL_H, d, Color(0, 0, 0, 0.18))
+	_seg(ci, x, cw, 0, 2.4, d, Color(0, 0, 0, 0.26))
+
+## Puertas del ascensor: marco de latón, dos hojas con abanico art déco e indicador de planta.
+func _draw_elev(ci: CanvasItem, c: int, x: float, cw: float) -> void:
+	var d := maxf(_wd[c], 1.0)
+	var m: Color = _wm[c]
+	if _ws[c] == 1:
+		m = Color(m.r * 0.82, m.g * 0.82, m.b * 0.82)
+	var u := _wu[c]
+	_seg(ci, x, cw, 46, WALL_H, d, _lit(Color("#2a2018"), m))
+	_seg(ci, x, cw, 44, 46, d, _lit(Painter.GOLD2, m))
+	# indicador de planta sobre la puerta
+	if absf(u - 0.5) < 0.17:
+		_seg(ci, x, cw, 48.2, 53.6, d, _lit(Color("#120d08"), m))
+		if absf(u - 0.5) < 0.035:
+			_seg(ci, x, cw, 49.4, 52.4, d, Color("#ffd98a") * (0.5 + 0.5 * _fog(d)))
+		elif absf(u - 0.5) > 0.14:
+			_seg(ci, x, cw, 48.2, 53.6, d, _lit(Painter.GOLD2, m))
+	if u < 0.07 or u > 0.93:
+		_seg(ci, x, cw, 0, 44, d, _lit(Color("#8f7330"), m))
+		return
+	if absf(u - 0.5) < 0.012:
+		_seg(ci, x, cw, 0, 44, d, _lit(Color("#120d08"), m))
+		return
+	var leaf := Color("#b8923f")
+	_seg(ci, x, cw, 0, 44, d, _lit(leaf, m))
+	var lu := (u - 0.07) / 0.43 if u < 0.5 else (u - 0.5) / 0.43     # 0-1 dentro de cada hoja
+	if lu < 0.1 or lu > 0.9:
+		_seg(ci, x, cw, 2.5, 41.5, d, _lit(leaf.darkened(0.28), m))
+		return
+	_seg(ci, x, cw, 2.5, 4.0, d, _lit(leaf.darkened(0.28), m))
+	_seg(ci, x, cw, 40.0, 41.5, d, _lit(leaf.darkened(0.28), m))
+	# abanico escalonado
+	var kk := floorf(absf(lu - 0.5) * 2.0 * 5.0) / 5.0
+	_seg(ci, x, cw, 9.0, 35.0 - kk * 17.0, d, _lit(Color("#dcc070"), m))
+	_seg(ci, x, cw, 9.0, 10.2, d, _lit(leaf.darkened(0.3), m))
+	if fmod(lu * 10.0, 2.0) < 0.35:
+		_seg(ci, x, cw, 10.2, 35.0 - kk * 17.0, d, _lit(leaf.darkened(0.18), m))
 
 ## Puerta cerrada: hoja de madera con cuarterones y pomo de latón, dintel encima.
 func _draw_door(ci: CanvasItem, c: int, x: float, cw: float) -> void:
@@ -705,6 +823,14 @@ func _draw_skyline(ci: CanvasItem, c: int, x: float, cw: float) -> void:
 	var hv := absf(sin(b * 12.9898) * 43758.5453)
 	hv -= floorf(hv)
 	var hgt := (30.0 + hv * 120.0) * s
+	# segunda fila de rascacielos, más lejos y más clara por la bruma
+	var b2 := floori(_wa[c] * 11.0 + 40.0)
+	var hv2 := absf(sin(b2 * 4.1414) * 24634.6345)
+	hv2 -= floorf(hv2)
+	var hgt2 := (90.0 + hv2 * 150.0) * s
+	ci.draw_rect(Rect2(x, horizon - hgt2, cw, hgt2 + 2), Color("#1a2238"))
+	if hv2 > 0.82:
+		ci.draw_rect(Rect2(x, horizon - hgt2 - 26.0 * s, cw, 26.0 * s), Color("#1a2238") if absf(fmod(_wa[c] * 11.0 + 40.0, 1.0) - 0.5) < 0.12 else Color(0, 0, 0, 0))
 	ci.draw_rect(Rect2(x, horizon - hgt, cw, hgt + 2), Color("#0b1220"))
 	for j in 6:
 		var lv := absf(sin((b * 7 + j) * 78.233) * 12543.21)
@@ -858,7 +984,7 @@ func _build_decals(f: FloorData) -> void:
 const FURN_H := {"plant": 11.0, "phone": 18.0, "bench": 9.0, "table": 15.0, "desk": 15.0, "night": 12.0, "shelf": 38.0, "mail": 34.0,
 	"ward": 42.0, "stage": 5.0, "crate": 14.0, "bar": 21.0, "recdesk": 21.0, "boiler": 36.0, "gen": 26.0, "steel": 36.0, "vent": 14.0,
 	"antenna": 90.0, "cart": 15.0, "washer": 17.0, "sink": 17.0, "stove": 17.0, "sofa": 8.0, "safe": 20.0, "piano": 21.0, "bed": 9.0,
-	"scope": 24.0, "sign": 60.0}
+	"scope": 24.0, "sign": 60.0, "mast": 300.0}
 
 func _box(list: Array, x0: float, y0: float, x1: float, y1: float, z0: float, z1: float, col: Color, top: Color, extra: Dictionary = {}) -> void:
 	var b := {"x0": x0, "y0": y0, "x1": x1, "y1": y1, "z0": z0, "z1": z1, "col": col, "top": top}
@@ -910,10 +1036,29 @@ func _furn_boxes(o: Dictionary, list: Array) -> void:
 		"bar", "recdesk":
 			_box(list, x0, y0, x1, y1, 0, hgt - 2, c, c)
 			_box(list, x0 - 1, y0 - 1, x1 + 1, y1 + 1, hgt - 2, hgt, Color("#7a5232"), Color("#9a6a42"))
-		"sign":
-			_box(list, x0, y0, x1, y1, 22, 22 + hgt, Color("#8a1f1a"), Color("#5a1410"), {"emit": true, "text": "NEW YORKER"})
-			_box(list, x0 + 4, y0 + 2, x0 + 7, y1 - 2, 0, 22, Color("#3a3a3e"), Color("#3a3a3e"), {"notop": true})
-			_box(list, x1 - 7, y0 + 2, x1 - 4, y1 - 2, 0, 22, Color("#3a3a3e"), Color("#3a3a3e"), {"notop": true})
+		"mast":
+			# gran antena de radio: zócalo de hormigón, torre de celosía que se estrecha, brazos y baliza roja
+			var mx := (x0 + x1) / 2.0
+			var my := (y0 + y1) / 2.0
+			var steel := Color("#7d8791")
+			_box(list, mx - 27, my - 27, mx + 27, my + 27, 0, 7, Color("#4a4f57"), Color("#5c626b"))
+			var zs: Array = [7.0, 62.0, 116.0, 166.0, 212.0, 252.0]
+			var ws: Array = [15.0, 11.5, 8.5, 6.0, 3.8, 2.2]
+			for i in 5:
+				var wa: float = ws[i]
+				var za: float = zs[i]
+				var zb: float = zs[i + 1]
+				for sx in [-1.0, 1.0]:
+					for sy in [-1.0, 1.0]:
+						var lx: float = mx + float(sx) * wa
+						var ly: float = my + float(sy) * wa
+						_box(list, lx - 1.2, ly - 1.2, lx + 1.2, ly + 1.2, za, zb, steel, steel, {"notop": true})
+				_box(list, mx - wa - 1.2, my - wa - 1.2, mx + wa + 1.2, my + wa + 1.2, zb - 2.0, zb, steel.darkened(0.2), steel)
+			_box(list, mx - 22, my - 1.5, mx + 22, my + 1.5, 150, 153, steel, steel)
+			_box(list, mx - 1.5, my - 22, mx + 1.5, my + 22, 196, 199, steel, steel)
+			_box(list, mx - 1.0, my - 1.0, mx + 1.0, my + 1.0, 252, 300, steel, steel, {"notop": true})
+			var bcn := Color("#ff3a3a") if fmod(anim, 1.4) < 0.7 else Color("#5a1414")
+			_box(list, mx - 2.5, my - 2.5, mx + 2.5, my + 2.5, 300, 305, bcn, bcn, {"emit": true})
 		"antenna":
 			var acx := (x0 + x1) / 2.0
 			var acy := (y0 + y1) / 2.0
@@ -931,7 +1076,7 @@ func _build_boxes(f: FloorData) -> void:
 		var ocx: float = (o["x"] + o["w"] / 2.0) * TS
 		var ocy: float = (o["y"] + o["h"] / 2.0) * TS
 		var rr: float = maxf(o["w"], o["h"]) * TS
-		if Vector2(ocx, ocy).distance_to(eye) > _sight + rr:
+		if o["k"] != "mast" and Vector2(ocx, ocy).distance_to(eye) > _sight + rr:
 			continue
 		var c := _cam(Vector3(ocx, ocy, 0))
 		if c.x < -rr:
@@ -939,13 +1084,25 @@ func _build_boxes(f: FloorData) -> void:
 		_furn_boxes(o, raw)
 	# barandillas de la azotea
 	if f.sky:
-		var r := ceili(_sight / TS)
+		var r := mini(ceili(_sight / TS), 18)
 		var ex := floori(eye.x / TS)
 		var ey := floori(eye.y / TS)
 		for ty in range(ey - r, ey + r + 1):
 			for tx in range(ex - r, ex + r + 1):
 				if f.at(tx, ty) == Cfg.T_RAIL:
-					_box(raw, tx * TS + 6, ty * TS + 6, tx * TS + TS - 6, ty * TS + TS - 6, 0, 16, Color("#a68a45"), Color("#c9a24b"))
+					# pretil de ladrillo con albardilla de piedra y, encima, barandilla de hierro
+					var ax := f.at(tx - 1, ty) == Cfg.T_RAIL or f.at(tx + 1, ty) == Cfg.T_RAIL
+					var ay := f.at(tx, ty - 1) == Cfg.T_RAIL or f.at(tx, ty + 1) == Cfg.T_RAIL
+					var bx0 := tx * TS
+					var by0 := ty * TS
+					if ax or not ay:
+						_box(raw, bx0, by0 + 11, bx0 + TS, by0 + TS - 11, 0, 11, Color("#6a3b2c"), Color("#b9ae96"))
+						_box(raw, bx0, by0 + 14.5, bx0 + TS, by0 + TS - 14.5, 18.5, 20, Color("#23262b"), Color("#3a3f46"))
+					if ay:
+						_box(raw, bx0 + 11, by0, bx0 + TS - 11, by0 + TS, 0, 11, Color("#6a3b2c"), Color("#b9ae96"))
+						_box(raw, bx0 + 14.5, by0, bx0 + TS - 14.5, by0 + TS, 18.5, 20, Color("#23262b"), Color("#3a3f46"))
+					if (tx + ty) % 2 == 0:
+						_box(raw, bx0 + 14.8, by0 + 14.8, bx0 + TS - 14.8, by0 + TS - 14.8, 11, 18.5, Color("#23262b"), Color("#23262b"), {"notop": true})
 	# lámparas del techo (arañas)
 	if not f.sky:
 		for l in f.lamps:
@@ -962,7 +1119,7 @@ func _build_boxes(f: FloorData) -> void:
 				_box(raw, kx - 4, ky - 3, kx + 4, ky + 3, 29, 32, Color("#ff3030") if fmod(anim, 0.5) < 0.25 else Color("#3050ff"), Color("#ffffff"), {"emit": true})
 	# objetos sueltos
 	for p in w.picks:
-		if p.fl != e.fl:
+		if p.fl != e.fl or p.box != "":
 			continue
 		var px: float = (p.x + 0.5) * TS
 		var py: float = (p.y + 0.5) * TS
@@ -974,9 +1131,24 @@ func _build_boxes(f: FloorData) -> void:
 			var qx: float = pet["x"]
 			var qy: float = pet["y"]
 			var qc := Color(str(pet["col"]))
-			_box(raw, qx - 7, qy - 3, qx + 7, qy + 3, 3, 10, qc, qc.lightened(0.1))
-			var hd: float = 7.0 * float(pet["dir"])
-			_box(raw, qx + hd - 3, qy - 2.5, qx + hd + 3, qy + 2.5, 8, 14, qc, qc.lightened(0.15))
+			var dd: float = float(pet["dir"])
+			var wk: float = sin(float(pet["walk"])) * 1.5
+			var zo: float = 15.0 if int(pet["carried"]) != 0 else 0.0     # en brazos
+			var dk := qc.darkened(0.25)
+			# cuatro patas, cuerpo, cabeza, hocico, trufa, orejas y cola
+			if zo == 0.0:
+				for plx in [-5.0, 5.0]:
+					for ply in [-2.0, 2.0]:
+						var gx2: float = qx + float(plx)
+						var gy2: float = qy + float(ply)
+						_box(raw, gx2 - 1.0, gy2 - 1.0, gx2 + 1.0, gy2 + 1.0, 0, 5, dk, dk, {"notop": true})
+			_box(raw, qx - 7, qy - 3, qx + 7, qy + 3, 5 + zo, 10.5 + zo, qc, qc.lightened(0.1))
+			_box(raw, qx + dd * 6.0 - 2.6, qy - 2.6, qx + dd * 6.0 + 2.6, qy + 2.6, 9 + zo, 15 + zo, qc, qc.lightened(0.12))
+			_box(raw, qx + dd * 9.6 - 2.0, qy - 1.5, qx + dd * 9.6 + 2.0, qy + 1.5, 9.5 + zo, 12 + zo, qc.lightened(0.2), qc.lightened(0.25))
+			_box(raw, qx + dd * 11.4 - 0.7, qy - 0.8, qx + dd * 11.4 + 0.7, qy + 0.8, 10.6 + zo, 12.2 + zo, Color("#151515"), Color("#151515"))
+			_box(raw, qx + dd * 5.0 - 1.0, qy - 2.9, qx + dd * 5.0 + 1.0, qy - 1.6, 15 + zo, 17.6 + zo, dk, dk)
+			_box(raw, qx + dd * 5.0 - 1.0, qy + 1.6, qx + dd * 5.0 + 1.0, qy + 2.9, 15 + zo, 17.6 + zo, dk, dk)
+			_box(raw, qx - dd * 8.5 - 0.9, qy - 0.8, qx - dd * 8.5 + 0.9, qy + 0.8, 9 + zo, 14 + zo + wk, dk, dk, {"notop": true})
 	for b in raw:
 		var pb: Dictionary = _project_box(b)
 		if not pb.is_empty():
@@ -1120,7 +1292,7 @@ func _redraw_cols(ci: CanvasItem, bb: Rect2, d: float) -> void:
 	var c0 := clampi(floori((bb.position.x - _x0) / colw), 0, ncols - 1)
 	var c1 := clampi(ceili((bb.end.x - _x0) / colw), 0, ncols - 1)
 	for c in range(c0, c1 + 1):
-		if (_wk[c] == 1 or _wk[c] == 3) and _wd[c] < d:
+		if (_wk[c] == 1 or _wk[c] == 3 or _wk[c] == 4) and _wd[c] < d:
 			_draw_col(ci, c)
 		if _dd[c] > 0.0 and _dd[c] < d:
 			_draw_lintel(ci, c)
@@ -1191,7 +1363,7 @@ func _sync_actors() -> void:
 func _pick_target() -> void:
 	target = null
 	var mid := int(ncols / 2.0)
-	center_d = _wd[mid] if mid < ncols and (_wk[mid] == 1 or _wk[mid] == 3) else 600.0
+	center_d = _wd[mid] if mid < ncols and (_wk[mid] == 1 or _wk[mid] == 3 or _wk[mid] == 4) else 600.0
 	var ch := vs / 2.0
 	var best := INF
 	for s in sprites:

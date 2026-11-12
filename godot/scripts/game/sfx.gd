@@ -64,3 +64,26 @@ func _build() -> void:
 	streams["call"] = _wav(0.9, func(t, p): return (sin(TAU * 440.0 * t) + sin(TAU * 480.0 * t)) * 0.18 * (1.0 if fmod(t, 0.3) < 0.18 else 0.0))
 	streams["ui"] = _wav(0.05, func(t, p): return sin(TAU * 1500.0 * t) * exp(-t * 90.0) * 0.3)
 	streams["buy"] = streams["cash"]
+	# v0.13: pinganillo, ganzúa rota y acorde de suspense de película antigua
+	streams["radio"] = _wav(0.55, func(t, p): return _n() * 0.16 * (1.0 if t < 0.18 else 0.0) + sin(TAU * 1180.0 * t) * 0.25 * (1.0 if (t > 0.22 and t < 0.32) or (t > 0.38 and t < 0.5) else 0.0))
+	streams["snap"] = _wav(0.14, func(t, p): return _n() * exp(-t * 120.0) * 0.8 + sin(TAU * 2600.0 * t) * exp(-t * 60.0) * 0.5)
+	streams["suspense"] = _wav(5.0, _suspense)
+
+## Trémolo de cuerdas en menor, timbal y un golpe final, como en el cine de los años 30.
+func _suspense(t: float, p: float) -> float:
+	var trem := 0.6 + 0.4 * sin(TAU * 11.0 * t)
+	var swell := minf(1.0, t / 2.8) * (1.0 if t < 3.9 else maxf(0.0, 1.0 - (t - 3.9) * 2.5))
+	var v := 0.0
+	for hz in [110.0, 130.81, 164.81, 220.0, 233.08]:
+		v += (fmod(t * hz, 1.0) * 2.0 - 1.0) * 0.05
+	v *= trem * swell
+	# timbal: redoble cada vez más rápido
+	var beat := fmod(t, lerpf(0.9, 0.22, minf(1.0, t / 3.8)))
+	if t < 3.9:
+		v += sin(TAU * 62.0 * t) * exp(-beat * 9.0) * 0.32 * swell
+	# golpe final de metales
+	if t >= 3.9:
+		var u := t - 3.9
+		v += (sin(TAU * 73.42 * u) + 0.6 * sin(TAU * 146.83 * u) + 0.4 * sin(TAU * 220.0 * u)) * exp(-u * 2.2) * 0.3
+		v += _n() * exp(-u * 14.0) * 0.25
+	return v

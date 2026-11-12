@@ -344,6 +344,7 @@ static func press(w: World, e: Ent, hint: Dictionary) -> String:
 			p["carried"] = e.id
 			p["state"] = "carried"
 			e.pet_id = int(p["id"])
+			Heat.pet_taken(w, e, p)
 			if e == w.human:
 				Sim.wlog(w, "Llevas al perro en brazos. Suéltalo (E) dentro de una habitación: no sabe abrir puertas.")
 			return "ok"
@@ -356,6 +357,7 @@ static func press(w: World, e: Ent, hint: Dictionary) -> String:
 					p2["x"] = e.x
 					p2["y"] = e.y + 8.0
 					p2["path"] = []
+					Heat.pet_dropped(w, e, p2)
 			e.pet_id = 0
 			return "ok"
 	return ""

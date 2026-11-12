@@ -43,8 +43,13 @@ static func punch(w: World, e: Ent) -> bool:
 	var v := _front(w, e, Cfg.PUNCH_RANGE, 0.25, func(x): return true)
 	if v == null:
 		return false
+	if v.shop != "" and Heat.vendor_punched(w, e, v):
+		Sim.ev(w, "punch", v.fl, v.x, v.y)
+		return true
 	knock_out(w, v, Cfg.KO_POLICE if v.role == "police" else Cfg.KO_TIME)
 	Stealth.on_punch(w, e, v)
+	if e.rperk == "pugil":
+		v.ko_t *= 2.0
 	Sim.ev(w, "punch", v.fl, v.x, v.y)
 	v.say(Rng.pick(["¡Uf!", "¡Ay!", "…"]), 1.5)
 	# quien lo vea se lo toma mal

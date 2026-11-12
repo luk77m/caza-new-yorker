@@ -127,6 +127,23 @@ var vent_to := Vector2.ZERO
 var planted_gun := -1     # balas de la pistola que le han colocado (-1: ninguna)
 var planted_t := 0.0
 var pet_id := 0           # perro que lleva en brazos
+# v0.13
+var female := false       # género del personaje (para saber si la ropa le queda bien)
+var bad_fit := false      # lleva ropa del otro género: disfraz penoso
+var rperk := ""           # habilidad especial de corredor: atleta, cerrajero, camaleon, pugil
+var picks_n := 0          # ganzúas que le quedan (se rompen)
+var warned_t := -99.0     # último aviso de la central
+var quiz_cd := 0.0        # hasta cuándo no le vuelven a interrogar
+var quiz_id := 0          # cazador: botones que le busca · botones: cazador al que busca
+var quiz_t := 0.0
+var pet_warn := 0.0       # s que le quedan para soltar al perro antes de la denuncia
+var pet_wanted := false   # denunciado por robar un perro
+var shop_hit := false     # vendedor: ya le han atacado una vez
+var shop_back := 0.0      # vendedor: instante en que vuelve
+var shop_home := Vector3.ZERO
+var bandaged := false
+var special := ""         # vendedor: artículo especial en venta
+var agent_n := 0          # veces que la central ha tenido que sustituirle
 # PNJ
 var staff := false
 var tiles: Array = []

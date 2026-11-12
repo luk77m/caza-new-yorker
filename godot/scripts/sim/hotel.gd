@@ -53,6 +53,22 @@ static func load_data(path: String = "res://data/hotel.json") -> void:
 			f.rooms.append(r)
 		for o in fd["furn"]:
 			f.furn.append({"k": o["k"], "x": int(o["x"]), "y": int(o["y"]), "w": int(o["w"]), "h": int(o["h"]), "solid": o["solid"]})
+		if f.roof:
+			for o in f.furn:
+				if o["k"] != "sign":
+					continue
+				# el letrero de la azotea ya no existe: en su lugar hay una gran antena de radio (2×2)
+				for ty in range(int(o["y"]), int(o["y"]) + int(o["h"])):
+					for tx in range(int(o["x"]), int(o["x"]) + int(o["w"])):
+						f.blk[ty * Cfg.W + tx] = 0
+						f.walkable[ty * Cfg.W + tx] = 1
+				o["k"] = "mast"
+				o["x"] = int(o["x"]) + int(int(o["w"]) / 2.0) - 1
+				o["w"] = 2
+				for ty in range(int(o["y"]), int(o["y"]) + int(o["h"])):
+					for tx in range(int(o["x"]), int(o["x"]) + 2):
+						f.blk[ty * Cfg.W + tx] = 1
+						f.walkable[ty * Cfg.W + tx] = 0
 		for l in fd["lamps"]:
 			f.lamps.append({"x": float(l["x"]), "y": float(l["y"]), "r": float(l["r"]), "tint": l["tint"]})
 		for o in fd["wards"]:

@@ -37,7 +37,7 @@ func _draw() -> void:
 			draw_string(font, c + Vector2(-tw / 2 + 1, fs * 0.4 + 1), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.6))
 			draw_string(font, c + Vector2(-tw / 2, fs * 0.4), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.96, 0.93, 0.86, 0.92))
 	for p in w.picks:
-		if p.fl == fl:
+		if p.fl == fl and p.box == "":
 			draw_rect(Rect2(off + Vector2((p.x + 0.2) * s, (p.y + 0.2) * s), Vector2(s * 0.6, s * 0.6)), Painter.GOLD)
 	var me := view_ent
 	if me != null and me.role == "runner" and me == w.human:
@@ -59,6 +59,15 @@ func _draw() -> void:
 			draw_circle(c, 2.2, col)
 		elif me != null and e.role == me.role and (e.role == "runner" or e.role == "hunter"):
 			draw_circle(c, 2.6, Color("#5aa8ff") if e.role == "runner" else Color("#ff9a9a"))
+	# vendedores de los dos bandos: $ dorado el tuyo, rojo el del contrario
+	for v in w.ents:
+		if v.shop == "" or v.fl != fl or not v.alive:
+			continue
+		var vc := off + Vector2(v.x / Cfg.TS * s, v.y / Cfg.TS * s)
+		var vcol := Painter.GOLD if (me == null or role == "spectator" or v.shop == me.role) else Painter.RED
+		draw_circle(vc, 5.5, Color(0, 0, 0, 0.75))
+		draw_arc(vc, 5.5, 0, TAU, 14, vcol, 1.5)
+		Painter.text(self, vc.x, vc.y + 3.5, "$", 9, vcol, 0)
 	var hm := w.human
 	if hm != null and hm.job != null and hm.job.fl == fl:
 		var jc := off + Vector2((hm.job.x + 0.5) * s, (hm.job.y + 0.5) * s)

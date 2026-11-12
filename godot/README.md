@@ -1,4 +1,4 @@
-# Hidden Lead (título provisional) · versión Godot (v0.12, 2D)
+# Hidden Lead (título provisional) · versión Godot (v0.13, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -14,7 +14,54 @@ sabotajes (apagón, alarma de incendios, ascensores), policía, carteles de busc
 Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o liberar, E mantenido para
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
-Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+R registrar muebles y cadáveres, F arrastrar cuerpos, Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.13 «La central» (segunda ronda de pruebas)
+
+Arreglos:
+
+- **Reloj:** el sombreado dorado ahora se consume en el sentido de las agujas.
+- **Victoria:** los corredores solo pierden si mueren todos. El cartel del cazador enseña dos rostros y, cuando
+  caen, la central envía los que faltan.
+- **Puertas con llave:** ya no se abren solas al acercarte ni al apuntar; solo si tienes llave, las has abierto
+  o estás dentro.
+- **Primera persona:** las puertas del ascensor se ven como puertas (latón, abanico art déco, indicador de planta).
+  La azotea tiene profundidad: más allá del pretil se ve la ciudad treinta pisos más abajo, hay luna, dos filas de
+  rascacielos, pretil de ladrillo con barandilla de hierro y se ve mucho más lejos. Los perros tienen forma de
+  perro. La luz de los muros es continua y hay sombra al pie de las paredes.
+- **Sin letrero:** el cartel «New Yorker» de la azotea ha desaparecido; en su lugar hay una gran antena de radio
+  con baliza roja (también en la vista desde arriba).
+
+Mecánicas:
+
+- **La central:** con la sospecha alta, un agente de la sala de escuchas te avisa por el pinganillo en una
+  ventanita. Al límite, un botones te busca y te hace tres preguntas sobre el hotel (plantas de las salas y algún
+  dato del New Yorker). Con dos fallos te echan: vuelves al minuto con otra cara y otro nombre de agente.
+  Noquear al botones antes de que llegue también vale.
+- **Botín:** los objetos ya no están por el suelo. Con **R** registras mesillas, escritorios, sofás, mesas, cajas
+  y cadáveres, y puedes coger o dejar cosas (también dinero, de 20 en 20). Lo que dejas en una habitación ajena
+  se lo llevan las limpiadoras al minuto y medio; lo que hay en un cadáver se pierde cuando se lo llevan. Quien
+  muere deja en su cuerpo lo que llevaba.
+- **Ganzúas:** abren las cerraduras con un minijuego propio (A/D busca el punto, mantener E gira el bombín) y se
+  rompen si las fuerzas. Se llevan hasta tres y los vendedores tienen más. Sin ganzúa se puede forzar a lo bruto.
+- **Minijuegos nuevos:** instalar un micrófono (elegir escondite, colocarlo cuando nadie mira y conectarlo) y
+  esconder paquetes debajo de un mueble.
+- **Vendedores:** salen con un **$** en el mapa y sobre su cabeza, y una flecha te lleva al tuyo. El bando
+  contrario puede noquearlo (1 min) o abatirlo (2 min) una sola vez; vuelve vendado, con los precios rebajados y a
+  veces con un «soplo de venganza».
+- **Perros:** si el dueño ve que te llevas a su perro (o lo echa de menos), tienes 10 s para soltarlo. Si no, te
+  denuncia, y si la policía te ve con él te retiene 15 s y se lo devuelve.
+- **Personaje:** antes de la partida eliges género, ropa, sombrero, pelo y piel. Ponerte ropa del otro género es
+  un disfraz penoso: la sospecha sube más deprisa.
+- **Habilidades de corredor:** uno o dos corredores por partida reciben una al azar (piernas ligeras, dedos de
+  seda, cara de póquer o derecha de hierro).
+- **Práctica:** el tutorial es ahora una partida de práctica sin reloj ni consecuencias, con una parte de
+  corredor y otra de cazador.
+- **Presentación:** cada ronda empieza con tu equipo a la vista y el contrario en silueta, con un acorde de
+  suspense.
+
+Pendiente de esta ronda: separar más la indumentaria (zapatos, complementos) y usar sprites de un paquete de
+arte en vez de dibujo por código.
 
 ## Novedades de la v0.12 «El hotel vivo» (resto de propuestas del tester)
 

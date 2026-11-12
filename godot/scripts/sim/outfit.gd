@@ -46,6 +46,7 @@ var stache := false
 var build := 1.0
 var apron := false
 var bow := false
+var fem := false        # ropa de mujer (vestido)
 
 static func reset() -> void:
 	oid = 0
@@ -72,6 +73,7 @@ static func new_guest(female: bool) -> Outfit:
 		var tie_s: String = Rng.pick(TIES)
 		o.id = _next_id()
 		o.kind = "dress" if female else "suit"
+		o.fem = female
 		o.coat = Color(su[0]); o.coat_n = su[1]
 		o.pants = o.coat if female else o.coat.darkened(0.22)
 		o.tie = Color(tie_s)
@@ -87,6 +89,32 @@ static func new_guest(female: bool) -> Outfit:
 	used[o.key] = true
 	return o
 
+## Aspecto elegido en el menú: {female, coat, hat, hair, skin} (índices de las listas de arriba).
+static func new_custom(look: Dictionary) -> Outfit:
+	var female: bool = look.get("female", false)
+	var o := new_guest(female)
+	var list: Array = DRESSES if female else SUITS
+	var su: Array = list[clampi(int(look.get("coat", 0)), 0, list.size() - 1)]
+	o.coat = Color(su[0]); o.coat_n = su[1]
+	o.pants = o.coat if female else o.coat.darkened(0.22)
+	var hi := int(look.get("hat", 0))
+	if female:
+		if hi == 1:
+			o.hat_t = "none"; o.hat_n = "sin sombrero"; o.hat_cn = ""
+		else:
+			o.hat_t = "cloche"; o.hat_n = "sombrero cloché"; o.hat_c = o.coat; o.hat_cn = su[1]
+	else:
+		var hat: Array = HATS[clampi(hi, 0, HATS.size() - 1)]
+		o.hat_t = hat[0]; o.hat_n = hat[1]
+	o.hair = Color(HAIRS[clampi(int(look.get("hair", 0)), 0, HAIRS.size() - 1)])
+	o.skin = Color(SKINS[clampi(int(look.get("skin", 0)), 0, SKINS.size() - 1)])
+	o.glasses = false
+	o.stache = false
+	o.build = 1.0
+	o.hs = "bob" if female else "short"
+	o.key = "custom" + o.id
+	return o
+
 static func new_staff(role: String) -> Outfit:
 	var s: Dictionary = STAFF[role]
 	var o := Outfit.new()
@@ -100,6 +128,7 @@ static func new_staff(role: String) -> Outfit:
 		o.glasses = false
 	o.id = _next_id()
 	o.kind = "dress" if dress else "staff"
+	o.fem = dress
 	o.coat = Color(s["coat"]); o.coat_n = s["coat_n"]; o.pants = Color(s["pants"])
 	o.tie = Color(s.get("tie", "#8c2f39"))
 	var hat: Array = s["hat"]
@@ -136,11 +165,12 @@ static func new_under(src: Outfit) -> Outfit:
 	o.id = _next_id(); o.kind = "under"
 	o.coat = Color("#d8d1bd"); o.coat_n = "ropa interior"; o.pants = Color("#cfc6b0"); o.has_tie = false
 	o.hat_t = "none"; o.hat_n = "sin sombrero"; o.hair = src.hair; o.skin = src.skin; o.key = "under"
+	o.fem = src.fem
 	return o
 
 func clone() -> Outfit:
 	var c := Outfit.new()
-	for p in ["id", "kind", "coat", "coat_n", "pants", "tie", "has_tie", "hat_t", "hat_c", "hat_n", "hat_cn", "hair", "skin", "staff_role", "blood", "key", "hs", "glasses", "stache", "build", "apron", "bow"]:
+	for p in ["id", "kind", "coat", "coat_n", "pants", "tie", "has_tie", "hat_t", "hat_c", "hat_n", "hat_cn", "hair", "skin", "staff_role", "blood", "key", "hs", "glasses", "stache", "build", "apron", "bow", "fem"]:
 		c.set(p, get(p))
 	return c
 

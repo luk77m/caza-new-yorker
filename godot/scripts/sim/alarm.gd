@@ -163,7 +163,7 @@ static func cuff(w: World, t: Ent, p: Ent) -> void:
 	t.cuffed = true
 	t.cuff_t = Cfg.CUFF_TIME
 	t.shackled = false
-	t.gun = false; t.ammo = 0; t.knife = false; t.melee = false; t.lockpick = false; t.cutter = false
+	t.gun = false; t.ammo = 0; t.knife = false; t.melee = false; t.lockpick = false; t.picks_n = 0; t.cutter = false
 	t.masterkey = false; t.equip = "fist"; t.aim = false; t.goal = null; t.has_path = false; t.moving = false
 	if t.carry != "":
 		for k in t.tasks:

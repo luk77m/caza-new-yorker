@@ -50,7 +50,10 @@ var panic := 0.0            # 0-100: más policía y durante más tiempo
 var gsus := 0.0             # 0-100 sospecha general: los PNJ ven más y se mosquean antes
 var slot := ""              # franja del día: desayuno, mañana, almuerzo, tarde, cena, copas, dormir
 var pets: Array = []        # perros {id, owner, fl, x, y, ...}
+var central := {}           # aviso de la central por el pinganillo {t, msg}
+var quiz := {}              # interrogatorio en curso {hunter, bell, qs, i, fail, t, last}
 var tutorial := false
+var practice := ""          # rol de la partida de práctica
 var flags := {}             # cosas que ha hecho el jugador (para el tutorial)
 var stats := {"kills": 0, "civ_kills": 0, "calls": 0, "tasks": 0, "reports": 0, "arrests": 0, "forced": 0}
 

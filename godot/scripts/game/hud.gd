@@ -24,9 +24,14 @@ const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
 const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · F: arrastrar o soltar un cuerpo · clic derecho: apuntar (con la pistola, en primera persona; Q/E: asomarse) · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
-const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos.\n\n[b][color=#ebd08a]SIGILO[/color][/b]\nCorrer delante de la gente levanta sospechas. La sangre se pisa y deja huellas; salpica a quien esté cerca. A un inconsciente puedes vaciarle los bolsillos y quitarle la ropa (E), y con F arrastras cuerpos y los escondes en un armario ya registrado (o te escondes tú). Si te ven cambiarte, ese traje queda quemado. Con una fregona limpias la sangre. Solo hay unas pocas ganzúas en todo el hotel. Las puertas cerradas tapan la vista.\n\n[b][color=#ebd08a]EL HOTEL VIVO[/color][/b]\nEl día dura 5 minutos y la noche 4: los huéspedes desayunan, almuerzan, cenan, toman copas y se van a dormir (dormidos no ven nada). El pánico trae más policía; la alerta general hace a todos más atentos. Dos guardias de seguridad avisan por radio. Por las rejillas de ventilación (minijuego de tornillos) pasas a otra parte de la planta. Los perros buscan a su dueño aunque esté escondido, pero no abren puertas: cógelos y enciérralos. Con la pistola en la mano puedes colocársela a alguien inconsciente para que cargue con la culpa. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
+const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan cuando no queda ningún corredor con vida (su cartel enseña a los dos primeros; al caer, la central manda los rostros que faltan).\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos.\n\n[b][color=#ebd08a]SIGILO[/color][/b]\nCorrer delante de la gente levanta sospechas. La sangre se pisa y deja huellas; salpica a quien esté cerca. A un inconsciente puedes vaciarle los bolsillos y quitarle la ropa (E), y con F arrastras cuerpos y los escondes en un armario ya registrado (o te escondes tú). Si te ven cambiarte, ese traje queda quemado. Con una fregona limpias la sangre. Solo hay unas pocas ganzúas en todo el hotel. Las puertas cerradas tapan la vista.\n\n[b][color=#ebd08a]EL HOTEL VIVO[/color][/b]\nEl día dura 5 minutos y la noche 4: los huéspedes desayunan, almuerzan, cenan, toman copas y se van a dormir (dormidos no ven nada). El pánico trae más policía; la alerta general hace a todos más atentos. Dos guardias de seguridad avisan por radio. Por las rejillas de ventilación (minijuego de tornillos) pasas a otra parte de la planta. Los perros buscan a su dueño aunque esté escondido, pero no abren puertas: cógelos y enciérralos. Con la pistola en la mano puedes colocársela a alguien inconsciente para que cargue con la culpa. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
 
+const HOW13 := "\n\n[b][color=#ebd08a]NOVEDADES v0.13[/color][/b]\n[b]Botín:[/b] los objetos ya no están por el suelo. Pulsa R junto a una mesilla, un escritorio, un sofá, una caja o un cadáver para coger o dejar cosas. Lo que dejes en una habitación ajena se lo llevan las limpiadoras, y lo que haya en un cadáver se pierde cuando se lo llevan.\n[b]Ganzúas:[/b] abren las cerraduras con su propio minijuego (A/D busca el punto, mantén E para girar) y se rompen si las fuerzas. Los vendedores tienen más.\n[b]La central:[/b] si un cazador llama la atención, le avisan por el pinganillo; al límite, un botones le hace 3 preguntas sobre el hotel y, con 2 fallos, lo echan un minuto y vuelve como otro agente.\n[b]Vendedores:[/b] salen en el mapa con un $. El bando contrario puede noquear (1 min) o abatir (2 min) al vendedor rival, una sola vez; vuelve vendado, con rebajas y a veces con un soplo de venganza.\n[b]Perros:[/b] si el dueño ve que te llevas a su perro tienes 10 s para soltarlo; si no, te denuncia, y si la policía te ve con él te retiene.\n[b]Ropa:[/b] ponerte ropa del otro género es un disfraz penoso: te descubren antes.\n[b]Habilidades:[/b] uno o dos corredores por partida tienen una habilidad especial al azar.\n[b]R:[/b] registrar muebles y cadáveres."
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4, "perk": "silencer"}
+var look := {"female": false, "coat": 0, "hat": 0, "hair": 1, "skin": 0}
+var look_view: Control
+var look_opts := {}
+var _look_outfit: Outfit = null
 var root: Control
 var title_panel: Control
 var menu_box: VBoxContainer
@@ -496,7 +501,7 @@ func _build_shop() -> void:
 
 func _build_pick() -> void:
 	pick = PickGame.new()
-	pick.size = Vector2(440, 150)
+	pick.size = Vector2(440, 172)
 	pick.visible = false
 	pick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pick.finished.connect(func(ok: bool): _pick_done(ok))
@@ -591,12 +596,12 @@ func _build_title() -> void:
 	col.add_child(mc)
 	menu_box.add_child(_menu_btn("Partida rápida", func(): start_requested.emit(opt.duplicate())))
 	menu_box.add_child(_menu_btn("Nueva partida", func(): _open_title_panel(lobby_panel)))
-	menu_box.add_child(_menu_btn("Tutorial", func(): tutorial_requested.emit()))
-	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
+	menu_box.add_child(_menu_btn("Práctica (los dos bandos)", func(): tutorial_requested.emit()))
+	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + HOW13 + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
 	menu_box.add_child(_menu_btn("Ajustes", func(): open_settings()))
-	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.12 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
+	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.13 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
 	menu_box.add_child(_menu_btn("Salir", func(): quit_requested.emit()))
-	var ver := _lbl("Prototipo v0.12 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	var ver := _lbl("Prototipo v0.13 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
 	ver.position = Vector2(40, 0)
 	ver.name = "Version"
 	title_panel.add_child(ver)
@@ -689,6 +694,30 @@ func _build_lobby() -> void:
 	pk.item_selected.connect(func(i): opt["perk"] = perk_ids[i])
 	perk_row.add_child(pk)
 	v.add_child(perk_row)
+	# tu personaje: género, ropa, sombrero, pelo y piel
+	v.add_child(_lbl("TU PERSONAJE", 13, C_GOLD))
+	var lk := HBoxContainer.new()
+	lk.add_theme_constant_override("separation", 16)
+	v.add_child(lk)
+	look_view = Control.new()
+	look_view.custom_minimum_size = Vector2(96, 124)
+	look_view.draw.connect(_draw_look)
+	lk.add_child(look_view)
+	var lg := GridContainer.new()
+	lg.columns = 2
+	lg.add_theme_constant_override("h_separation", 14)
+	lg.add_theme_constant_override("v_separation", 4)
+	lk.add_child(lg)
+	for spec in [["female", "Género"], ["coat", "Ropa"], ["hat", "Sombrero"], ["hair", "Pelo"], ["skin", "Piel"]]:
+		lg.add_child(_lbl(spec[1], 14, C_MUT))
+		var ob := OptionButton.new()
+		ob.focus_mode = Control.FOCUS_NONE
+		ob.custom_minimum_size = Vector2(220, 0)
+		var lkey: String = spec[0]
+		ob.item_selected.connect(func(i): _look_set(lkey, i))
+		lg.add_child(ob)
+		look_opts[lkey] = ob
+	_look_fill()
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	var go := _btn("Empezar partida", func(): start_requested.emit(opt.duplicate()), 18)
@@ -698,6 +727,49 @@ func _build_lobby() -> void:
 	v.add_child(h)
 	_pick_role("runner")
 
+## Rellena los desplegables del personaje según el género elegido.
+func _look_fill() -> void:
+	var fem: bool = look["female"]
+	_opt_fill(look_opts["female"], ["Hombre", "Mujer"], 1 if fem else 0)
+	var coats: Array = []
+	for c in (Outfit.DRESSES if fem else Outfit.SUITS):
+		coats.append(("Vestido " if fem else "Traje ") + str(c[1]))
+	_opt_fill(look_opts["coat"], coats, int(look["coat"]))
+	var hats: Array = ["Sombrero cloché", "Sin sombrero"]
+	if not fem:
+		hats = []
+		for hh in Outfit.HATS:
+			var hn: String = hh[1]
+			hats.append(hn.substr(0, 1).to_upper() + hn.substr(1))
+	_opt_fill(look_opts["hat"], hats, int(look["hat"]))
+	_opt_fill(look_opts["hair"], ["Negro", "Castaño oscuro", "Castaño", "Rubio", "Canoso"], int(look["hair"]))
+	_opt_fill(look_opts["skin"], ["Clara", "Morena", "Oscura", "Muy clara"], int(look["skin"]))
+	_look_outfit = Outfit.new_custom(look)
+	opt["look"] = look.duplicate()
+	if look_view != null:
+		look_view.queue_redraw()
+
+func _opt_fill(ob: OptionButton, names: Array, sel: int) -> void:
+	ob.clear()
+	for n in names:
+		ob.add_item(str(n))
+	ob.select(clampi(sel, 0, names.size() - 1))
+
+func _look_set(key: String, i: int) -> void:
+	if key == "female":
+		look["female"] = i == 1
+		look["coat"] = 0
+		look["hat"] = 0
+	else:
+		look[key] = i
+	_look_fill()
+
+func _draw_look() -> void:
+	look_view.draw_rect(Rect2(Vector2.ZERO, look_view.size), Color("#1a1f27"))
+	look_view.draw_rect(Rect2(Vector2.ZERO, look_view.size), C_GOLD, false, 1.0)
+	if _look_outfit != null:
+		Painter.draw_actor(look_view, look_view.size.x / 2.0, look_view.size.y * 0.74, _look_outfit, "down", 0.0, false, 0.0, 3.0)
+
 func _pick_role(key: String) -> void:
 	opt["role"] = key
 	for k in role_buttons:
@@ -705,8 +777,8 @@ func _pick_role(key: String) -> void:
 	if perk_row != null:
 		perk_row.visible = key == "hunter"
 	var txt := {
-		"runner": "Mafia contratada. Tienes 8-10 encargos en tu bloc de notas. Las habitaciones ajenas están cerradas y si te ven forzarlas te denuncian. El primero en acabar recibe una pistola y el chivatazo de un cazador.",
-		"hunter": "Policía secreta infiltrada. Elimina a los dos corredores de tu cartel sin testigos. Tienes " + str(Cfg.AMMO) + " balas y unas esposas; el vigilante de la entrada te vende material.",
+		"runner": "Mafia contratada. Solo perdéis si caéis todos. Tienes 8-10 encargos en tu bloc de notas. Las habitaciones ajenas están cerradas y si te ven forzarlas te denuncian. El primero en acabar recibe una pistola y el chivatazo de un cazador.",
+		"hunter": "Policía secreta infiltrada. Acaba con todos los corredores sin testigos (tu cartel enseña a los dos primeros). Si llamas la atención, la central te avisa y un botones puede interrogarte. Tienes " + str(Cfg.AMMO) + " balas y unas esposas; el vigilante de la entrada te vende material.",
 		"spectator": "Mira una partida completa entre bots, sin niebla. Espacio cambia el personaje al que sigues.",
 	}
 	var rt := lobby_panel.find_child("RoleText", true, false) as Label
@@ -880,7 +952,7 @@ func _draw_qte() -> void:
 func set_tutorial(on: bool, step: int, total: int, txt: String) -> void:
 	tut_box.visible = on
 	if on:
-		tut_step.text = "TUTORIAL · PASO " + str(mini(step + 1, total)) + " DE " + str(total)
+		tut_step.text = "PRÁCTICA · PASO " + str(mini(step + 1, total)) + " DE " + str(total)
 		if tut_label.text != txt:
 			tut_label.text = txt
 			tut_box.reset_size()
@@ -1092,8 +1164,12 @@ func _inventory(w: World) -> void:
 		gad.append("Llave maestra")
 	if hm.badge:
 		gad.append("Insignia de botones")
-	if hm.lockpick:
-		gad.append("Ganzúa")
+	if hm.picks_n > 0:
+		gad.append("Ganzúas x" + str(hm.picks_n) + " (se rompen si las fuerzas)")
+	if hm.rperk != "":
+		gad.append("Habilidad · " + Loot.perk_text(hm))
+	if hm.bad_fit:
+		gad.append("Disfraz penoso: esta ropa no es de tu género")
 	if hm.mop:
 		gad.append("Fregona")
 	if hm.cutter:

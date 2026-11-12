@@ -11,6 +11,9 @@ class Pick:
 	var nm := ""
 	var value := 0
 	var job_owner := 0
+	var box := ""    # dónde está guardado: "f:planta:x:y" (mueble), "c:id" (cadáver) o "" (suelto)
+	var by := 0      # jugador que lo dejó ahí
+	var t := 0.0     # cuándo
 
 class Corpse:
 	var id := 0

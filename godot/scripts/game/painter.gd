@@ -693,7 +693,28 @@ static func draw_city(ci: CanvasItem, rect: Rect2, time: float) -> void:
 			r(ci, es.x - sz / 2, es.y - sz / 2 - k * 6, sz, sz, Color(0.12 + k * 0.02, 0.13 + k * 0.02, 0.17 + k * 0.02))
 		ci.draw_circle(es + Vector2(0, -40), 6, Color(1, 0.2, 0.2, 0.6 + 0.4 * sin(time * 3.0)))
 
-## Letrero luminoso del hotel sobre la azotea.
+## Gran antena de radio de la azotea vista desde arriba: zócalo, celosía, vientos y baliza roja.
+static func draw_mast(ci: CanvasItem, cx: float, cy: float, time: float) -> void:
+	var c := Vector2(cx, cy)
+	for a in 4:
+		var d := Vector2(cos(PI / 4.0 + a * PI / 2.0), sin(PI / 4.0 + a * PI / 2.0))
+		ci.draw_line(c + d * 20.0, c + d * 150.0, Color(0.75, 0.78, 0.82, 0.45), 1.0)
+		r(ci, c.x + d.x * 150.0 - 3, c.y + d.y * 150.0 - 3, 6, 6, Color("#3a3f46"))
+	r(ci, cx - 30, cy - 30, 60, 60, Color("#23262b"))
+	r(ci, cx - 27, cy - 27, 54, 54, Color("#4a4f57"))
+	ci.draw_line(c + Vector2(-22, -22), c + Vector2(22, 22), Color("#6a727b"), 2.0)
+	ci.draw_line(c + Vector2(22, -22), c + Vector2(-22, 22), Color("#6a727b"), 2.0)
+	for k in 5:
+		var s := 22.0 - k * 4.4
+		ci.draw_rect(Rect2(cx - s, cy - s, s * 2.0, s * 2.0), Color("#8d96a0").darkened(0.25 - k * 0.05), false, 2.0)
+	ci.draw_line(c + Vector2(-34, 0), c + Vector2(34, 0), Color("#9aa3ab"), 2.0)
+	ci.draw_line(c + Vector2(0, -30), c + Vector2(0, 30), Color("#9aa3ab"), 2.0)
+	var on := fmod(time, 1.4) < 0.7
+	if on:
+		ci.draw_circle(c, 12.0, Color(1, 0.2, 0.2, 0.22))
+	ci.draw_circle(c, 3.6, Color("#ff3a3a") if on else Color("#5a1414"))
+
+## Letrero luminoso del hotel sobre la azotea (ya no se usa: lo sustituye la antena).
 static func draw_sign(ci: CanvasItem, x: float, y: float, w: float, time: float) -> void:
 	var f := font()
 	var on := 0.85 + 0.15 * sin(time * 9.0) * (1.0 if fmod(time, 7.0) < 0.4 else 0.0)

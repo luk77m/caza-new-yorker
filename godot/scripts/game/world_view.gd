@@ -107,8 +107,8 @@ func _draw_base() -> void:
 		if o["k"] == "rug":
 			Painter.draw_furn(ci, o)
 	for o in f.furn:
-		if o["k"] == "sign" and f.roof:
-			Painter.draw_sign(ci, o["x"] * TS, o["y"] * TS - 12, o["w"] * TS, anim)
+		if o["k"] == "mast":
+			Painter.draw_mast(ci, (o["x"] + o["w"] / 2.0) * TS, (o["y"] + o["h"] / 2.0) * TS, anim)
 		elif o["k"] != "rug":
 			Painter.draw_furn(ci, o)
 	_draw_plates(ci, f)
@@ -124,7 +124,7 @@ func _draw_base() -> void:
 		ci.draw_rect(Rect2(cx - tw / 2 - 5, cy - 9, tw + 10, 12), Color("#d9b862"))
 		Painter.text(ci, cx, cy, nm, 9, Color("#2a1e0a"), 0)
 	for p in w.picks:
-		if p.fl == view_ent.fl and can_see(f, (p.x + 0.5) * TS, (p.y + 0.5) * TS, p.fl):
+		if p.box == "" and p.fl == view_ent.fl and can_see(f, (p.x + 0.5) * TS, (p.y + 0.5) * TS, p.fl):
 			Painter.draw_pick(ci, p, anim)
 	# charcos de sangre, huellas y rastros de arrastre
 	for bp in w.pools:
@@ -238,8 +238,8 @@ func _draw_glow() -> void:
 			_light(ci, lp, lr * 0.85 * flick, tint)
 	if f.roof:
 		for o in f.furn:
-			if o["k"] == "sign":
-				_light(ci, Vector2((o["x"] + o["w"] / 2.0) * Cfg.TS, o["y"] * Cfg.TS + 14), 260.0, Color(0.55, 0.08, 0.06))
+			if o["k"] == "mast" and fmod(anim, 1.4) < 0.7:
+				_light(ci, Vector2((o["x"] + o["w"] / 2.0) * Cfg.TS, (o["y"] + o["h"] / 2.0) * Cfg.TS), 150.0, Color(0.4, 0.06, 0.05))
 	if f.fi == 1:
 		for lx in [8, 15, 29, 36]:
 			_light(ci, Vector2(lx * Cfg.TS, 27.0 * Cfg.TS + 6), 110.0, Color(0.4, 0.32, 0.16))
@@ -279,6 +279,25 @@ func _draw_top() -> void:
 			Painter.text(ci, e.x, e.y - 30, e.nm, 10, Painter.BLUE if e.role == "runner" else Color("#ff9a9a"))
 		if e.arrest > 0:
 			Painter.text(ci, e.x, e.y - 42, "DETENIDO", 10, Painter.RED)
+		if e.shop != "":
+			# vendedores señalizados: dorado el de tu bando, rojo el del contrario
+			var vmine: bool = see_all() or e.shop == role
+			Painter.text(ci, e.x, e.y - 31, "$ CONTACTO" if e.shop == "runner" else "$ VIGILANTE", 9, Painter.GOLD if vmine else Painter.RED)
+			if e.bandaged:
+				Painter.r(ci, e.x - 5.5, e.y - 23.5, 11, 2.6, Color("#f4f1ea"))
+				Painter.r(ci, e.x + 1.5, e.y - 23.5, 2.2, 2.6, Color("#c0392b"))
+	# flecha hacia tu vendedor si está en la planta y no muy lejos
+	if view_ent != null and (role == "runner" or role == "hunter"):
+		var vd := Heat.vendor_for(w, role)
+		if vd != null and vd.fl == view_ent.fl:
+			var dv := Vector2(vd.x - view_ent.x, vd.y - view_ent.y)
+			var dvl := dv.length()
+			if dvl > 5.0 * Cfg.TS and dvl < 18.0 * Cfg.TS:
+				var un := dv / dvl
+				var ap := Vector2(view_ent.x, view_ent.y - 10.0) + un * 52.0
+				var pn := Vector2(-un.y, un.x)
+				Painter.poly(ci, [ap + un * 9.0, ap + pn * 4.5, ap - pn * 4.5], Color(0.92, 0.82, 0.54, 0.8))
+				Painter.text(ci, ap.x - un.x * 9.0, ap.y - un.y * 9.0 + 4.0, "$", 10, Painter.GOLD)
 	for e in list:
 		if e.bubble != "":
 			Painter.draw_bubble(ci, e.x, e.y, e.bubble)
