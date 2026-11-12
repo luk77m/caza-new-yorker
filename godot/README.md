@@ -1,4 +1,4 @@
-# Hidden Lead (título provisional) · versión Godot (v0.11, 2D)
+# Hidden Lead (título provisional) · versión Godot (v0.12, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,23 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.12 «El hotel vivo» (resto de propuestas del tester)
+
+- **Día y noche:** el día dura 5 minutos y la noche 4. Los huéspedes desayunan, almuerzan, pasan la tarde en los
+  salones, cenan, toman copas y se van a dormir a su habitación. Quien duerme no ve ni oye nada.
+  De noche el hotel baja las luces. La hora y la franja salen en un aviso del HUD.
+- **Pánico y alerta general:** el pánico (cuerpos descubiertos, crímenes con testigos, disparos) hace que lleguen
+  más policías y se queden más tiempo; la alerta general (llamadas y denuncias) hace que todos vean más lejos y
+  sospechen antes. Los dos bajan solos con el tiempo.
+- **Dos guardias de seguridad** que van donde está la gente (comidas, salones, bar) y avisan por radio al momento.
+- **Conductos de ventilación:** rejillas en los muros; con el minijuego de los cuatro tornillos pasas a la
+  siguiente rejilla de la planta (también dentro de habitaciones cerradas). Las rejillas quedan abiertas.
+- **Perros:** tres huéspedes tienen perro. Si matas al dueño, el perro va hasta el cuerpo (aunque esté en un
+  armario) y ladra hasta que alguien lo encuentra. No abren puertas: cógelo en brazos (E) y enciérralo.
+- **Deshacerse del arma:** con la pistola en la mano, E sobre alguien inconsciente se la coloca; cuando despierte
+  y lo vea la policía, se lo llevan a él, se retiran los carteles y baja el pánico. Tú te quedas sin pistola.
+- Sigue pendiente: plantas más grandes con pasillos de servicio (hay que rediseñar el mapa).
 
 ## Novedades de la v0.11 «Sigilo» (propuestas del tester)
 

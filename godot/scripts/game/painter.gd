@@ -404,6 +404,39 @@ static func draw_pick(ci: CanvasItem, p: Items.Pick, time: float) -> void:
 		r(ci, x - 5, y - 2, 10, 4, Color("#9aa3ab"))
 		r(ci, x - 3, y + 2, 8, 2, Color("#6a7279"))
 
+## Perro de un huésped (v0.12).
+static func draw_pet(ci: CanvasItem, p: Dictionary, x: float, y: float) -> void:
+	var c := Color(str(p["col"]))
+	var d: float = p["dir"]
+	var wk := sin(float(p["walk"])) * 1.6
+	ellipse(ci, x, y + 5, 8, 2.6, Color(0, 0, 0, 0.3))
+	r(ci, x - 6, y + 1, 2.2, 4.5 + wk * 0.5, c.darkened(0.25))
+	r(ci, x + 3.8, y + 1, 2.2, 4.5 - wk * 0.5, c.darkened(0.25))
+	ellipse(ci, x, y - 1, 7.5, 4.2, c)
+	ci.draw_circle(Vector2(x + 7.5 * d, y - 4), 3.6, c)
+	poly(ci, [Vector2(x + 6 * d, y - 7), Vector2(x + 4.5 * d, y - 2.5), Vector2(x + 8 * d, y - 6)], c.darkened(0.35))
+	r(ci, x + (9.5 * d if d > 0 else 9.5 * d - 2.5), y - 4, 2.5, 2, c.darkened(0.1))
+	ci.draw_circle(Vector2(x + 11.6 * d, y - 3.6), 0.9, Color("#111111"))
+	ci.draw_circle(Vector2(x + 8.4 * d, y - 5), 0.7, Color("#111111"))
+	ci.draw_line(Vector2(x - 7 * d, y - 2), Vector2(x - 10.5 * d, y - 6 - wk), c.darkened(0.15), 1.8)
+	if float(p["msg_t"]) > 0.0:
+		text(ci, x, y - 14, str(p["msg"]), 9, Color("#f3efe2"))
+
+## Rejilla de ventilación en el muro (abierta si alguien ha pasado por ella).
+static func draw_vent(ci: CanvasItem, tx: int, ty: int, open: bool) -> void:
+	var px := tx * TS + 7.0
+	var py := ty * TS - 13.0
+	r(ci, px - 1, py - 1, 20, 12, Color("#1a1c20"))
+	if open:
+		r(ci, px, py, 18, 10, Color("#050607"))
+		poly(ci, [Vector2(px, py + 10), Vector2(px + 18, py + 10), Vector2(px + 20, py + 15), Vector2(px + 2, py + 15)], Color("#7d848c"))
+	else:
+		r(ci, px, py, 18, 10, Color("#6d747c"))
+		for j in 4:
+			r(ci, px + 1, py + 1.5 + j * 2.3, 16, 1, Color("#2a2d32"))
+		for q in [Vector2(px + 1, py + 1), Vector2(px + 16, py + 1), Vector2(px + 1, py + 8), Vector2(px + 16, py + 8)]:
+			ci.draw_circle(q, 0.8, Color("#c9cdd2"))
+
 static func draw_corpse(ci: CanvasItem, c: Items.Corpse) -> void:
 	ci.draw_set_transform(Vector2(c.x, c.y + 4), c.ang, Vector2.ONE)
 	ellipse(ci, 0, 0, 16, 9, Color(0.45, 0.03, 0.06, 0.55))

@@ -968,6 +968,15 @@ func _build_boxes(f: FloorData) -> void:
 		var py: float = (p.y + 0.5) * TS
 		var pc := Color("#d9b862") if p.kind == "cash" or p.kind == "money" else Color("#9aa3ab")
 		_box(raw, px - 5, py - 4, px + 5, py + 4, 0, 4 + 1.5 * sin(anim * 4.0 + p.id), pc, pc.lightened(0.3), {"emit": true})
+	# perros
+	for pet in w.pets:
+		if int(pet["fl"]) == e.fl:
+			var qx: float = pet["x"]
+			var qy: float = pet["y"]
+			var qc := Color(str(pet["col"]))
+			_box(raw, qx - 7, qy - 3, qx + 7, qy + 3, 3, 10, qc, qc.lightened(0.1))
+			var hd: float = 7.0 * float(pet["dir"])
+			_box(raw, qx + hd - 3, qy - 2.5, qx + hd + 3, qy + 2.5, 8, 14, qc, qc.lightened(0.15))
 	for b in raw:
 		var pb: Dictionary = _project_box(b)
 		if not pb.is_empty():

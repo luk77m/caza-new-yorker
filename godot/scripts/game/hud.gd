@@ -24,7 +24,7 @@ const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
 const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · F: arrastrar o soltar un cuerpo · clic derecho: apuntar (con la pistola, en primera persona; Q/E: asomarse) · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
-const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos.\n\n[b][color=#ebd08a]SIGILO[/color][/b]\nCorrer delante de la gente levanta sospechas. La sangre se pisa y deja huellas; salpica a quien esté cerca. A un inconsciente puedes vaciarle los bolsillos y quitarle la ropa (E), y con F arrastras cuerpos y los escondes en un armario ya registrado (o te escondes tú). Si te ven cambiarte, ese traje queda quemado. Con una fregona limpias la sangre. Solo hay unas pocas ganzúas en todo el hotel. Las puertas cerradas tapan la vista. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
+const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos.\n\n[b][color=#ebd08a]SIGILO[/color][/b]\nCorrer delante de la gente levanta sospechas. La sangre se pisa y deja huellas; salpica a quien esté cerca. A un inconsciente puedes vaciarle los bolsillos y quitarle la ropa (E), y con F arrastras cuerpos y los escondes en un armario ya registrado (o te escondes tú). Si te ven cambiarte, ese traje queda quemado. Con una fregona limpias la sangre. Solo hay unas pocas ganzúas en todo el hotel. Las puertas cerradas tapan la vista.\n\n[b][color=#ebd08a]EL HOTEL VIVO[/color][/b]\nEl día dura 5 minutos y la noche 4: los huéspedes desayunan, almuerzan, cenan, toman copas y se van a dormir (dormidos no ven nada). El pánico trae más policía; la alerta general hace a todos más atentos. Dos guardias de seguridad avisan por radio. Por las rejillas de ventilación (minijuego de tornillos) pasas a otra parte de la planta. Los perros buscan a su dueño aunque esté escondido, pero no abren puertas: cógelos y enciérralos. Con la pistola en la mano puedes colocársela a alguien inconsciente para que cargue con la culpa. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
 
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4, "perk": "silencer"}
 var root: Control
@@ -277,6 +277,8 @@ func _build_play() -> void:
 	_badge("sab", C_WARN, C_WARN)
 	_badge("intel", C_RED, C_RED)
 	_badge("follow", C_MUT, C_LINE)
+	_badge("day", C_MUT, C_LINE)
+	_badge("panic", C_WARN, C_WARN)
 	sus_box = VBoxContainer.new()
 	sus_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sus_lbl = _lbl("SOSPECHA", 12, C_MUT)
@@ -592,9 +594,9 @@ func _build_title() -> void:
 	menu_box.add_child(_menu_btn("Tutorial", func(): tutorial_requested.emit()))
 	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
 	menu_box.add_child(_menu_btn("Ajustes", func(): open_settings()))
-	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.11 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
+	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.12 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
 	menu_box.add_child(_menu_btn("Salir", func(): quit_requested.emit()))
-	var ver := _lbl("Prototipo v0.11 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	var ver := _lbl("Prototipo v0.12 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
 	ver.position = Vector2(40, 0)
 	ver.name = "Version"
 	title_panel.add_child(ver)
@@ -1141,6 +1143,15 @@ func update_hud(w: World, view: Ent, delta: float) -> void:
 	clock.total = maxf(w.limit, 1.0)
 	clock.label = "EL CLIENTE LLEGA" if role == "runner" else ("TIEMPO" if role == "spectator" else "EL CLIENTE")
 	clock.queue_redraw()
+	# hora del hotel, franja del día, pánico y sospecha general
+	if w.tutorial:
+		_set_badge("day", "")
+	else:
+		_set_badge("day", Life.hour_text(w) + " · " + ("noche" if Life.is_night(w) else "día") + " · " + w.slot)
+	if w.panic >= 3.0 or w.gsus >= 3.0:
+		_set_badge("panic", "Pánico " + str(int(w.panic)) + " · alerta general " + str(int(w.gsus)))
+	else:
+		_set_badge("panic", "")
 	# avisos
 	if w.alarm >= 3:
 		_set_badge("alarm", "BLUEGEDDON")

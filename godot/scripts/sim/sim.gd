@@ -20,7 +20,7 @@ const NPC_SPECS := [
 	{"f": 5, "home": "pub"}, {"f": 5, "home": "pub"},
 	{"f": 1, "staff": "guard", "home": "fixed", "at": Vector2i(24, 25)},
 ]
-const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock", "task", "force", "job", "drop", "stash", "hide", "unhide"]
+const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock", "task", "force", "job", "drop", "stash", "hide", "unhide", "vent", "pet_take", "pet_drop"]
 
 static var _lockm := PackedByteArray()
 
@@ -170,6 +170,7 @@ static func new_world(opt: Dictionary) -> World:
 	Stealth.setup(w, n_h + n_r)
 	if opt.get("tutorial", false):
 		_setup_tutorial(w)
+	Life.setup(w)
 	refresh_tasks(w)
 	if w.tutorial:
 		return w
@@ -513,7 +514,7 @@ static func free_for(w: World, e: Ent, f: FloorData, px: float, py: float) -> bo
 	return true
 
 static func sight_scale(w: World) -> float:
-	return Cfg.BLACKOUT_SIGHT if w.sab_blackout > w.time else 1.0
+	return (Cfg.BLACKOUT_SIGHT if w.sab_blackout > w.time else 1.0) * Life.sight_mul(w)
 
 static func elev_out(w: World) -> bool:
 	return w.sab_elev > w.time or w.sab_alarm > w.time
@@ -578,7 +579,7 @@ static func civils_seeing(w: World, a: Ent, b: Ent, rad: float) -> Array:
 	var out: Array = []
 	var f := fdat(a.fl)
 	for c in w.ents:
-		if not c.alive or c.role != "civil" or c.fl != a.fl or c.ko_t > 0:
+		if not c.alive or c.role != "civil" or c.fl != a.fl or c.ko_t > 0 or c.asleep or c.hidden:
 			continue
 		if (dist(c.x, c.y, a.x, a.y) <= rad and Nav.los(f, c.x, c.y, a.x, a.y)) or (b != null and dist(c.x, c.y, b.x, b.y) <= rad and Nav.los(f, c.x, c.y, b.x, b.y)):
 			out.append(c)
@@ -607,7 +608,7 @@ static func send_police(w: World, ctx: Dictionary, stay: float) -> void:
 		for p in active:
 			p.target = Vector3i(ctx["fl"], ctx["x"], ctx["y"])
 			p.ai_mode = "go"; p.goal = null
-			p.stay_until = maxf(p.stay_until, w.time + stay)
+			p.stay_until = maxf(p.stay_until, w.time + stay * Life.stay_mul(w))
 	else:
 		for d in w.dispatch:
 			if not d["done"]:
@@ -621,12 +622,15 @@ static func police_call(w: World, ctx: Dictionary) -> void:
 	w.stats["calls"] += 1
 	if ctx.get("outfit", "") != "":
 		w.wanted[ctx["outfit"]] = true
+	Life.add_gsus(w, 15.0)
+	Life.add_panic(w, 6.0)
 	wlog(w, "Un testigo ha llamado a la policía.", "call")
 	send_police(w, ctx, Cfg.POLICE_STAY)
 
 static func report_runner(w: World, ctx: Dictionary) -> void:
 	var r := w.ent_by_id(int(ctx["rep"]))
 	w.stats["reports"] += 1
+	Life.add_gsus(w, 8.0)
 	send_police(w, ctx, 45.0)
 	if r == null or not r.alive:
 		return
@@ -651,13 +655,14 @@ static func spawn_police(w: World, d: Dictionary) -> void:
 	Combat.add_car(w, "police", Combat.park_slot(w), d)
 
 static func spawn_police_now(w: World, d: Dictionary, car_x: float) -> void:
-	var sp := [Vector2i(21, 25), Vector2i(23, 25), Vector2i(22, 24)]
-	for i in Cfg.POLICE_COUNT:
+	var sp := [Vector2i(21, 25), Vector2i(23, 25), Vector2i(22, 24), Vector2i(21, 24), Vector2i(23, 24)]
+	# con pánico en el hotel llegan más agentes
+	for i in mini(Cfg.POLICE_COUNT + Life.police_extra(w), sp.size()):
 		var p := new_ent(w)
 		p.nm = "Policía"; p.type = "police"; p.role = "police"; p.fl = 1
 		p.x = (sp[i].x + 0.5) * TS; p.y = (sp[i].y + 0.5) * TS; p.outfit = Outfit.new_police(); p.dir = "up"
 		p.target = Vector3i(d["fl"], d["x"], d["y"]); p.ai_mode = "go"; p.ai_t = 0
-		p.stay_until = w.time + float(d.get("stay", Cfg.POLICE_STAY))
+		p.stay_until = w.time + float(d.get("stay", Cfg.POLICE_STAY)) * Life.stay_mul(w)
 		w.ents.append(p)
 	wlog(w, "Un coche de policía aparca en la puerta: los agentes entran en el hotel.", "alarm")
 
@@ -719,6 +724,7 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 		var wr := Cfg.WITNESS_RADIUS * TS * sight_scale(w) * (Cfg.SILENCER_PERK if (how == "gun" and killer.perk == "silencer") else 1.0) * (0.75 if how == "knife" else 1.0)
 		var wit: Array = civils_seeing(w, killer, victim, wr).filter(func(x): return x != victim)
 		if not wit.is_empty():
+			Life.add_panic(w, 15.0)
 			killer.sus = 100
 			if victim.role == "civil":
 				c.found = true
@@ -733,6 +739,7 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 		w.fx.append({"type": "flash", "fl": killer.fl, "x": killer.x, "y": killer.y, "t": 0.3, "big": true})
 		w.fx.append({"type": "tracer", "fl": killer.fl, "x": killer.x, "y": killer.y - 14, "x2": victim.x, "y2": victim.y - 10, "t": 0.22, "loud": true})
 		ev(w, "shot_police", killer.fl, killer.x, killer.y)
+		Life.add_panic(w, 5.0)
 		# los disparos de la policía asustan a todo el que esté cerca
 		for npc in w.ents:
 			if npc.role == "civil" and npc.alive and npc.fl == killer.fl and (npc.state == "idle" or npc.state == "evac") and dist(npc.x, npc.y, killer.x, killer.y) < 10 * TS:
@@ -886,12 +893,20 @@ static func hold_valid(w: World, e: Ent, h: Hold) -> bool:
 			return h.ref.alive and h.ref.cuffed and dist(e.x, e.y, h.ref.x, h.ref.y) < 70
 		"strip_ko", "loot", "clean":
 			return Stealth.hold_valid(w, e, h)
+		"plant":
+			return e.gun and h.ref.alive and h.ref.ko_t > 0 and h.ref.planted_gun < 0
 	return true
 
 static func finish_hold(w: World, e: Ent, h: Hold) -> void:
 	var human := e == w.human
 	if h.type in Stealth.HOLDS:
 		Stealth.finish_hold(w, e, h)
+		return
+	if h.type in Life.HOLDS:
+		Life.finish_hold(w, e, h)
+		return
+	if h.type == "vent":
+		Life.use_vent(w, e, int(h.ref))
 		return
 	if h.type == "task":
 		var t: Task = h.ref
@@ -1110,6 +1125,8 @@ static func npc_ai(w: World, e: Ent, dt: float) -> void:
 		return
 	if w.alarm < 3 and Stealth.npc_ai(w, e, dt):
 		return
+	if w.alarm < 3 and Life.npc_ai(w, e, dt):
+		return
 	if w.alarm >= 3:
 		if e.state != "flee":
 			e.state = "flee"
@@ -1172,7 +1189,7 @@ static func npc_ai(w: World, e: Ent, dt: float) -> void:
 		return
 	if e.goal == null:
 		var t: Vector2i = Rng.pick(e.tiles)
-		nav_to(w, e, e.fl, t.x, t.y)
+		nav_to(w, e, e.rt_fl if e.rt_fl >= 0 else e.fl, t.x, t.y)
 	if nav_update(w, e, dt, Cfg.SPEED_NPC):
 		e.goal = null; e.moving = false; e.ai_wait = Rng.ri(2, 8)
 
@@ -1284,6 +1301,8 @@ static func press(w: World, e: Ent, hint: Dictionary) -> String:
 			return "minigame"
 		"drop", "stash", "hide", "unhide":
 			return Stealth.press(w, e, hint)
+		"vent", "pet_take", "pet_drop":
+			return Life.press(w, e, hint)
 	return ""
 
 ## Bluegeddon (buscar material y salida) y rescate de compañeros esposados.
@@ -1552,7 +1571,7 @@ static func hunter_ai(w: World, e: Ent, dt: float) -> void:
 
 static func perceive(w: World, dt: float) -> void:
 	var sc := sight_scale(w)
-	var civils: Array = w.ents.filter(func(c): return c.alive and c.role == "civil")
+	var civils: Array = w.ents.filter(func(c): return c.alive and c.role == "civil" and not c.asleep and not c.hidden)
 	Stealth.perceive(w, dt)
 	for h in w.ents:
 		if h.role != "hunter" or not h.alive or h.hidden:
@@ -1597,7 +1616,7 @@ static func perceive(w: World, dt: float) -> void:
 						rate += Cfg.BLOOD_RATE
 			if rate == 0:
 				rate = -Cfg.SUS_DECAY
-			h.sus = clampf(h.sus + rate * dt, 0, 100)
+			h.sus = clampf(h.sus + rate * (Life.rate_mul(w) if rate > 0 else 1.0) * dt, 0, 100)
 			if restricted and staff_v != null and h.sus >= Cfg.WARN_AT and h.sus < Cfg.CALL_AT and w.time - staff_v.last_warn > 6:
 				staff_v.last_warn = w.time
 				staff_v.say("¡Esa zona es solo para el personal!", 3)
@@ -1629,7 +1648,7 @@ static func perceive(w: World, dt: float) -> void:
 			rate = -Cfg.SUS_DECAY
 		if intr and rate > 0 and not r.was_intr:
 			r.sus = minf(100.0, r.sus + 6.0)
-		r.sus = clampf(r.sus + rate * dt, 0, 100)
+		r.sus = clampf(r.sus + rate * (Life.rate_mul(w) if rate > 0 else 1.0) * dt, 0, 100)
 		r.was_intr = intr
 		r.restricted = intr and rate > 0
 		if intr and staff_v != null and r.sus >= Cfg.WARN_AT and r.sus < Cfg.CALL_AT and w.time - staff_v.last_warn > 6:
@@ -1769,7 +1788,8 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 	var t := e.tile()
 	# escondido en un armario: solo puedes salir
 	if e.hidden:
-		cand.call("unhide", null, e.x, e.y, 999.0, "Salir del armario", 0.0)
+		if e.vent_t <= 0.0:
+			cand.call("unhide", null, e.x, e.y, 999.0, "Salir del armario", 0.0)
 		return best
 	# esposado: solo puedes sobornar al guardia
 	if e.cuffed:
@@ -1814,6 +1834,9 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 				cand.call("escape", null, (x["x"] + 0.5) * TS, (x["y"] + 0.5) * TS, Cfg.TASK_RANGE, str(x["name"]), Cfg.HOLD_ESCAPE)
 	Stealth.candidates(w, e, f, cand)
 	if e.dragging != null:
+		return best
+	Life.candidates(w, e, f, cand)
+	if e.pet_id != 0:
 		return best
 	if e.role == "hunter" or e.role == "runner":
 		for c in w.corpses:
@@ -2073,6 +2096,7 @@ static func step(w: World, dt: float, inp: Dictionary) -> void:
 	Alarm.update(w, dt)
 	Combat.update(w, dt)
 	Stealth.update(w, dt)
+	Life.update(w, dt)
 	update_doors(w, dt)
 	if h != null and h.alive and h.arrest > 0:
 		h.arrest -= dt; h.moving = false; h.aim = false; h.hold = null; w.hint = {}

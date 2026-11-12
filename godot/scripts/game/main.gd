@@ -272,6 +272,8 @@ func _mode_for(hint: Dictionary) -> Array:
 	var ht: String = hint["type"]
 	if ht == "force":
 		return ["timing", 2 if w.human.lockpick else 3]
+	if ht == "vent":
+		return ["timing", 4]     # los cuatro tornillos de la rejilla
 	if ht == "job":
 		return ["balance", 0]
 	var t: Task = hint["ref"]

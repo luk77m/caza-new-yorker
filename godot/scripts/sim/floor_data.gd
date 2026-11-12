@@ -28,6 +28,8 @@ var lock_at := {}              # índice de casilla de puerta -> Room
 
 var open_from := 999          # filas desde las que se ve "hacia fuera" (la calle del vestíbulo)
 var door_t := PackedFloat32Array()   # s que le quedan abierta a cada puerta (se abren al pasar alguien)
+var vents: Array = []          # Vector2i: casillas con rejilla de ventilación (en el muro de arriba)
+var vent_open: Array = []      # bool: rejillas que alguien ha dejado abiertas
 var door_ver := 0                    # cambia cuando alguna puerta se abre o se cierra
 var door_idx := PackedInt32Array()   # casillas de puerta de la planta
 

@@ -120,6 +120,7 @@ static func innocent_found(w: World, c: Items.Corpse) -> void:
 	if c.counted or c.role != "civil" or (c.killer_role != "hunter" and c.killer_role != "runner"):
 		return
 	c.counted = true
+	Life.add_panic(w, 20.0)
 	w.innocents += 1
 	var killer := w.ent_by_id(c.killer_id)
 	if killer == null:

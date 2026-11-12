@@ -116,6 +116,17 @@ var ko_by := ""           # traje de quien le noqueó
 var ko_looted := false
 var clean_pool := {}      # PNJ limpiador: charco asignado
 var clean_phase := 0
+# v0.12 el hotel vivo
+var home_tiles: Array = []  # zona habitual del PNJ
+var home_fl := -1
+var rt_fl := -1           # planta de la rutina actual
+var asleep := false
+var guard := false        # guardia de seguridad
+var vent_t := 0.0         # s que le quedan dentro del conducto
+var vent_to := Vector2.ZERO
+var planted_gun := -1     # balas de la pistola que le han colocado (-1: ninguna)
+var planted_t := 0.0
+var pet_id := 0           # perro que lleva en brazos
 # PNJ
 var staff := false
 var tiles: Array = []

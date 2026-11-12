@@ -100,6 +100,9 @@ func _draw_base() -> void:
 	if f.fi == 1:
 		Painter.draw_street(ci, w, anim)
 	Painter.draw_floor(ci, f, x0, y0, x1, y1)
+	for vi in f.vents.size():
+		var vt: Vector2i = f.vents[vi]
+		Painter.draw_vent(ci, vt.x, vt.y, f.vent_open[vi])
 	for o in f.furn:
 		if o["k"] == "rug":
 			Painter.draw_furn(ci, o)
@@ -154,12 +157,17 @@ func _draw_base() -> void:
 				continue
 			Painter.draw_corpse(ci, c)
 	_draw_task_marks(ci, f)
+	for pet in w.pets:
+		if int(pet["fl"]) == view_ent.fl and can_see(f, pet["x"], pet["y"], view_ent.fl):
+			Painter.draw_pet(ci, pet, pet["x"], pet["y"])
 	for e in _visible_ents(f):
 		# quien se asoma en primera persona se ve desplazado hacia ese lado
 		Painter.draw_actor(ci, e.x + e.lean_x * 0.7, e.y + e.lean_y * 0.7, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
 		Painter.draw_extras(ci, e)
 		if e.ko_t > 0:
 			Painter.draw_ko(ci, e, anim)
+		if e.asleep:
+			Painter.text(ci, e.x + 8, e.y - 34 - fmod(anim * 6.0, 8.0), "z Z z", 9, Color(0.8, 0.85, 1.0, 0.8))
 		if e.fx_swing > 0:
 			var a := atan2(e.aim_y - e.y, e.aim_x - e.x)
 			ci.draw_arc(Vector2(e.x, e.y - 6), 20, a - 0.9, a + 0.9, 10, Color(1, 1, 1, 0.7), 3)
@@ -204,6 +212,8 @@ func _draw_base() -> void:
 			ci.draw_line(bp - bv * 14, bp, Color(1, 0.9, 0.55, 0.95), 2.0)
 	# oscuridad ambiente (las luces de la capa glow la compensan)
 	var amb := 0.72 if bo else (0.18 if f.roof else clampf(0.2 + f.dark * 0.7, 0.22, 0.5))
+	if not bo and Life.is_night(w):
+		amb = minf(amb + 0.1, 0.62)    # de noche el hotel baja las luces
 	ci.draw_rect(cam_rect.grow(64), Color(0.012, 0.016, 0.04, amb))
 
 # ---------------------------------------------------------------- capa de luz (aditiva)
@@ -274,7 +284,7 @@ func _draw_top() -> void:
 			Painter.draw_bubble(ci, e.x, e.y, e.bubble)
 	# objeto con el que puedes interactuar
 	if view_ent == w.human and view_ent.hidden:
-		Painter.text(ci, view_ent.x, view_ent.y - 26, "ESCONDIDO · E para salir", 10, Painter.GOLD)
+		Painter.text(ci, view_ent.x, view_ent.y - 26, "EN EL CONDUCTO…" if view_ent.vent_t > 0 else "ESCONDIDO · E para salir", 10, Painter.GOLD)
 	elif view_ent == w.human and view_ent.dragging == null and not view_ent.cuffed:
 		var dg = Stealth.find_draggable(w, view_ent)
 		if dg != null:

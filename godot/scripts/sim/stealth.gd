@@ -76,6 +76,7 @@ static func on_kill(w: World, killer: Ent, victim: Ent, how: String, c: Items.Co
 			n.outfit = n.outfit.clone()
 			n.outfit.blood = true
 			n.state = "scared"; n.ai_t = Rng.ri(5, 9); n.goal = null; n.moving = false
+			Life.add_panic(w, 5.0)
 			n.say(Rng.pick(["¡Me ha salpicado!", "¡Sangre! ¡Sangre!", "¡Dios santo!"]), 2.4)
 
 static func _pool_at(w: World, fl: int, x: float, y: float, extra: float = 0.0) -> Dictionary:
@@ -332,7 +333,7 @@ static func perceive(w: World, dt: float) -> void:
 		var seer: Ent = null
 		var staff_seer: Ent = null
 		for c in w.ents:
-			if c.role != "civil" or not c.alive or c.fl != p.fl or c.ko_t > 0 or c.hidden or c.state == "dead":
+			if c.role != "civil" or not c.alive or c.fl != p.fl or c.ko_t > 0 or c.hidden or c.asleep or c.state == "dead":
 				continue
 			var d := Sim.dist(c.x, c.y, p.x, p.y)
 			if d > SEE * TS * sc or not Nav.los(f, c.x, c.y, p.x, p.y):
@@ -361,7 +362,7 @@ static func perceive(w: World, dt: float) -> void:
 				add += CLEAN_RATE
 		if add <= 0.0 or seer == null:
 			continue
-		p.sus = clampf(p.sus + add * dt, 0.0, 100.0)
+		p.sus = clampf(p.sus + add * Life.rate_mul(w) * dt, 0.0, 100.0)
 		if w.time - seer.last_warn > 7.0:
 			if staff_seer != null:
 				staff_seer.last_warn = w.time
@@ -414,7 +415,10 @@ static func candidates(w: World, e: Ent, f: FloorData, cand: Callable) -> void:
 	for v in w.ents:
 		if v == e or not v.alive or v.fl != e.fl or v.ko_t <= 0 or v.cuffed or v.hidden or (v.role != "civil" and v.role != "police"):
 			continue
-		if not v.ko_looted and v.role == "civil":
+		if e.gun and e.equip == "gun" and v.role == "civil" and v.planted_gun < 0:
+			# con la pistola en la mano: deshacerte de ella cargándole el muerto
+			cand.call("plant", v, v.x, v.y, 44.0, "Colocarle tu pistola", 2.0)
+		elif not v.ko_looted and v.role == "civil":
 			cand.call("loot", v, v.x, v.y, 44.0, "Vaciarle los bolsillos", HOLD_LOOT)
 		elif v.outfit.kind != "under":
 			cand.call("strip_ko", v, v.x, v.y, 44.0, "Quitarle la ropa", HOLD_STRIP_KO)
@@ -581,6 +585,7 @@ static func score(w: World, p: Ent) -> Array:
 	if w.time >= w.limit:
 		out.append(["Se acabó el tiempo", -150])
 	out.append(["Sospecha a cero" if p.sus <= 0.5 else "Sospecha al final (" + str(int(p.sus)) + ")", 100 if p.sus <= 0.5 else -int(p.sus)])
+	out.append(["Sin pánico en el hotel" if w.panic < 1.0 else "Pánico al final (" + str(int(w.panic)) + ")", 100 if w.panic < 1.0 else -int(w.panic)])
 	out.append(["Sin alarma en el hotel" if w.alarm == 0 else "Nivel de alarma " + str(w.alarm), 100 if w.alarm == 0 else -100 * w.alarm])
 	var inn := 0
 	for c in w.corpses:
