@@ -67,7 +67,7 @@ func _ready_to_draw() -> bool:
 func _visible_ents(f: FloorData) -> Array:
 	var list: Array = []
 	for e in w.ents:
-		if e.alive and e.fl == view_ent.fl and (e == view_ent or can_see(f, e.x, e.y, e.fl)):
+		if e.alive and not e.hidden and e.fl == view_ent.fl and (e == view_ent or can_see(f, e.x, e.y, e.fl)):
 			list.append(e)
 	list.sort_custom(func(a, b): return a.y < b.y)
 	return list
@@ -123,17 +123,40 @@ func _draw_base() -> void:
 	for p in w.picks:
 		if p.fl == view_ent.fl and can_see(f, (p.x + 0.5) * TS, (p.y + 0.5) * TS, p.fl):
 			Painter.draw_pick(ci, p, anim)
+	# charcos de sangre, huellas y rastros de arrastre
+	for bp in w.pools:
+		if int(bp["fl"]) == view_ent.fl and can_see(f, bp["x"], bp["y"], view_ent.fl):
+			var grow: float = clampf((w.time - float(bp["t"])) / 4.0, 0.35, 1.0)
+			var pr: float = float(bp["r"]) * grow
+			Painter.ellipse(ci, bp["x"], bp["y"], pr * 1.35, pr * 0.8, Color(0.38, 0.02, 0.05, 0.78))
+			Painter.ellipse(ci, float(bp["x"]) - pr * 0.3, float(bp["y"]) - pr * 0.15, pr * 0.5, pr * 0.25, Color(0.55, 0.05, 0.08, 0.5))
+	for ft in w.prints:
+		if int(ft["fl"]) != view_ent.fl or not can_see(f, ft["x"], ft["y"], view_ent.fl):
+			continue
+		var fade: float = clampf(1.0 - (w.time - float(ft["t"])) / Stealth.PRINT_LIFE, 0.0, 1.0)
+		var fa: float = ft["a"]
+		var fpos := Vector2(ft["x"], ft["y"])
+		if ft["drag"]:
+			ci.draw_set_transform(fpos, fa, Vector2.ONE)
+			ci.draw_rect(Rect2(-10, -4, 20, 8), Color(0.4, 0.03, 0.06, 0.5 * fade))
+		else:
+			var side: float = 3.5 if int(ft["s"]) == 0 else -3.5
+			ci.draw_set_transform(fpos, fa, Vector2.ONE)
+			ci.draw_rect(Rect2(-3.5, side - 1.6, 6, 3.2), Color(0.42, 0.03, 0.06, 0.75 * fade))
+			ci.draw_rect(Rect2(-6, side - 1.4, 2, 2.8), Color(0.42, 0.03, 0.06, 0.6 * fade))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for c in w.corpses:
+		if c.hidden:
+			continue
 		if can_see(f, c.x, c.y, c.fl):
 			if c.chalk:
 				Painter.draw_chalk(ci, c)
 				continue
-			var age: float = w.time - c.t
-			Painter.ellipse(ci, c.x + 4, c.y + 6, minf(8.0 + age * 5.0, 26.0), minf(5.0 + age * 3.0, 15.0), Color(0.38, 0.02, 0.05, 0.75))
 			Painter.draw_corpse(ci, c)
 	_draw_task_marks(ci, f)
 	for e in _visible_ents(f):
-		Painter.draw_actor(ci, e.x, e.y, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
+		# quien se asoma en primera persona se ve desplazado hacia ese lado
+		Painter.draw_actor(ci, e.x + e.lean_x * 0.7, e.y + e.lean_y * 0.7, e.outfit, e.dir, e.walk, e.aim, atan2(e.aim_y - e.y, e.aim_x - e.x) if e.aim else 0.0)
 		Painter.draw_extras(ci, e)
 		if e.ko_t > 0:
 			Painter.draw_ko(ci, e, anim)
@@ -250,6 +273,12 @@ func _draw_top() -> void:
 		if e.bubble != "":
 			Painter.draw_bubble(ci, e.x, e.y, e.bubble)
 	# objeto con el que puedes interactuar
+	if view_ent == w.human and view_ent.hidden:
+		Painter.text(ci, view_ent.x, view_ent.y - 26, "ESCONDIDO · E para salir", 10, Painter.GOLD)
+	elif view_ent == w.human and view_ent.dragging == null and not view_ent.cuffed:
+		var dg = Stealth.find_draggable(w, view_ent)
+		if dg != null:
+			Painter.text(ci, dg.x, dg.y + 26, "F · arrastrar", 9, Painter.GOLD)
 	if view_ent == w.human and not w.hint.is_empty() and w.hint.has("x") and view_ent.hold == null:
 		var hp := Vector2(w.hint["x"], w.hint["y"])
 		ci.draw_arc(hp, 15 + sin(anim * 5.0) * 2, 0, TAU, 24, Color(0.92, 0.82, 0.54, 0.8), 1.5)
@@ -275,7 +304,7 @@ func _draw_top() -> void:
 ## solo donde se acaba el alcance de la vista.
 func _draw_fog(ci: CanvasItem, f: FloorData) -> void:
 	var o := Vector2(view_ent.x, view_ent.y)
-	var key := str(f.fi) + ":" + str(roundi(o.x * 2)) + ":" + str(roundi(o.y * 2)) + ":" + str(roundi(sight))
+	var key := str(f.fi) + ":" + str(roundi(o.x * 2)) + ":" + str(roundi(o.y * 2)) + ":" + str(roundi(sight)) + ":" + str(f.door_ver)
 	if key != _poly_key:
 		_poly_key = key
 		_poly = Nav.vis_poly(f, o.x, o.y, sight)

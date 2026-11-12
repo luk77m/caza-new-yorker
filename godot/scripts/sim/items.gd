@@ -29,6 +29,9 @@ class Corpse:
 	var killer_id := 0
 	var killer_role := ""
 	var counted := false
+	var hidden := false         # escondido en un armario
+	var drag_acc := 0.0
+	var stripped_clean := false
 
 class Poster:
 	var outfit_id := ""

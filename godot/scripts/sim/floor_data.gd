@@ -27,12 +27,32 @@ var room_tiles := {}           # nombre -> Array[Vector2i]
 var lock_at := {}              # índice de casilla de puerta -> Room
 
 var open_from := 999          # filas desde las que se ve "hacia fuera" (la calle del vestíbulo)
+var door_t := PackedFloat32Array()   # s que le quedan abierta a cada puerta (se abren al pasar alguien)
+var door_ver := 0                    # cambia cuando alguna puerta se abre o se cierra
+var door_idx := PackedInt32Array()   # casillas de puerta de la planta
+
+func reset_doors() -> void:
+	door_t.resize(Cfg.W * Cfg.H)
+	door_t.fill(0.0)
+	door_idx.clear()
+	for i in Cfg.W * Cfg.H:
+		if g[i] == Cfg.T_DOOR:
+			door_idx.append(i)
+	door_ver += 1
+
+func door_open(tx: int, ty: int) -> bool:
+	if tx < 0 or ty < 0 or tx >= Cfg.W or ty >= Cfg.H or door_t.size() != Cfg.W * Cfg.H:
+		return false
+	return door_t[ty * Cfg.W + tx] > 0.0
 
 ## ¿Tapa la vista esta casilla?
 func blocks(tx: int, ty: int) -> bool:
 	if ty >= open_from:
 		return false
-	return Cfg.blocks_sight(at(tx, ty))
+	var t := at(tx, ty)
+	if t == Cfg.T_DOOR:
+		return not door_open(tx, ty)   # las puertas cerradas tapan la vista
+	return Cfg.blocks_sight(t)
 
 func at(tx: int, ty: int) -> int:
 	if tx < 0 or ty < 0 or tx >= Cfg.W or ty >= Cfg.H:

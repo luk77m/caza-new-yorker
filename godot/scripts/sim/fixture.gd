@@ -10,6 +10,8 @@ var stand := Vector2i(-1, -1)
 var has_stand := false
 var fi := 0
 var looted := false
+var body = null            # Items.Corpse escondido dentro
+var occupant = null        # Ent escondido dentro
 
 func center() -> Vector2:
 	return Vector2((x + w / 2.0) * Cfg.TS, (y + h / 2.0) * Cfg.TS)

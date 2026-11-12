@@ -20,7 +20,7 @@ const NPC_SPECS := [
 	{"f": 5, "home": "pub"}, {"f": 5, "home": "pub"},
 	{"f": 1, "staff": "guard", "home": "fixed", "at": Vector2i(24, 25)},
 ]
-const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock", "task", "force", "job"]
+const PRESS_TYPES := ["elev", "elevx", "shop", "talk", "bribe", "free_key", "unlock", "task", "force", "job", "drop", "stash", "hide", "unhide"]
 
 static var _lockm := PackedByteArray()
 
@@ -65,6 +65,9 @@ static func new_world(opt: Dictionary) -> World:
 	for f in floors():
 		for wd in f.wards:
 			wd.looted = false
+			wd.body = null
+			wd.occupant = null
+		(f as FloorData).reset_doors()
 	var n_h := clampi(int(opt.get("hunters", 2)), 1, 2)
 	var n_r := clampi(int(opt.get("runners", 4)), 2, 4)
 	var h_spawn := [Vector2i(21, 24), Vector2i(23, 24)]
@@ -164,6 +167,7 @@ static func new_world(opt: Dictionary) -> World:
 		var cp := _mk_pick(pid, "cash", Vector3i(cf, ct.x, ct.y), "cartera")
 		cp.value = Rng.ri(2, 5) * 10
 		w.picks.append(cp)
+	Stealth.setup(w, n_h + n_r)
 	if opt.get("tutorial", false):
 		_setup_tutorial(w)
 	refresh_tasks(w)
@@ -173,7 +177,7 @@ static func new_world(opt: Dictionary) -> World:
 		var me := w.human
 		wlog(w, "Tu cartel de corredor: " + str(task_units(me).y) + " encargos propios. Tu habitación es la " + me.room.split(" ")[me.room.split(" ").size() - 1] + ". Las demás puertas están cerradas: fuerza la cerradura (mantén la tecla de interactuar) o busca la llave maestra, pero si alguien te ve te denunciará.")
 		wlog(w, "Tus compañeros corredores se ven con el nombre en azul.")
-		wlog(w, "Tu contacto está en la barra del bar (Planta 2): vende ganzúas, sobornos y chivatazos, te compra soplos y te ofrece trabajos extra por dinero. Pulsa E o haz clic sobre él.")
+		wlog(w, "Tu contacto está en la barra del bar (Planta 2): vende sobornos, chivatazos y fregonas, te compra soplos y te ofrece trabajos extra por dinero. Pulsa E o haz clic sobre él.")
 	elif w.role == "hunter":
 		wlog(w, "Tu cartel tiene dos rostros. Encuéntralos y elimínalos sin que nadie lo vea.")
 		wlog(w, "Ventaja: " + str(PERK_NAMES[w.human.perk]) + ". Tienes " + str(w.human.ammo) + " balas y un cuchillo (Q para cambiar). El vigilante de la entrada (planta baja) es amigo de la policía: te vende balas, trajes y rastros, y te da trabajillos.")
@@ -277,7 +281,7 @@ static func snitch_target(w: World, e: Ent) -> Ent:
 static func shop_items(w: World, e: Ent) -> Array:
 	var out: Array = []
 	if e.role == "runner":
-		out.append({"id": "ganzua", "name": "Ganzúa", "desc": "Fuerzas cerraduras en la mitad de tiempo.", "price": 70, "ok": not e.lockpick, "why": "Ya la tienes"})
+		out.append({"id": "fregona", "name": "Fregona", "desc": "Limpias charcos y huellas de sangre.", "price": 30, "ok": not e.mop, "why": "Ya la tienes"})
 		out.append({"id": "soborno", "name": "Soborno", "desc": "Borra una denuncia (y el fichado si bajas de " + str(Cfg.STRIKES) + ").", "price": 90, "ok": e.reports > 0, "why": "No tienes denuncias"})
 		out.append({"id": "chivatazo", "name": "Chivatazo", "desc": "Durante " + str(int(Cfg.INTEL_DUR)) + " s sabes en qué planta está cada cazador.", "price": 110, "ok": true, "why": ""})
 		out.append({"id": "llave", "name": "Llave inglesa montada", "desc": "Sin buscar piezas: un golpe abate a un cazador.", "price": 120, "ok": not e.melee, "why": "Ya tienes una"})
@@ -291,6 +295,7 @@ static func shop_items(w: World, e: Ent) -> Array:
 		out.append({"id": "rastro", "name": "Rastro", "desc": "Durante " + str(int(Cfg.INTEL_DUR)) + " s sabes en qué planta está cada objetivo.", "price": 110, "ok": true, "why": ""})
 		out.append({"id": "trabajo", "name": "Pedir un trabajillo", "desc": "Un recado para el vigilante a cambio de $" + str(Cfg.JOB_PAY_MIN) + "-" + str(Cfg.JOB_PAY_MAX) + ".", "price": 0, "ok": e.job == null, "why": "Ya tienes un trabajo pendiente"})
 		out.append({"id": "insignia", "name": "Insignia de botones", "desc": "Entras en las zonas del personal.", "price": 70, "ok": not e.badge, "why": "Ya la tienes"})
+		out.append({"id": "fregona", "name": "Fregona", "desc": "Limpias charcos y huellas de sangre.", "price": 30, "ok": not e.mop, "why": "Ya la tienes"})
 	return out
 
 static func buy(w: World, e: Ent, id: String) -> String:
@@ -311,6 +316,9 @@ static func buy(w: World, e: Ent, id: String) -> String:
 		"ganzua":
 			e.lockpick = true
 			msg = "Has comprado una ganzúa."
+		"fregona":
+			e.mop = true
+			msg = "Has comprado una fregona: acércate a la sangre y mantén E para limpiarla."
 		"soborno":
 			e.reports -= 1
 			if e.reports < Cfg.STRIKES:
@@ -738,6 +746,13 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 	elif victim.role == "runner":
 		wlog(w, victim.nm + " ha sido eliminado.")
 	w.fx.append({"type": "blood", "fl": victim.fl, "x": victim.x, "y": victim.y, "t": 0.6})
+	if victim.dragging != null:
+		Stealth.drop(w, victim)
+	if victim.hide_ward != null:
+		victim.hide_ward.occupant = null
+		victim.hide_ward = null
+		victim.hidden = false
+	Stealth.on_kill(w, killer, victim, how, c)
 	check_win(w)
 
 static func try_shoot(w: World, e: Ent) -> bool:
@@ -754,21 +769,23 @@ static func try_shoot(w: World, e: Ent) -> bool:
 	e.ammo -= 1
 	var tx := e.aim_x
 	var ty := e.aim_y
+	var ox := e.x + e.lean_x    # se dispara desde donde te asomas
+	var oy := e.y + e.lean_y
 	var best: Ent = null
 	var bd := 20.0
 	for v in w.ents:
-		if v == e or not v.alive or v.fl != e.fl or v.escaped:
+		if v == e or not v.alive or v.fl != e.fl or v.escaped or v.hidden:
 			continue
 		var d := dist(v.x, v.y - 2, e.aim_x, e.aim_y)
-		if d < bd and dist(e.x, e.y, v.x, v.y) <= Cfg.KILL_RANGE * TS and Nav.los(fdat(e.fl), e.x, e.y, v.x, v.y):
+		if d < bd and dist(ox, oy, v.x, v.y) <= Cfg.KILL_RANGE * TS and Nav.los(fdat(e.fl), ox, oy, v.x, v.y):
 			bd = d
 			best = v
 	if best != null:
 		tx = best.x
 		ty = best.y - 10
-	var a := atan2(ty - (e.y - 14), tx - e.x)
-	w.fx.append({"type": "flash", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "t": 0.08})
-	w.fx.append({"type": "tracer", "fl": e.fl, "x": e.x + cos(a) * 14, "y": e.y - 14 + sin(a) * 14, "x2": tx, "y2": ty, "t": 0.12, "loud": false})
+	var a := atan2(ty - (oy - 14), tx - ox)
+	w.fx.append({"type": "flash", "fl": e.fl, "x": ox + cos(a) * 14, "y": oy - 14 + sin(a) * 14, "t": 0.08})
+	w.fx.append({"type": "tracer", "fl": e.fl, "x": ox + cos(a) * 14, "y": oy - 14 + sin(a) * 14, "x2": tx, "y2": ty, "t": 0.12, "loud": false})
 	ev(w, "shot", e.fl, e.x, e.y)
 	Combat.muzzle(w, e)
 	if best != null:
@@ -867,10 +884,15 @@ static func hold_valid(w: World, e: Ent, h: Hold) -> bool:
 			return w.alarm >= 3
 		"unlock":
 			return h.ref.alive and h.ref.cuffed and dist(e.x, e.y, h.ref.x, h.ref.y) < 70
+		"strip_ko", "loot", "clean":
+			return Stealth.hold_valid(w, e, h)
 	return true
 
 static func finish_hold(w: World, e: Ent, h: Hold) -> void:
 	var human := e == w.human
+	if h.type in Stealth.HOLDS:
+		Stealth.finish_hold(w, e, h)
+		return
 	if h.type == "task":
 		var t: Task = h.ref
 		t.done = true
@@ -919,6 +941,7 @@ static func finish_hold(w: World, e: Ent, h: Hold) -> void:
 				wlog(w, "Te han visto forzar la puerta: tu sospecha se dispara.")
 		if human:
 			wlog(w, "Has forzado la cerradura de la " + rm.label() + ". Queda abierta unos segundos.")
+		Stealth.on_force(w, e, rm)
 	elif h.type == "strip":
 		var c: Items.Corpse = h.ref
 		var o := c.outfit.clone()
@@ -926,14 +949,16 @@ static func finish_hold(w: World, e: Ent, h: Hold) -> void:
 		swap_outfit(w, e, o)
 		c.outfit = Outfit.new_under(o)
 		c.stripped = true
+		Stealth.on_change(w, e)
 		if human:
 			wlog(w, "Llevas su ropa, pero está manchada de sangre. Lávala antes de que alguien lo note.")
 	elif h.type == "ward":
 		h.ref.looted = true
 		var no: Outfit = Outfit.new_guest(Rng.rnd() < 0.3) if Rng.rnd() < 0.5 else Outfit.new_staff(Rng.pick(["bell", "tech", "waiter", "maid", "chef"]))
 		swap_outfit(w, e, no)
+		Stealth.on_change(w, e)
 		if human:
-			wlog(w, "Te has cambiado de ropa: " + no.describe() + ".")
+			wlog(w, "Te has cambiado de ropa: " + no.describe() + ". Ahora puedes esconderte en este armario.")
 	elif h.type == "wash":
 		e.outfit.blood = false
 		if human:
@@ -1082,6 +1107,8 @@ static func nav_update(w: World, e: Ent, dt: float, speed: float) -> bool:
 
 static func npc_ai(w: World, e: Ent, dt: float) -> void:
 	if Reward.npc_ai(w, e, dt):
+		return
+	if w.alarm < 3 and Stealth.npc_ai(w, e, dt):
 		return
 	if w.alarm >= 3:
 		if e.state != "flee":
@@ -1255,6 +1282,8 @@ static func press(w: World, e: Ent, hint: Dictionary) -> String:
 			return "ok"
 		"unlock", "task", "force", "job":
 			return "minigame"
+		"drop", "stash", "hide", "unhide":
+			return Stealth.press(w, e, hint)
 	return ""
 
 ## Bluegeddon (buscar material y salida) y rescate de compañeros esposados.
@@ -1524,8 +1553,9 @@ static func hunter_ai(w: World, e: Ent, dt: float) -> void:
 static func perceive(w: World, dt: float) -> void:
 	var sc := sight_scale(w)
 	var civils: Array = w.ents.filter(func(c): return c.alive and c.role == "civil")
+	Stealth.perceive(w, dt)
 	for h in w.ents:
-		if h.role != "hunter" or not h.alive:
+		if h.role != "hunter" or not h.alive or h.hidden:
 			continue
 		var f := fdat(h.fl)
 		var ht: Vector2i = h.tile()
@@ -1578,7 +1608,7 @@ static func perceive(w: World, dt: float) -> void:
 		h.restricted = restricted
 	# corredores: un intruso en una habitación ajena provoca denuncias
 	for r in w.ents:
-		if r.role != "runner" or not r.alive or r.escaped or r.undercover or r.cuffed:
+		if r.role != "runner" or not r.alive or r.escaped or r.undercover or r.cuffed or r.hidden:
 			continue
 		var f := fdat(r.fl)
 		var rt: Vector2i = r.tile()
@@ -1620,7 +1650,7 @@ static func perceive(w: World, dt: float) -> void:
 		var frisk_t: Ent = null
 		var bp := Alarm.bench_pos(w)
 		for h in w.ents:
-			if not h.alive or h.fl != p.fl or h == p or h.escaped or h.undercover:
+			if not h.alive or h.fl != p.fl or h == p or h.escaped or h.undercover or h.hidden:
 				continue
 			var hd := dist(p.x, p.y, h.x, h.y)
 			var in_r := hd <= Cfg.POLICE_SIGHT * TS * sc and Nav.los(fdat(p.fl), p.x, p.y, h.x, h.y)
@@ -1667,7 +1697,7 @@ static func perceive(w: World, dt: float) -> void:
 	if w.acc2 >= 0.5:
 		w.acc2 = 0
 		for c in w.corpses:
-			if c.found or c.chalk:
+			if c.found or c.chalk or c.hidden:
 				continue
 			for n in civils:
 				if n.fl != c.fl or not n.alive or n.state == "call" or n.state == "calling":
@@ -1737,6 +1767,10 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 			best["type"] = type; best["ref"] = ref; best["label"] = label; best["dur"] = dur
 			best["x"] = px; best["y"] = py
 	var t := e.tile()
+	# escondido en un armario: solo puedes salir
+	if e.hidden:
+		cand.call("unhide", null, e.x, e.y, 999.0, "Salir del armario", 0.0)
+		return best
 	# esposado: solo puedes sobornar al guardia
 	if e.cuffed:
 		var g := Alarm.guard_of(w)
@@ -1778,9 +1812,12 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 		for x in w.exits:
 			if int(x["fl"]) == e.fl and ((x["item"] == "rope" and e.rope) or (x["item"] == "dockkey" and e.dockkey)):
 				cand.call("escape", null, (x["x"] + 0.5) * TS, (x["y"] + 0.5) * TS, Cfg.TASK_RANGE, str(x["name"]), Cfg.HOLD_ESCAPE)
-	if e.role == "hunter":
+	Stealth.candidates(w, e, f, cand)
+	if e.dragging != null:
+		return best
+	if e.role == "hunter" or e.role == "runner":
 		for c in w.corpses:
-			if c.fl == e.fl and not c.stripped and not c.chalk and c.outfit.kind != "under":
+			if c.fl == e.fl and not c.stripped and not c.chalk and not c.hidden and c.outfit.kind != "under":
 				cand.call("strip", c, c.x, c.y, 44.0, "Coger su ropa", Cfg.HOLD_STRIP)
 		for wd in f.wards:
 			if not wd.looted:
@@ -1792,7 +1829,7 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 				cand.call("wash", s, cw.x, cw.y, 58.0, "Lavar el traje", Cfg.HOLD_WASH)
 			for s in f.sinks:
 				cand.call("wash", s, (s.x + 0.5) * TS, (s.y + 0.5) * TS, 50.0, "Lavar el traje", Cfg.HOLD_SINK)
-	elif e.role == "runner":
+	if e.role == "runner":
 		var pool: Array = e.tasks.duplicate()
 		if Reward.all_done(e):
 			for o in w.ents:
@@ -1823,6 +1860,8 @@ static func auto_pickup(w: World, e: Ent) -> void:
 			continue
 		if e.cuffed and p.kind != "cuffkey":
 			continue
+		if (p.kind == "lockpick" and e.lockpick) or (p.kind == "mop" and e.mop) or e.hidden:
+			continue
 		w.picks.remove_at(i)
 		ev(w, "cash" if p.kind == "cash" else "pick", e.fl, e.x, e.y)
 		if p.kind == "cuffkey":
@@ -1848,6 +1887,14 @@ static func auto_pickup(w: World, e: Ent) -> void:
 			e.cutter = true
 			if e == w.human:
 				wlog(w, "Has cogido una cizalla. En el ascensor puedes romperlo, pero si te ven te denuncian.")
+		elif p.kind == "lockpick":
+			e.lockpick = true
+			if e == w.human:
+				wlog(w, "Has encontrado una ganzúa: fuerzas cerraduras en la mitad de tiempo. Hay muy pocas en el hotel.")
+		elif p.kind == "mop":
+			e.mop = true
+			if e == w.human:
+				wlog(w, "Has cogido una fregona: junto a la sangre, mantén E para limpiarla.")
 		elif p.kind == "masterkey":
 			e.masterkey = true
 			if e == w.human:
@@ -1903,8 +1950,30 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 		e.equip = "fist"
 	e.aim_x = inp.get("aim_x", e.x); e.aim_y = inp.get("aim_y", e.y)
 	e.aim = e.gun and e.equip == "gun" and inp.get("aim", false) and e.hold == null and not e.cuffed
+	# asomarse (solo apuntando): el ojo y el cañón se desplazan un poco, nunca a través de un muro
+	var lx: float = inp.get("lean_x", 0.0)
+	var ly: float = inp.get("lean_y", 0.0)
+	var ll := Vector2(lx, ly).length()
+	if not e.aim or ll < 0.5:
+		lx = 0.0
+		ly = 0.0
+	elif ll > Cfg.LEAN_PX:
+		lx *= Cfg.LEAN_PX / ll
+		ly *= Cfg.LEAN_PX / ll
+	if (lx != 0.0 or ly != 0.0) and (f.blocks(floori((e.x + lx) / TS), floori((e.y + ly) / TS)) or not Nav.los(f, e.x, e.y, e.x + lx, e.y + ly)):
+		lx = 0.0
+		ly = 0.0
+	e.lean_x = lx
+	e.lean_y = ly
 	var mx: float = inp.get("mx", 0.0)
 	var my: float = inp.get("my", 0.0)
+	if e.hidden:
+		mx = 0.0
+		my = 0.0
+		e.aim = false
+	if e.dragging != null:
+		e.aim = false
+	e.running = false
 	var can_move := true
 	if e.cuffed and (e.shackled or Alarm.guard_of(w) != null):
 		can_move = false
@@ -1918,6 +1987,9 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 			cancel_hold(w, e)
 		var l := Vector2(mx, my).length()
 		var sp := Cfg.SPEED_AIM if e.aim else (Cfg.SPEED_RUN if inp.get("run", false) else Cfg.SPEED_WALK)
+		e.running = not e.aim and inp.get("run", false) and e.dragging == null and not e.cuffed
+		if e.dragging != null:
+			sp = Cfg.SPEED_WALK * Stealth.SPEED_DRAG
 		if e.cuffed:
 			sp = Cfg.CUFF_SPEED
 		var vx := mx / l * sp * dt
@@ -1946,7 +2018,7 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 		start_hold(w, e, hint["type"], hint["ref"], hint["dur"])
 	if e.hold != null and not interact and not e.hold.auto:
 		cancel_hold(w, e)
-	if inp.get("fire", false) and not e.cuffed and w.cine.is_empty():
+	if inp.get("fire", false) and not e.cuffed and w.cine.is_empty() and not e.hidden and e.dragging == null:
 		match e.equip:
 			"fist":
 				Combat.punch(w, e)
@@ -1960,6 +2032,36 @@ static func human_control(w: World, e: Ent, dt: float, inp: Dictionary) -> void:
 			"wrench":
 				try_melee(w, e)
 
+# ---------------------------------------------------------------- puertas
+
+## Las puertas se abren cuando alguien está junto a ellas y se cierran solas al poco.
+static func update_doors(w: World, dt: float) -> void:
+	for fv in floors():
+		var f: FloorData = fv
+		if f.door_t.size() != Cfg.W * Cfg.H:
+			f.reset_doors()
+		for i in f.door_idx:
+			if f.door_t[i] > 0.0:
+				f.door_t[i] -= dt
+				if f.door_t[i] <= 0.0:
+					f.door_ver += 1
+	for e in w.ents:
+		if not e.alive or e.escaped or e.away_t > 0:
+			continue
+		var f2 := fdat(e.fl)
+		var tx := floori(e.x / TS)
+		var ty := floori(e.y / TS)
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				if f2.at(tx + dx, ty + dy) != Cfg.T_DOOR:
+					continue
+				if Vector2((tx + dx + 0.5) * TS - e.x, (ty + dy + 0.5) * TS - e.y).length() > 1.2 * TS:
+					continue
+				var i2 := (ty + dy) * Cfg.W + tx + dx
+				if f2.door_t[i2] <= 0.0:
+					f2.door_ver += 1
+				f2.door_t[i2] = 0.8
+
 # ---------------------------------------------------------------- paso de simulación
 
 static func step(w: World, dt: float, inp: Dictionary) -> void:
@@ -1970,6 +2072,8 @@ static func step(w: World, dt: float, inp: Dictionary) -> void:
 	Reward.update(w, dt)
 	Alarm.update(w, dt)
 	Combat.update(w, dt)
+	Stealth.update(w, dt)
+	update_doors(w, dt)
 	if h != null and h.alive and h.arrest > 0:
 		h.arrest -= dt; h.moving = false; h.aim = false; h.hold = null; w.hint = {}
 	elif h != null and h.alive and (h.ko_t > 0 or h.qte_t > 0):

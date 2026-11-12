@@ -20,7 +20,7 @@ static func _front(w: World, e: Ent, rng: float, cone: float, filter: Callable) 
 	var best: Ent = null
 	var bd := 1e9
 	for v in w.ents:
-		if v == e or not v.alive or v.fl != e.fl or v.escaped or v.away_t > 0:
+		if v == e or not v.alive or v.fl != e.fl or v.escaped or v.away_t > 0 or v.hidden:
 			continue
 		if not filter.call(v):
 			continue
@@ -44,6 +44,7 @@ static func punch(w: World, e: Ent) -> bool:
 	if v == null:
 		return false
 	knock_out(w, v, Cfg.KO_POLICE if v.role == "police" else Cfg.KO_TIME)
+	Stealth.on_punch(w, e, v)
 	Sim.ev(w, "punch", v.fl, v.x, v.y)
 	v.say(Rng.pick(["¡Uf!", "¡Ay!", "…"]), 1.5)
 	# quien lo vea se lo toma mal

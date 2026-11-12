@@ -23,8 +23,8 @@ const C_MUT := Color("#a9b2b8")
 const C_RED := Color("#ff6a78")
 const C_WARN := Color("#f0b04a")
 const C_BLUE := Color("#6fb8ff")
-const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · clic derecho: apuntar · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
-const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
+const CONTROLS := "WASD / flechas: moverse · Shift: correr · E o clic: hablar, comprar, ascensor, encargos y cerraduras (con minijuego)\nQ: cambiar lo que llevas en la mano · F: arrastrar o soltar un cuerpo · clic derecho: apuntar (con la pistola, en primera persona; Q/E: asomarse) · clic izquierdo: usar · Tab: bloc de notas · M: mapa · I: inventario\nRueda: zoom · Esc: pausa · F11: pantalla completa · Espacio: cambiar de personaje (espectador)"
+const HOW := "[b][color=#ebd08a]DOS BANDOS[/color][/b]\n[b]Cazadores[/b] (máx. 2): policía secreta infiltrada. Ganan eliminando a los dos retratados en su cartel.\n[b]Corredores[/b] (máx. 4): mafia contratada. Ganan si todos terminan sus encargos, si aguantan hasta que llegue el cliente o si caen los cazadores.\n\n[b][color=#ebd08a]CORREDORES[/color][/b]\nCada uno tiene 8-10 encargos en el bloc de notas (Tab). Las habitaciones ajenas están cerradas: fuerza la cerradura o busca la llave maestra; si te ven, te denuncian y a la tercera quedas fichado. El contacto del bar (Planta 2) vende material y ofrece trabajos extra por dinero. El primero en terminar recibe una pistola y el chivatazo de quién es un cazador. Los demás pueden hacer encargos de sus compañeros.\n\n[b][color=#ebd08a]CAZADORES[/color][/b]\n8 balas y unas esposas (Q para cambiar): al esposar a un corredor por sorpresa, este puede zafarse con una combinación de flechas; si no, desaparece 10 s y tú ves dónde están todos. Los puños noquean a cualquiera unos segundos.\n\n[b][color=#ebd08a]SIGILO[/color][/b]\nCorrer delante de la gente levanta sospechas. La sangre se pisa y deja huellas; salpica a quien esté cerca. A un inconsciente puedes vaciarle los bolsillos y quitarle la ropa (E), y con F arrastras cuerpos y los escondes en un armario ya registrado (o te escondes tú). Si te ven cambiarte, ese traje queda quemado. Con una fregona limpias la sangre. Solo hay unas pocas ganzúas en todo el hotel. Las puertas cerradas tapan la vista. Si te ven matar, llaman a la policía y reparten un cartel con tu aspecto: cámbiate de ropa. El vigilante de la entrada te vende material.\n\n[b][color=#ebd08a]LA POLICÍA[/color][/b]\nSe puede matar a un policía, pero sube la alarma. [b]Nivel 1:[/b] refuerzos y cacheos; si llevas algo encima, te esposan en el vestíbulo 1:30 (soborno, ganzúa o llave de las esposas para salir). [b]Nivel 2:[/b] llegan los federales y registran todo; el bando culpable paga en tiempo. [b]Nivel 3, BLUEGEDDON:[/b] la policía dispara a cualquiera; los corredores pueden escapar con una cuerda (azotea) o la llave del muelle (sótano)."
 
 var opt := {"role": "runner", "minutes": 12, "hunters": 2, "runners": 4, "perk": "silencer"}
 var root: Control
@@ -568,14 +568,8 @@ func _build_title() -> void:
 	col.add_theme_constant_override("separation", 4)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	cc.add_child(col)
-	var t0 := _lbl("HOTEL NEW YORKER · NUEVA YORK · 1930", 14, C_MUT)
-	t0.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(t0)
-	var t1 := _lbl("CAZA EN EL", 30, C_GOLD)
-	t1.add_theme_font_override("font", Painter.deco_font())
-	t1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(t1)
-	var t2 := _lbl("NEW YORKER", 72, C_GOLD)
+	# título provisional del juego
+	var t2 := _lbl("HIDDEN LEAD", 76, C_GOLD)
 	t2.add_theme_font_override("font", Painter.deco_font())
 	t2.add_theme_constant_override("outline_size", 10)
 	t2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -598,9 +592,9 @@ func _build_title() -> void:
 	menu_box.add_child(_menu_btn("Tutorial", func(): tutorial_requested.emit()))
 	menu_box.add_child(_menu_btn("Cómo se juega", func(): _open_info("CÓMO SE JUEGA", HOW + "\n\n[color=#a9b2b8]" + CONTROLS + "[/color]")))
 	menu_box.add_child(_menu_btn("Ajustes", func(): open_settings()))
-	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.8 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
+	menu_box.add_child(_menu_btn("Créditos", func(): _open_info("CRÉDITOS", "Prototipo v0.11 hecho con Godot 4.\nIdea y diseño: Luca Matonte Antúnez.\nProgramación con ayuda de Claude.\nGráficos, sonido y música generados por código.\n\nPuedes poner tus propias texturas en [b]assets/tiles/[/b] y [b]assets/furniture/[/b], y música en [b]assets/music/menu.ogg[/b].")))
 	menu_box.add_child(_menu_btn("Salir", func(): quit_requested.emit()))
-	var ver := _lbl("Prototipo v0.8 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
+	var ver := _lbl("Prototipo v0.11 · partida contra bots", 11, Color(0.5, 0.55, 0.6))
 	ver.position = Vector2(40, 0)
 	ver.name = "Version"
 	title_panel.add_child(ver)
@@ -739,6 +733,8 @@ func _build_settings() -> void:
 	_slider(grid, "Opacidad de la niebla", 0.6, 1.0, Settings.fog, func(x): Settings.fog = x)
 	_check(grid, "Flechas hacia los encargos", Settings.arrows, func(x): Settings.arrows = x)
 	_check(grid, "Sacudida de cámara", Settings.shake, func(x): Settings.shake = x)
+	_check(grid, "Primera persona al apuntar", Settings.fps_aim, func(x): Settings.fps_aim = x)
+	_slider(grid, "Sensibilidad del ratón (1.ª persona)", 0.3, 2.5, Settings.sens, func(x): Settings.sens = x)
 	_check(grid, "Pantalla completa (F11)", Settings.fullscreen, func(x): Settings.fullscreen = x)
 	v.add_child(_btn("Guardar y cerrar", func(): close_settings(), 16))
 
@@ -857,6 +853,15 @@ func show_end(w: World) -> void:
 	end_reason.text = w.over.get("reason", "")
 	var s := w.stats
 	end_stats.text = "Tiempo jugado " + _fmt(w.time) + " · encargos " + str(w.tasks_done) + "/" + str(w.quota) + " · bajas " + str(s["kills"]) + " · policías caídos " + str(w.cop_kills) + " · llamadas " + str(s["calls"]) + " · denuncias " + str(s["reports"]) + " · detenciones " + str(s["arrests"]) + " · cerraduras forzadas " + str(s["forced"])
+	# tabla de puntuación del jugador
+	if w.human != null and (w.role == "runner" or w.role == "hunter"):
+		var rows := Stealth.score(w, w.human)
+		var txt := "\n\nPUNTUACIÓN\n"
+		for r in rows:
+			var pts: int = r[1]
+			txt += str(r[0]) + ":  " + ("+" if pts >= 0 else "") + str(pts) + "\n"
+		txt += "TOTAL:  " + str(Stealth.total(rows))
+		end_stats.text += txt
 	close_panels()
 	end_panel.visible = true
 	_center(end_panel)
@@ -1087,6 +1092,8 @@ func _inventory(w: World) -> void:
 		gad.append("Insignia de botones")
 	if hm.lockpick:
 		gad.append("Ganzúa")
+	if hm.mop:
+		gad.append("Fregona")
 	if hm.cutter:
 		gad.append("Cizalla")
 	if hm.cuffkey:

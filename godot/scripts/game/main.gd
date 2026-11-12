@@ -19,6 +19,7 @@ var cam: Camera2D
 var hud: Hud
 var sfx: Sfx
 var music: Music
+var fps: FpsView                # primera persona al apuntar
 
 func _ready() -> void:
 	# nitidez: filtrado lineal (luces y degradados suaves) y antialias en 2D
@@ -37,6 +38,12 @@ func _ready() -> void:
 	cam.zoom = Vector2(zoom, zoom)
 	cam.position_smoothing_enabled = true
 	cam.position_smoothing_speed = 9.0
+	var fl := CanvasLayer.new()
+	fl.layer = 5
+	add_child(fl)
+	fps = FpsView.new()
+	fps.visible = false
+	fl.add_child(fps)
 	sfx = Sfx.new()
 	add_child(sfx)
 	music = Music.new()
@@ -83,6 +90,7 @@ func _setup_input() -> void:
 	_key("map", [KEY_M])
 	_key("inv", [KEY_I])
 	_key("equip", [KEY_Q])
+	_key("drag", [KEY_F])
 	_key("pause", [KEY_ESCAPE, KEY_P])
 	_key("next", [KEY_SPACE])
 	_key("fullscreen", [KEY_F11])
@@ -101,6 +109,18 @@ func _read_input() -> Dictionary:
 	var m := view.get_global_mouse_position()
 	if _blocking():
 		mv = Vector2.ZERO
+	if fps.visible:
+		# primera persona: WASD relativo a la mirada, punto de mira y asomarse
+		var ap := fps.aim_point()
+		return {
+			"mx": fps.move_vec(mv).x, "my": fps.move_vec(mv).y,
+			"run": false,
+			"aim": Input.is_action_pressed("aim") and not blocked,
+			"aim_x": ap.x, "aim_y": ap.y,
+			"lean_x": fps.lean_off.x, "lean_y": fps.lean_off.y,
+			"fire": Input.is_action_pressed("fire") and not blocked,
+			"interact": false,
+		}
 	return {
 		"mx": mv.x, "my": mv.y,
 		"run": Input.is_action_pressed("run"),
@@ -109,6 +129,12 @@ func _read_input() -> Dictionary:
 		"fire": Input.is_action_pressed("fire") and not blocked and Time.get_ticks_msec() > no_fire_until,
 		"interact": Input.is_action_pressed("use") and not _blocking(),
 	}
+
+## Con el ratón capturado (primera persona) el movimiento gira la mirada.
+func _input(ev: InputEvent) -> void:
+	var mm := ev as InputEventMouseMotion
+	if mm != null and fps != null and fps.visible:
+		fps.look(mm.relative * Settings.sens)
 
 func _unhandled_input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("fullscreen"):
@@ -164,6 +190,20 @@ func _unhandled_input(ev: InputEvent) -> void:
 		_next_follow()
 		return
 	if h == null or not h.alive or h.escaped or not w.cine.is_empty():
+		return
+	if fps.visible and (ev.is_action_pressed("equip") or ev.is_action_pressed("use")):
+		return   # Q/E sirven para asomarse
+	if ev.is_action_pressed("drag") and not h.hidden and not h.cuffed and h.ko_t <= 0:
+		# F: arrastrar el cuerpo más cercano o soltarlo
+		if h.dragging != null:
+			Stealth.drop(w, h)
+			sfx.play("ui", 0.4, 0.8)
+		else:
+			var dg = Stealth.find_draggable(w, h)
+			if dg != null:
+				Sim.cancel_hold(w, h)
+				Stealth.press(w, h, {"type": "drag", "ref": dg})
+				sfx.play("ui", 0.5, 0.7)
 		return
 	if ev.is_action_pressed("equip"):
 		Sim.cycle_equip(h)
@@ -310,6 +350,8 @@ func _start(opt: Dictionary) -> void:
 
 ## En el menú principal se ve una partida entre bots de fondo y suena la música.
 func _to_menu() -> void:
+	if fps != null and fps.visible:
+		_end_fps()
 	mode = "title"
 	paused = false
 	elev_pend = -1
@@ -326,6 +368,8 @@ func _to_menu() -> void:
 
 func _set_pause(on: bool) -> void:
 	paused = on
+	if on and fps.visible:
+		_end_fps()
 	hud.set_pause(on)
 
 func _buy(id: String) -> void:
@@ -431,6 +475,7 @@ func _process(delta: float) -> void:
 	_events(ve)
 	if mode == "title":
 		return
+	_update_fps(delta)
 	_steps(ve, delta)
 	for kind in hud.pump_logs(w):
 		if kind == "call" or kind == "report" or kind == "hunt":
@@ -443,6 +488,33 @@ func _process(delta: float) -> void:
 	else:
 		hud.set_tutorial(false, 0, 0, "")
 		view.tut_target = Vector3(-1, 0, 0)
+
+## Entra o sale de la primera persona según se apunte con la pistola.
+func _update_fps(delta: float) -> void:
+	var h := w.human
+	var want := mode == "play" and not paused and Settings.fps_aim and h != null and h.alive and not h.escaped \
+		and h.away_t <= 0 and h.aim and w.cine.is_empty() and Input.is_action_pressed("aim") and not hud.any_panel() \
+		and Combat.qte_for(w, h.id).is_empty()
+	if want and not fps.visible:
+		fps.begin(w, h)
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		view.visible = false
+		sfx.play("ui", 0.35, 0.7)
+	elif not want and fps.visible:
+		_end_fps()
+	if fps.visible:
+		var lean_in := (1.0 if Input.is_physical_key_pressed(KEY_E) else 0.0) - (1.0 if Input.is_physical_key_pressed(KEY_Q) else 0.0)
+		fps.update_view(w, h, delta, lean_in, shake)
+
+## Vuelve a la vista cenital con el ratón donde miraba la cámara en primera persona.
+func _end_fps() -> void:
+	fps.stop()
+	view.visible = mode != "title"
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var h := w.human if w != null else null
+	if h != null:
+		var wp := Vector2(h.x, h.y) + fps.fw * 110.0
+		Input.warp_mouse(get_viewport().get_canvas_transform() * wp)
 
 ## Sonidos y sacudidas a partir de los eventos de la simulación.
 func _events(ve: Ent) -> void:

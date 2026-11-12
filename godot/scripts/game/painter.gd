@@ -229,12 +229,19 @@ static func draw_floor(ci: CanvasItem, f: FloorData, x0: int, y0: int, x1: int, 
 						r(ci, px + off + 4, py + k * 8, 1, 8, Color(0, 0, 0, 0.16))
 						r(ci, px + off + 20, py + k * 8, 1, 8, Color(0, 0, 0, 0.16))
 				5:
-					# puerta de madera con marco y pomo de latón
-					r(ci, px + 2, py + 1, TS - 4, TS - 2, Color("#5a3a22"))
-					r(ci, px + 4, py + 3, TS - 8, TS - 6, Color("#7a5232"))
-					r(ci, px + 7, py + 6, TS - 14, 9, Color("#6a4529"))
-					r(ci, px + 7, py + 18, TS - 14, 9, Color("#6a4529"))
-					ci.draw_circle(Vector2(px + TS - 8, py + 17), 2, GOLD)
+					if f.door_open(tx, ty):
+						# puerta abierta: umbral y la hoja girada contra el marco
+						r(ci, px, py, TS, TS, Color("#3a2a1c"))
+						r(ci, px + 2, py + 2, TS - 4, TS - 4, Color("#6a4c34"))
+						r(ci, px + 1, py + 1, 5, TS - 2, Color("#5a3a22"))
+						r(ci, px + 2, py + 2, 3, TS - 4, Color("#7a5232"))
+					else:
+						# puerta cerrada de madera con marco y pomo de latón
+						r(ci, px + 2, py + 1, TS - 4, TS - 2, Color("#5a3a22"))
+						r(ci, px + 4, py + 3, TS - 8, TS - 6, Color("#7a5232"))
+						r(ci, px + 7, py + 6, TS - 14, 9, Color("#6a4529"))
+						r(ci, px + 7, py + 18, TS - 14, 9, Color("#6a4529"))
+						ci.draw_circle(Vector2(px + TS - 8, py + 17), 2, GOLD)
 				6:
 					# puertas del ascensor de latón con indicador
 					r(ci, px + 1, py + 1, TS - 2, TS - 2, Color("#2a2112"))
@@ -357,6 +364,16 @@ static func draw_furn(ci: CanvasItem, o: Dictionary) -> void:
 static func draw_pick(ci: CanvasItem, p: Items.Pick, time: float) -> void:
 	var x := (p.x + 0.5) * TS
 	var y := (p.y + 0.5) * TS
+	# ganzúas y fregonas no llevan marca: hay que fijarse para verlas
+	if p.kind == "lockpick":
+		ci.draw_line(Vector2(x - 6, y + 2), Vector2(x + 5, y - 1), Color("#8a9097"), 1.4)
+		ci.draw_line(Vector2(x + 5, y - 1), Vector2(x + 7, y - 3), Color("#8a9097"), 1.4)
+		ci.draw_circle(Vector2(x - 6, y + 2), 1.8, Color("#6a7279"))
+		return
+	if p.kind == "mop":
+		ci.draw_line(Vector2(x - 8, y + 7), Vector2(x + 7, y - 8), Color("#8a6a42"), 2.2)
+		r(ci, x - 12, y + 5, 8, 5, Color("#cfc9b8"))
+		return
 	ci.draw_circle(Vector2(x, y), 12 + sin(time * 4) * 1.5, Color(0.92, 0.82, 0.54, 0.28))
 	if p.kind == "masterkey":
 		ci.draw_circle(Vector2(x - 4, y), 4.5, GOLD)

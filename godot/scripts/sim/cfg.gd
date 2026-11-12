@@ -50,6 +50,7 @@ const POLICE_REACT := 0.7       # s entre que ve al cazador y dispara
 const SPEED_WALK := 118.0
 const SPEED_RUN := 180.0
 const SPEED_AIM := 66.0
+const LEAN_PX := 13.0          # cuánto te asomas con Q/E en primera persona
 const SPEED_NPC := 62.0
 const SPEED_BOT := 108.0
 const SPEED_BOT_RUN := 160.0

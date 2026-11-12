@@ -1,4 +1,4 @@
-# Caza en el New Yorker · versión Godot (v0.8, 2D)
+# Hidden Lead (título provisional) · versión Godot (v0.11, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,46 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.11 «Sigilo» (propuestas del tester)
+
+- **Sangre:** charcos que se pisan y dejan huellas, salpicaduras a quien esté cerca (y al asesino a quemarropa),
+  rastro al arrastrar un cuerpo. Con la **fregona** (por el hotel o en la tienda) se limpia.
+- **Correr** delante de la gente levanta sospechas. Los PNJ **esquivan los cadáveres**.
+- **Ropa:** cambiarte baja tu sospecha, pero si te ven hacerlo ese traje queda «quemado». Con uniforme del
+  personal, los empleados del mismo oficio no te reconocen cuando ya se ha descubierto algún muerto.
+- **Noquear:** los civiles quedan inconscientes más tiempo; puedes vaciarles los bolsillos y quitarles la ropa
+  (limpia). Al despertar, avisan.
+- **F: arrastrar** cadáveres o inconscientes; **esconderlos en un armario** ya registrado, o esconderte tú.
+  La policía que pasa junto al armario puede encontrar el cuerpo.
+- **Ganzúas limitadas** por partida (el anfitrión empieza con una; el resto están por el hotel sin marcar).
+  Forzar una puerta hace ruido: quien esté dentro avisa.
+- El **personal limpia** la sangre cuando la policía se lleva el cuerpo y baja a lavar el uniforme.
+- **Puntuación** al final de la partida.
+- Queda para más adelante: ciclo día/noche con rutinas, pánico general, guardias, conductos, mascotas, plantas más grandes.
+
+## Novedades de la v0.10
+
+- Título provisional **Hidden Lead**; menú sin la línea superior y torre sin letrero, con pilastras, cornisas,
+  almenas art déco, corona iluminada con focos, depósitos de agua en las alas y marquesina con bombillas.
+- Arma y mano en **3D** (corredera pavonada, cachas de nogal, silenciador con anillos, dedos alrededor de la
+  empuñadura, manga y puño de la camisa) con luz de la escena, retroceso y fogonazo con destello.
+- Muebles más bajos y a escala de los personajes; solo tapan a alguien si están entre tus ojos y él.
+- **Puertas que se cierran:** se abren al pasar alguien y se cierran solas; cerradas tapan la vista
+  (en primera persona y en la vista cenital, y también para los PNJ y la policía).
+
+## Novedades de la v0.9
+
+- **Primera persona al apuntar**: con la pistola en la mano, mantén el clic derecho y la cámara pasa a los ojos del personaje.
+  El ratón mira, el clic izquierdo dispara, WASD se mueve respecto a la mirada y **Q / E** te asoman a izquierda y derecha
+  (ladea la cabeza y desplaza el ojo y el cañón sin atravesar muros, así puedes disparar desde una esquina).
+  Al soltar el clic derecho vuelves a la vista cenital mirando hacia el mismo sitio.
+- La vista es un raycaster sobre el mismo mapa: suelos con mármol, alfombras y parqué por shader, techos con casetones,
+  luz de las lámparas, muros con zócalo, moldura dorada, papel pintado, cuadros, apliques y ventanas a la ciudad,
+  dinteles en las puertas, muebles en 3D, arañas de luz, coches en la calle y el skyline desde la azotea.
+- Mano con una pistola con silenciador de los años 30: retroceso, corredera que se abre al quedarse sin balas,
+  fogonazo pequeño, humo, casquillos, mira que se pone roja con un objetivo en alcance y marca de impacto.
+- Se puede desactivar (o cambiar la sensibilidad del ratón) en Ajustes.
 
 ## Novedades de la v0.8
 
