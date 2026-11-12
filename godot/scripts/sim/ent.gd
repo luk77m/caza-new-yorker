@@ -143,6 +143,7 @@ var shop_back := 0.0      # vendedor: instante en que vuelve
 var shop_home := Vector3.ZERO
 var bandaged := false
 var special := ""         # vendedor: artículo especial en venta
+var cover := false        # a cubierto tras un muro en primera persona: el arma se ve peor
 var agent_n := 0          # veces que la central ha tenido que sustituirle
 # PNJ
 var staff := false

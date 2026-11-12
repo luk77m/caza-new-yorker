@@ -7,7 +7,7 @@ Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asim�
 
 ## Jugar
 
-- **Versión Godot (v0.13, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
+- **Versión Godot (v0.14, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
 - **Ejecutable para Linux (sin Godot):** mira [Instalar y actualizar](#instalar-y-actualizar).
 - **Versión web (v0.3):** abre `index.html` en el navegador. No necesita servidor ni dependencias.
 
@@ -130,6 +130,7 @@ Flujo recomendado: editar `src/`, `npm run build`, `npm test`, commit. Etiquetar
 | v0.11 | Godot: sigilo (sangre y huellas, arrastrar y esconder cuerpos, noquear y robar, ganzúas limitadas, fregona, puntuación) |
 | v0.12 | Godot: el hotel vivo (día/noche con rutinas, pánico y alerta general, guardias, conductos, perros, colocar el arma) + compilación e instalador |
 | v0.13 | Godot: la central (aviso por pinganillo, interrogatorio del botones), botín en muebles y cadáveres, ganzúas que se rompen, minijuegos nuevos, vendedores atacables y señalizados, perros con dueño que denuncia, personaje personalizable, habilidades de corredor, práctica de los dos bandos, presentación de la ronda y azotea con antena |
+| v0.14 | Godot: primera persona permanente opcional, escaleras en 3D, animación al cambiar de planta, avisos laterales, asomarse solo a cubierto, encargos heredados de los caídos y pulido de muebles |
 | v0.7 | Godot: minijuegos en los encargos, puñetazos, esposas con combinación de flechas, balas visibles y salud, pistola antigua con partículas, calle con coches de policía y coche fúnebre, interior detallado, menú art déco y tutorial |
 | v0.6 | Godot: HUD nuevo (minimapa, cronómetro, inventario rápido, bloc de notas, mapa, inventario), interacción con pulsar/clic, recompensa con cinemática, alarmas por matar policías hasta el Bluegeddon, visión sin dientes, perspectiva 3/4, azotea con ciudad, menú con música |
 | v0.5 | Godot: economía y tiendas, soplos, munición y cuchillo, ventajas del cazador, ascensor con espera y cizalla, hablar con PNJ, sonido, ajustes y mejoras visuales |

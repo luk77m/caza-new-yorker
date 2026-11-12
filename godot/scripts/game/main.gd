@@ -22,6 +22,7 @@ var music: Music
 var fps: FpsView                # primera persona al apuntar
 var overlays: Overlays          # central, interrogatorio, registro y presentación de la ronda
 var practice := ""              # rol de la partida de práctica en curso
+var last_fl := -99              # planta del jugador en el paso anterior (para la animación de escaleras)
 
 func _ready() -> void:
 	# nitidez: filtrado lineal (luces y degradados suaves) y antialias en 2D
@@ -120,14 +121,16 @@ func _read_input() -> Dictionary:
 	if fps.visible:
 		# primera persona: WASD relativo a la mirada, punto de mira y asomarse
 		var ap := fps.aim_point()
+		var aiming: bool = Input.is_action_pressed("aim") and not blocked
 		return {
 			"mx": fps.move_vec(mv).x, "my": fps.move_vec(mv).y,
-			"run": false,
-			"aim": Input.is_action_pressed("aim") and not blocked,
+			"run": Input.is_action_pressed("run") and not aiming,
+			"aim": aiming,
 			"aim_x": ap.x, "aim_y": ap.y,
 			"lean_x": fps.lean_off.x, "lean_y": fps.lean_off.y,
-			"fire": Input.is_action_pressed("fire") and not blocked,
-			"interact": false,
+			"fire": Input.is_action_pressed("fire") and not blocked and Time.get_ticks_msec() > no_fire_until,
+			# en primera persona permanente E interactúa mientras no apuntes (apuntando sirve para asomarse)
+			"interact": Settings.fps_always and not aiming and Input.is_action_pressed("use") and not _blocking(),
 		}
 	return {
 		"mx": mv.x, "my": mv.y,
@@ -141,7 +144,7 @@ func _read_input() -> Dictionary:
 ## Con el ratón capturado (primera persona) el movimiento gira la mirada.
 func _input(ev: InputEvent) -> void:
 	var mm := ev as InputEventMouseMotion
-	if mm != null and fps != null and fps.visible:
+	if mm != null and fps != null and fps.visible and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		fps.look(mm.relative * Settings.sens)
 
 func _unhandled_input(ev: InputEvent) -> void:
@@ -214,13 +217,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("inv"):
 		hud.toggle(hud.inv_panel, not hud.inv_panel.visible)
 		return
-	if ev.is_action_pressed("next") and (w.role == "spectator" or h == null or not h.alive or h.escaped):
+	if ev.is_action_pressed("next") and (w.role == "spectator" or h == null or not h.alive or h.escaped or h.away_t > 0):
 		_next_follow()
 		return
 	if h == null or not h.alive or h.escaped or not w.cine.is_empty():
 		return
-	if fps.visible and (ev.is_action_pressed("equip") or ev.is_action_pressed("use")):
-		return   # Q/E sirven para asomarse
+	if fps.visible and Input.is_action_pressed("aim") and (ev.is_action_pressed("equip") or ev.is_action_pressed("use")):
+		return   # apuntando, Q/E sirven para asomarse
 	if ev.is_action_pressed("loot") and not hud.any_panel():
 		# R: registrar el mueble o el cadáver que tengas al lado
 		var near := Loot.nearest(w, h)
@@ -255,7 +258,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 			_press(w.hint)
 		return
 	# clic sobre algo con lo que se puede interactuar
-	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and not Input.is_action_pressed("aim") and not _blocking():
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and not Input.is_action_pressed("aim") and not _blocking() and not fps.visible:
 		var hint := Sim.find_interact(w, h, view.get_global_mouse_position())
 		if not hint.is_empty():
 			no_fire_until = Time.get_ticks_msec() + 300
@@ -399,6 +402,7 @@ func _start(opt: Dictionary) -> void:
 	paused = false
 	elev_pend = -1
 	follow = null
+	last_fl = -99
 	step_t = {}
 	if w.human == null:
 		_next_follow()
@@ -454,6 +458,7 @@ func _elev_choose(fl: int) -> void:
 	hud.close_elev()
 	elev_pend = fl
 	elev_t = Cfg.ELEV_WAIT
+	overlays.start_travel("elev", h.fl, fl, h.outfit, Cfg.ELEV_WAIT + 0.4)
 	hud.set_status("El ascensor viene de camino…")
 	sfx.play("elev", 0.7)
 
@@ -470,7 +475,13 @@ func _settings_changed() -> void:
 	zoom = Settings.zoom
 
 func _next_follow() -> void:
-	var list: Array = w.ents.filter(func(e): return e.alive and not e.escaped and (e.role == "runner" or e.role == "hunter"))
+	var list: Array = w.ents.filter(func(e): return e.alive and not e.escaped and e.away_t <= 0 and e.fl >= 0 and e.type != "frozen" and (e.role == "runner" or e.role == "hunter"))
+	# jugando (caído, detenido o expulsado) se sigue a los compañeros de tu bando
+	var hm := w.human
+	if hm != null and w.role != "spectator" and mode != "title":
+		var mates: Array = list.filter(func(e): return e.role == hm.role and e != hm)
+		if not mates.is_empty():
+			list = mates
 	if list.is_empty():
 		return
 	var i := list.find(follow)
@@ -481,7 +492,7 @@ func view_ent() -> Ent:
 		return null
 	if mode != "title" and w.human != null and w.human.alive and not w.human.escaped and w.human.away_t <= 0 and w.role != "spectator":
 		return w.human
-	if follow == null or not follow.alive or follow.escaped:
+	if follow == null or not follow.alive or follow.escaped or follow.away_t > 0 or follow == w.human:
 		_next_follow()
 	return follow if follow != null else w.human
 
@@ -496,9 +507,10 @@ func _physics_process(delta: float) -> void:
 		return
 	if overlays.intro_t > 0.0:
 		return     # presentación de los equipos: la partida aún no ha empezado
+	if overlays.travel_t > 0.0 and overlays.travel_kind == "stairs":
+		return     # subiendo o bajando la escalera
 	if elev_pend >= 0:
 		elev_t -= delta
-		hud.set_fade(clampf(1.0 - elev_t / 0.5, 0.0, 1.0))
 		if elev_t <= 0:
 			var h := w.human
 			if h != null and h.alive:
@@ -514,6 +526,15 @@ func _physics_process(delta: float) -> void:
 	if hud.shop_panel.visible and (w.hint.is_empty() or w.hint["type"] != "shop"):
 		hud.close_shop()
 	Sim.step(w, delta, _read_input())
+	var hs := w.human
+	if hs != null and hs.alive:
+		# cambio de planta por la escalera: un par de segundos viendo al personaje subir o bajar
+		if last_fl != -99 and absi(hs.fl - last_fl) == 1 and hs.stair_cd > 0.4 and hs.away_t <= 0 and hs.fl >= 0:
+			overlays.start_travel("stairs", last_fl, hs.fl, hs.outfit, 1.5)
+			sfx.play("step", 0.5, 0.8)
+		last_fl = hs.fl
+		if fps.visible and Settings.fps_always and not hs.moving and not hs.aim:
+			hs.dir = Sim.dir_of(fps.fw.x, fps.fw.y)
 	if w.is_over():
 		mode = "over"
 		hud.show_end(w)
@@ -557,12 +578,15 @@ func _process(delta: float) -> void:
 		hud.set_tutorial(false, 0, 0, "")
 		view.tut_target = Vector3(-1, 0, 0)
 
-## Entra o sale de la primera persona según se apunte con la pistola.
+## Entra o sale de la primera persona. Vista mixta: solo al apuntar con la pistola.
+## Primera persona permanente (ajustes): toda la partida, y el arma se levanta al apuntar.
 func _update_fps(delta: float) -> void:
 	var h := w.human
-	var want := mode == "play" and not paused and Settings.fps_aim and h != null and h.alive and not h.escaped \
-		and h.away_t <= 0 and h.aim and w.cine.is_empty() and Input.is_action_pressed("aim") and not hud.any_panel() and not overlays.modal() \
-		and Combat.qte_for(w, h.id).is_empty()
+	var ok: bool = mode == "play" and not paused and h != null and h.alive and not h.escaped and h.away_t <= 0 \
+		and w.cine.is_empty() and Combat.qte_for(w, h.id).is_empty() and overlays.intro_t <= 0.0 and overlays.travel_t <= 0.0
+	var ui_open: bool = hud.any_panel() or overlays.modal()
+	var aiming: bool = ok and h.aim and Input.is_action_pressed("aim") and not ui_open
+	var want: bool = ok and (Settings.fps_always or (Settings.fps_aim and aiming))
 	if want and not fps.visible:
 		fps.begin(w, h)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -571,8 +595,18 @@ func _update_fps(delta: float) -> void:
 	elif not want and fps.visible:
 		_end_fps()
 	if fps.visible:
-		var lean_in := (1.0 if Input.is_physical_key_pressed(KEY_E) else 0.0) - (1.0 if Input.is_physical_key_pressed(KEY_Q) else 0.0)
+		fps.show_gun = aiming or not Settings.fps_always
+		# con un panel abierto (mapa, tienda, registro...) el ratón queda libre
+		var mm := Input.MOUSE_MODE_VISIBLE if ui_open else Input.MOUSE_MODE_CAPTURED
+		if Input.mouse_mode != mm:
+			Input.mouse_mode = mm
+		var lean_in := 0.0
+		if aiming:
+			lean_in = (1.0 if Input.is_physical_key_pressed(KEY_E) else 0.0) - (1.0 if Input.is_physical_key_pressed(KEY_Q) else 0.0)
 		fps.update_view(w, h, delta, lean_in, shake)
+		h.cover = aiming and fps.cover and absf(fps.lean) < 0.3
+	elif h != null:
+		h.cover = false
 
 ## Vuelve a la vista cenital con el ratón donde miraba la cámara en primera persona.
 func _end_fps() -> void:

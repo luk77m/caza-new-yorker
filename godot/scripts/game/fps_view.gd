@@ -15,6 +15,7 @@ const DOOR_H := 42.0         # altura del dintel de las puertas
 const NEAR := 3.0
 const PAD := 96.0            # margen para que al ladear no se vean los bordes
 const ROLL := 0.11           # inclinación máxima al asomarse (rad)
+const GUN_GROW := 0.09       # margen de la imagen del arma por cada lado
 
 var w: World
 var e: Ent
@@ -22,6 +23,10 @@ var yaw := 0.0
 var pitch := 0.0
 var lean := 0.0
 var lean_off := Vector2.ZERO
+var cover := false           # pegado a un muro o a una esquina: puedes asomarte (Q/E)
+var deny_t := 0.0            # aviso de «pégate a un muro»
+var show_gun := true         # en primera persona permanente el arma solo se ve al apuntar
+var _stairs: Array = []      # escaleras de la planta: [tx, ty, sube, dx, dy]
 var eye := Vector2.ZERO
 var fw := Vector2.RIGHT
 var rt := Vector2.DOWN
@@ -316,6 +321,9 @@ func begin(world: World, ent: Ent) -> void:
 	w = world
 	e = ent
 	yaw = atan2(ent.aim_y - ent.y, ent.aim_x - ent.x)
+	if ent.aim_x == 0.0 and ent.aim_y == 0.0:
+		var fv := _face_vec(ent.dir)
+		yaw = atan2(fv.y, fv.x)
 	pitch = 0.0
 	lean = 0.0
 	recoil = 0.0
@@ -370,8 +378,18 @@ func update_view(world: World, ent: Ent, delta: float, lean_in: float, shake_in:
 	fw = Vector2(cos(yaw), sin(yaw))
 	rt = Vector2(-fw.y, fw.x)
 	# asomarse sin atravesar muros
-	lean = move_toward(lean, lean_in, delta * 5.0)
 	var body := Vector2(e.x, e.y)
+	# solo te puedes asomar si estás pegado a un muro o a una esquina (a cubierto)
+	cover = false
+	for cv in [fw, rt, -rt]:
+		var cvv: Vector2 = cv
+		if Nav.ray_exact(f, body.x, body.y, cvv.x, cvv.y, 34.0) < 30.0:
+			cover = true
+	deny_t = maxf(0.0, deny_t - delta)
+	if not cover and lean_in != 0.0:
+		lean_in = 0.0
+		deny_t = 1.2
+	lean = move_toward(lean, lean_in, delta * 5.0)
 	lean_off = Vector2.ZERO
 	if absf(lean) > 0.01:
 		var dv := rt * signf(lean)
@@ -450,7 +468,7 @@ func _fired() -> void:
 	for i in 5:
 		parts.append({"k": "smoke", "p": mz, "v": Vector2(randf_range(-20, 20), randf_range(-60, -25)), "t": 1.1 + i * 0.1, "t0": 1.1 + i * 0.1, "r": 4.0 + i})
 	var s := vs.y / 720.0
-	parts.append({"k": "shell", "p": gun.port_screen(), "v": Vector2(randf_range(240, 320), randf_range(-330, -260)) * s, "t": 0.7, "t0": 0.7, "r": randf_range(0, TAU)})
+	parts.append({"k": "shell", "p": _gun_pt(gun.port_screen()), "v": Vector2(randf_range(240, 320), randf_range(-330, -260)) * s, "t": 0.7, "t0": 0.7, "r": randf_range(0, TAU)})
 
 func _update_parts(delta: float) -> void:
 	var keep: Array = []
@@ -515,6 +533,21 @@ func _build_floor(f: FloorData) -> void:
 			tc.a = t / 255.0
 			timg.set_pixel(tx, ty, tc)
 	_tiles_tex = ImageTexture.create_from_image(timg)
+	# escaleras: suben hacia el muro que tengan pegado
+	_stairs.clear()
+	for sy in H:
+		for sx in W:
+			var st := f.at(sx, sy)
+			if st != Cfg.T_UP and st != Cfg.T_DOWN:
+				continue
+			var sd := Vector2i(0, -1)
+			for dv in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+				var dvi: Vector2i = dv
+				var nt := f.at(sx + dvi.x, sy + dvi.y)
+				if nt == Cfg.T_WALL or nt == Cfg.T_VOID:
+					sd = dvi
+					break
+			_stairs.append([sx, sy, st == Cfg.T_UP, sd.x, sd.y])
 	_light_tex = ImageTexture.create_from_image(limg)
 
 func _shader_params(f: FloorData) -> void:
@@ -1103,6 +1136,58 @@ func _build_boxes(f: FloorData) -> void:
 						_box(raw, bx0 + 14.5, by0, bx0 + TS - 14.5, by0 + TS, 18.5, 20, Color("#23262b"), Color("#3a3f46"))
 					if (tx + ty) % 2 == 0:
 						_box(raw, bx0 + 14.8, by0 + 14.8, bx0 + TS - 14.8, by0 + TS - 14.8, 11, 18.5, Color("#23262b"), Color("#23262b"), {"notop": true})
+	# escaleras con volumen: peldaños que suben, o hueco con barandilla si bajan
+	for sv in _stairs:
+		var stx: int = sv[0]
+		var sty: int = sv[1]
+		if Vector2((stx + 0.5) * TS, (sty + 0.5) * TS).distance_to(eye) > _sight + TS:
+			continue
+		var up: bool = sv[2]
+		var sdx: int = sv[3]
+		var sdy: int = sv[4]
+		var wood := Color("#6b4526")
+		for i in 4:
+			# franja i-ésima de la casilla, contando desde el lado abierto hacia el muro
+			var a0 := i / 4.0
+			var a1 := (i + 1) / 4.0
+			var rx0 := stx * TS + 2.0
+			var rx1 := stx * TS + TS - 2.0
+			var ry0 := sty * TS + 2.0
+			var ry1 := sty * TS + TS - 2.0
+			if sdx > 0:
+				rx0 = stx * TS + a0 * TS
+				rx1 = stx * TS + a1 * TS
+			elif sdx < 0:
+				rx0 = stx * TS + (1.0 - a1) * TS
+				rx1 = stx * TS + (1.0 - a0) * TS
+			elif sdy > 0:
+				ry0 = sty * TS + a0 * TS
+				ry1 = sty * TS + a1 * TS
+			else:
+				ry0 = sty * TS + (1.0 - a1) * TS
+				ry1 = sty * TS + (1.0 - a0) * TS
+			if up:
+				_box(raw, rx0, ry0, rx1, ry1, 0, 5.5 * (i + 1), wood.darkened(0.15), wood.lightened(0.12 + 0.05 * i))
+				_box(raw, rx0, ry0 + (0.0 if sdx != 0 else 0.0), rx1, ry1, 5.5 * (i + 1) - 0.8, 5.5 * (i + 1), Painter.GOLD2, Painter.GOLD2)
+			else:
+				var dk2 := Color("#3a2414").darkened(0.2 * (i + 1))
+				_box(raw, rx0, ry0, rx1, ry1, 0, 0.5, dk2, dk2)
+		# barandillas a los dos lados
+		for side in [-1.0, 1.0]:
+			var sf: float = side
+			var hx0 := stx * TS + 1.0
+			var hx1 := stx * TS + TS - 1.0
+			var hy0 := sty * TS + 1.0
+			var hy1 := sty * TS + TS - 1.0
+			if sdx != 0:
+				hy0 = (sty + 0.5) * TS + sf * (TS * 0.5 - 2.0) - 1.2
+				hy1 = hy0 + 2.4
+			else:
+				hx0 = (stx + 0.5) * TS + sf * (TS * 0.5 - 2.0) - 1.2
+				hx1 = hx0 + 2.4
+			var rz := 30.0 if up else 17.0
+			_box(raw, hx0, hy0, hx1, hy1, rz, rz + 1.6, Color("#b8923f"), Color("#d9b862"))
+			_box(raw, (hx0 + hx1) / 2.0 - 1.0, (hy0 + hy1) / 2.0 - 1.0, (hx0 + hx1) / 2.0 + 1.0, (hy0 + hy1) / 2.0 + 1.0, 0, rz, Color("#23262b"), Color("#23262b"), {"notop": true})
 	# lámparas del techo (arañas)
 	if not f.sky:
 		for l in f.lamps:
@@ -1153,7 +1238,7 @@ func _build_boxes(f: FloorData) -> void:
 		var pb: Dictionary = _project_box(b)
 		if not pb.is_empty():
 			boxes.append(pb)
-	boxes.sort_custom(func(a, b): return float(a["d"]) > float(b["d"]))
+	boxes.sort_custom(_box_order)
 
 ## Proyecta una caja (o cilindro, bola, lámpara) y guarda sus polígonos, profundidad y recuadro en pantalla.
 func _project_box(b: Dictionary) -> Dictionary:
@@ -1252,11 +1337,20 @@ func _project_box(b: Dictionary) -> Dictionary:
 			var r3 := _bounds(tp)
 			bb = r3 if not has else bb.merge(r3)
 			has = true
+	if EYE < z0:
+		# cajas por encima de los ojos: se les ve la cara de abajo
+		var bp := _poly3([Vector3(x0, y0b, z0), Vector3(x1, y0b, z0), Vector3(x1, y1b, z0), Vector3(x0, y1b, z0)])
+		if bp.size() >= 3:
+			polys.append(["poly", bp, _lit(Color(col3.r * 0.55, col3.g * 0.55, col3.b * 0.55, 1.0), m2)])
+			var r4 := _bounds(bp)
+			bb = r4 if not has else bb.merge(r4)
+			has = true
 	if not has:
 		return {}
 	if bb.end.x < -PAD or bb.position.x > vs.x + PAD:
 		return {}
-	var out := {"polys": polys, "d": d, "bb": bb, "fp": Rect2(x0, y0b, x1 - x0, y1b - y0b)}
+	var near_pt := Vector2(clampf(eye.x, x0, x1), clampf(eye.y, y0b, y1b))
+	var out := {"polys": polys, "d": d, "bb": bb, "fp": Rect2(x0, y0b, x1 - x0, y1b - y0b), "ds": near_pt.distance_to(eye), "z": z0}
 	if b.has("text"):
 		var tcen := _cam(Vector3(ccx, ccy, (z0 + z1) / 2.0))
 		if tcen.x > NEAR + 4:
@@ -1296,6 +1390,60 @@ func _redraw_cols(ci: CanvasItem, bb: Rect2, d: float) -> void:
 			_draw_col(ci, c)
 		if _dd[c] > 0.0 and _dd[c] < d:
 			_draw_lintel(ci, c)
+
+## Distancia (en px, en profundidad) a la que un rayo desde el ojo entra en un rectángulo del suelo; -1 si no lo toca.
+func _ray_rect(rd: Vector2, r: Rect2) -> float:
+	var t0 := 0.0
+	var t1 := 1e9
+	if absf(rd.x) < 1e-6:
+		if eye.x < r.position.x or eye.x > r.end.x:
+			return -1.0
+	else:
+		var ta := (r.position.x - eye.x) / rd.x
+		var tb := (r.end.x - eye.x) / rd.x
+		t0 = maxf(t0, minf(ta, tb))
+		t1 = minf(t1, maxf(ta, tb))
+	if absf(rd.y) < 1e-6:
+		if eye.y < r.position.y or eye.y > r.end.y:
+			return -1.0
+	else:
+		var tc := (r.position.y - eye.y) / rd.y
+		var td := (r.end.y - eye.y) / rd.y
+		t0 = maxf(t0, minf(tc, td))
+		t1 = minf(t1, maxf(tc, td))
+	return t0 if t0 <= t1 else -1.0
+
+## Como _redraw_cols, pero comparando columna a columna con la profundidad real del mueble
+## (antes se usaba la de su centro y los muebles largos perdían trozos según el ángulo).
+func _redraw_cols_box(ci: CanvasItem, b: Dictionary) -> void:
+	var bb: Rect2 = b["bb"]
+	var dc: float = b["d"]
+	if not b.has("fp"):
+		_redraw_cols(ci, bb, dc)
+		return
+	var fp: Rect2 = b["fp"]
+	var c0 := clampi(floori((bb.position.x - _x0) / colw), 0, ncols - 1)
+	var c1 := clampi(ceili((bb.end.x - _x0) / colw), 0, ncols - 1)
+	for c in range(c0, c1 + 1):
+		var wall: bool = _wk[c] == 1 or _wk[c] == 3 or _wk[c] == 4
+		if not wall and _dd[c] <= 0.0:
+			continue
+		var sx := _x0 + (c + 0.5) * colw
+		var te := _ray_rect(fw + rt * ((sx - cx) / proj), fp)
+		if te < 0.0:
+			te = dc
+		if wall and _wd[c] < te:
+			_draw_col(ci, c)
+		if _dd[c] > 0.0 and _dd[c] < te:
+			_draw_lintel(ci, c)
+
+## Orden de pintado de los muebles: de lejos a cerca según su punto más próximo; a igual distancia, primero lo de abajo.
+func _box_order(a: Dictionary, b: Dictionary) -> bool:
+	var da: float = a.get("ds", a["d"])
+	var db: float = b.get("ds", b["d"])
+	if absf(da - db) < 0.5:
+		return float(a.get("z", 0.0)) < float(b.get("z", 0.0))
+	return da > db
 
 # ---------------------------------------------------------------- personajes
 
@@ -1395,7 +1543,7 @@ func _draw_walls() -> void:
 		_draw_lintel(ci, c)
 	for b in boxes:
 		_draw_box(ci, b)
-		_redraw_cols(ci, b["bb"], b["d"])
+		_redraw_cols_box(ci, b)
 
 ## Lo que tapa a los personajes: muros y muebles que están más cerca que ellos.
 func _draw_occl() -> void:
@@ -1413,7 +1561,7 @@ func _draw_occl() -> void:
 				continue
 			if _seg_hits(eye, Vector2(o.x, o.y), b["fp"]):
 				_draw_box(ci, b)
-				_redraw_cols(ci, b["bb"], b["d"])
+				_redraw_cols_box(ci, b)
 
 ## ¿Cruza el segmento a-b el rectángulo r? (Liang-Barsky)
 static func _seg_hits(a: Vector2, b: Vector2, r: Rect2) -> bool:
@@ -1485,7 +1633,9 @@ func _draw_over() -> void:
 			Painter.text(ci, s["sx"], top - 20, o.bubble, 14, Color("#f3efe2"))
 		if o.role == "police" and o.spotting:
 			Painter.text(ci, s["sx"], top - 8, "!", clampi(roundi(sc * 18.0), 12, 48), Color("#ff4a4a"))
-	ci.draw_texture_rect(gun.get_texture(), Rect2(Vector2.ZERO, vs), false)
+	if show_gun:
+		# algo más grande que la pantalla: al ladearte no se ve dónde termina el brazo
+		ci.draw_texture_rect(gun.get_texture(), Rect2(-vs * GUN_GROW, vs * (1.0 + GUN_GROW * 2.0)), false)
 	for p in parts:
 		var pp: Vector2 = p["p"]
 		var k2: float = 1.0 - float(p["t"]) / float(p["t0"])
@@ -1507,8 +1657,11 @@ func _sway() -> Vector2:
 		return Vector2(cos(e.walk * 0.5) * 9.0, absf(sin(e.walk * 0.5)) * 11.0) + Vector2(lag, 0)
 	return Vector2(lag, sin(anim * 1.6) * 3.0)
 
+func _gun_pt(p: Vector2) -> Vector2:
+	return (p - vs / 2.0) * (1.0 + GUN_GROW * 2.0) + vs / 2.0
+
 func _muzzle_screen() -> Vector2:
-	return gun.muzzle_screen()
+	return _gun_pt(gun.muzzle_screen())
 
 # ---------------------------------------------------------------- interfaz: mira, munición, viñeta
 
@@ -1570,6 +1723,10 @@ func _draw_ui() -> void:
 		Painter.text(ci, c.x, vs.y - 30, "Ratón: mirar   ·   Clic: disparar   ·   Q / E: asomarse   ·   Suelta el clic derecho para salir", 14, Color(0.92, 0.82, 0.54, a))
 	if absf(lean) > 0.3:
 		Painter.text(ci, c.x, 34, "<  ASOMADO" if lean < 0 else "ASOMADO  >", 12, Color(0.92, 0.82, 0.54, 0.8))
+	elif deny_t > 0.0:
+		Painter.text(ci, c.x, 34, "Pégate a un muro o a una esquina para asomarte", 12, Color(1.0, 0.6, 0.5, minf(1.0, deny_t * 2.0)))
+	elif cover and show_gun:
+		Painter.text(ci, c.x, 34, "A CUBIERTO  ·  Q / E para asomarte  ·  te ven peor el arma", 12, Color(0.5, 0.88, 0.55, 0.8))
 
 ## Una figura (cada personaje visible es un nodo para poder oscurecerlo con la distancia).
 class ActorNode extends Node2D:

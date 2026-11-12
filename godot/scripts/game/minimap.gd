@@ -47,6 +47,15 @@ func _draw() -> void:
 				var k := maxf(2.5, s * 0.6)
 				var col := Painter.GOLD if Sim.task_avail(w, t, me) else Color(0.92, 0.82, 0.54, 0.35)
 				Painter.poly(self, [c + Vector2(0, -k), c + Vector2(k, 0), c + Vector2(0, k), c + Vector2(-k, 0)], col)
+		# encargos heredados de compañeros caídos (rombo hueco)
+		for o in w.ents:
+			if o.role != "runner" or o.alive:
+				continue
+			for t2 in o.tasks:
+				if t2.kind == "" and not t2.done and t2.fl == fl:
+					var c2 := off + Vector2((t2.x + 0.5) * s, (t2.y + 0.5) * s)
+					var k2 := maxf(2.5, s * 0.6)
+					draw_polyline(PackedVector2Array([c2 + Vector2(0, -k2), c2 + Vector2(k2, 0), c2 + Vector2(0, k2), c2 + Vector2(-k2, 0), c2 + Vector2(0, -k2)]), Color(0.92, 0.82, 0.54, 0.8), 1.5)
 	for e in w.ents:
 		if not e.alive or e.fl != fl:
 			continue

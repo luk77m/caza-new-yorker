@@ -13,6 +13,7 @@ static var shake := true      # sacudida de cámara con los disparos
 static var fog := 0.93        # opacidad de la niebla de visión
 static var fullscreen := false
 static var fps_aim := true    # primera persona al apuntar con la pistola
+static var fps_always := false   # primera persona permanente (si no: cenital y primera persona al apuntar)
 static var sens := 1.0        # sensibilidad del ratón en primera persona
 
 static func load_cfg() -> void:
@@ -29,6 +30,7 @@ static func load_cfg() -> void:
 	fullscreen = bool(c.get_value("video", "pantalla_completa", fullscreen))
 	fps_aim = bool(c.get_value("juego", "primera_persona", fps_aim))
 	sens = float(c.get_value("juego", "sensibilidad", sens))
+	fps_always = bool(c.get_value("juego", "primera_persona_siempre", fps_always))
 
 static func save_cfg() -> void:
 	var c := ConfigFile.new()
@@ -42,6 +44,7 @@ static func save_cfg() -> void:
 	c.set_value("video", "pantalla_completa", fullscreen)
 	c.set_value("juego", "primera_persona", fps_aim)
 	c.set_value("juego", "sensibilidad", sens)
+	c.set_value("juego", "primera_persona_siempre", fps_always)
 	c.save(PATH)
 
 static func apply() -> void:

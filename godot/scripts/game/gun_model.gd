@@ -196,6 +196,8 @@ func _build() -> void:
 	_limb(root, Vector3(0.03, -0.065, 0.055), Vector3(0.058, -0.115, 0.125), 0.027, 0.03, m_skin)
 	_limb(root, Vector3(0.054, -0.108, 0.115), Vector3(0.068, -0.135, 0.155), 0.034, 0.035, shirt)
 	_limb(root, Vector3(0.064, -0.128, 0.145), Vector3(0.2, -0.36, 0.5), 0.042, 0.055, m_coat)
+	# el antebrazo sigue hasta bien fuera de la pantalla: al ladearte no se ve dónde termina
+	_limb(root, Vector3(0.19, -0.34, 0.47), Vector3(0.36, -0.7, 0.95), 0.055, 0.075, m_coat)
 
 # ---------------------------------------------------------------- cada fotograma
 

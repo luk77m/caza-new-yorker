@@ -1,15 +1,24 @@
 ; Engine configuration file.
-; Creado a mano para Godot 4.3 o superior. Godot lo completará al abrirlo.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
 config/name="Hidden Lead"
-config/icon="res://icon.svg"
 config/description="Juego asimétrico de cazadores y corredores en el hotel New Yorker, 1930."
 run/main_scene="res://scenes/main.tscn"
-config/features=PackedStringArray("4.3", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
 
 [display]
 
@@ -17,12 +26,8 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/aspect="expand"
 
-[physics]
-
-common/physics_ticks_per_second=60
-
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/canvas_textures/default_texture_filter=0

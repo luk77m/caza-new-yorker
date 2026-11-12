@@ -26,22 +26,39 @@ var _hot: Array = []         # zonas pulsables: [Rect2, acción, dato]
 var _mates: Array = []
 var _foes: Array = []
 var _cop: Outfit = null
+# avisos laterales (entran y salen deslizándose por la izquierda)
+var _cards := {}             # clave -> {a, title, text, col}
+var _card_order: Array = []
+var _fit_t := 0.0
+var _central_age := 0.0
+var _central_msg := ""
+# transición de escaleras y ascensor
+var travel_t := 0.0
+var travel_dur := 1.5
+var travel_kind := ""
+var _tr_from := 0
+var _tr_to := 0
+var _tr_outfit: Outfit = null
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# anclas Y márgenes: con solo las anclas el control se quedaba pequeño en una esquina
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	foes = Control.new()
-	foes.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(foes)
+	foes.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	foes.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	foes.modulate = Color(0, 0, 0, 1)
 	foes.draw.connect(_draw_foes)
-	add_child(foes)
 
 ## Partida nueva. Con intro se presentan los equipos antes de empezar.
 func begin(world: World, with_intro: bool) -> void:
 	w = world
 	loot_key = ""
 	intro_t = 0.0
+	travel_t = 0.0
+	_cards.clear()
+	_card_order.clear()
 	_mates.clear()
 	_foes.clear()
 	if with_intro and w != null and w.human != null:
@@ -60,10 +77,79 @@ func stop() -> void:
 	w = null
 	loot_key = ""
 	intro_t = 0.0
+	travel_t = 0.0
+	_cards.clear()
+	_card_order.clear()
+
+## Animación corta al cambiar de planta: "stairs" o "elev".
+func start_travel(kind: String, from_fl: int, to_fl: int, outfit: Outfit, dur: float) -> void:
+	travel_kind = kind
+	_tr_from = from_fl
+	_tr_to = to_fl
+	_tr_outfit = outfit
+	travel_dur = maxf(dur, 0.5)
+	travel_t = travel_dur
+	loot_key = ""
+
+## Avisos que tocan ahora mismo: [clave, título, texto, color].
+func _notices() -> Array:
+	var out: Array = []
+	if w == null or w.human == null or intro_t > 0.0:
+		return out
+	var h := w.human
+	var warn := Color("#f0b04a")
+	if h.away_t > 0.0 and h.alive:
+		if h.role == "hunter" and h.agent_n > 0:
+			out.append(["expel", "EXPULSADO DEL HOTEL", "Vuelves como " + h.nm + " en " + str(ceili(h.away_t)) + " s. Mientras, sigues a tu compañero (Espacio cambia).", C_RED])
+		else:
+			out.append(["away", "FUERA DE JUEGO", "Vuelves en " + str(ceili(h.away_t)) + " s. Mientras, sigues a tu compañero (Espacio cambia).", C_RED])
+	if h.arrest > 0.0 and h.alive:
+		out.append(["arrest", "DETENIDO", "La policía te retiene " + str(ceili(h.arrest)) + " s.", C_RED])
+	if h.pet_id != 0 and h.pet_wanted:
+		out.append(["petw", "DENUNCIADO POR EL PERRO", "Suéltalo (E) antes de que la policía te vea con él.", C_RED])
+	elif h.pet_id != 0 and h.pet_warn > 0.0:
+		out.append(["pet", "¡SUELTA AL PERRO!", "El dueño te ha visto. Te quedan " + str(ceili(h.pet_warn)) + " s antes de que te denuncie.", warn])
+	if h.quiz_id != 0 and w.quiz.is_empty() and h.alive:
+		out.append(["bell", "TE BUSCA UN BOTONES", "Te hará tres preguntas sobre el hotel. Repasa el mapa (M).", warn])
+	if h.bad_fit and h.alive and _fit_t < 9.0:
+		out.append(["fit", "DISFRAZ PENOSO", "Esta ropa no es de tu género: te descubrirán antes.", warn])
+	return out
+
+func _update_cards(delta: float) -> void:
+	var live := {}
+	for n in _notices():
+		var k: String = n[0]
+		live[k] = true
+		if not _cards.has(k):
+			_cards[k] = {"a": 0.0}
+			_card_order.append(k)
+		var c: Dictionary = _cards[k]
+		c["title"] = n[1]
+		c["text"] = n[2]
+		c["col"] = n[3]
+		c["a"] = minf(1.0, float(c["a"]) + delta * 4.0)
+	for k2 in _card_order.duplicate():
+		if live.has(k2):
+			continue
+		var c2: Dictionary = _cards[k2]
+		c2["a"] = float(c2["a"]) - delta * 4.0
+		if float(c2["a"]) <= 0.0:
+			_cards.erase(k2)
+			_card_order.erase(k2)
+	if w != null and w.human != null:
+		_fit_t = _fit_t + delta if w.human.bad_fit else 0.0
+		if w.central.is_empty():
+			_central_age = 0.0
+			_central_msg = ""
+		else:
+			if str(w.central["msg"]) != _central_msg:
+				_central_msg = str(w.central["msg"])
+				_central_age = 0.0
+			_central_age += delta
 
 ## Hay una ventana que se queda con el teclado y el ratón.
 func modal() -> bool:
-	return loot_key != "" or intro_t > 0.0 or (w != null and not w.quiz.is_empty())
+	return loot_key != "" or intro_t > 0.0 or travel_t > 0.0 or (w != null and not w.quiz.is_empty())
 
 func open_loot(d: Dictionary) -> void:
 	loot_key = str(d["key"])
@@ -83,6 +169,9 @@ func _process(delta: float) -> void:
 	anim += delta
 	if intro_t > 0.0:
 		intro_t = maxf(0.0, intro_t - delta)
+	if travel_t > 0.0:
+		travel_t = maxf(0.0, travel_t - delta)
+	_update_cards(delta)
 	if loot_key != "" and w != null:
 		var near := Loot.nearest(w, w.human)
 		if near.is_empty() or str(near["key"]) != loot_key:
@@ -96,6 +185,8 @@ func key(k: String) -> bool:
 	if intro_t > 0.0:
 		if k == "use" and intro_t < INTRO - 0.6:
 			intro_t = minf(intro_t, 0.5)
+		return true
+	if travel_t > 0.0:
 		return true
 	if w == null:
 		return false
@@ -191,17 +282,27 @@ func _draw() -> void:
 	if w == null or w.human == null:
 		return
 	var h := w.human
+	# avisos a la izquierda: la central arriba y debajo las tarjetas, todos con entrada y salida deslizante
+	var ny := size.y * 0.36
 	if not w.central.is_empty():
-		_draw_central()
-	if h.pet_warn > 0.0 and h.pet_id != 0 and not h.pet_wanted:
-		Painter.text(self, size.x / 2.0, 150, "¡SUELTA AL PERRO! · " + str(ceili(h.pet_warn)) + " s", 20, C_RED, 5)
-	elif h.pet_wanted and h.pet_id != 0:
-		Painter.text(self, size.x / 2.0, 150, "DENUNCIADO: que la policía no te vea con el perro", 15, C_RED, 4)
-	if h.away_t > 0.0 and h.role == "hunter" and h.agent_n > 0 and h.alive:
-		Painter.text(self, size.x / 2.0, size.y * 0.4, "EXPULSADO DEL HOTEL", 30, C_RED, 6)
-		Painter.text(self, size.x / 2.0, size.y * 0.4 + 34, "Vuelves como " + h.nm + " en " + str(ceili(h.away_t)) + " s", 16, C_TEXT, 4)
-	if h.bad_fit and h.alive and not quiet:
-		Painter.text(self, size.x / 2.0, size.y - 190, "Disfraz penoso: esta ropa no es de tu género y te descubrirán antes", 12, Color("#f0b04a"), 4)
+		_draw_central(ny)
+		ny += 140.0
+	for ck in _card_order:
+		var cd: Dictionary = _cards[ck]
+		var ca: float = cd["a"]
+		var ce := 1.0 - pow(1.0 - clampf(ca, 0.0, 1.0), 3.0)
+		var cr := Rect2(14.0 - (1.0 - ce) * 420.0, ny, 392, 66)
+		var ccol: Color = cd["col"]
+		draw_rect(cr.grow(2), Color(0, 0, 0, 0.5))
+		draw_rect(cr, C_BG)
+		draw_rect(Rect2(cr.position, Vector2(6, cr.size.y)), ccol)
+		draw_rect(cr, Color(ccol, 0.7), false, 1.5)
+		_txt(cr.position + Vector2(18, 24), str(cd["title"]), 15, ccol, 364.0)
+		_wrap(cr.position + Vector2(18, 43), str(cd["text"]), 12, C_TEXT, 364.0, 2)
+		ny += 74.0
+	if travel_t > 0.0:
+		_draw_travel()
+		return
 	if not w.quiz.is_empty():
 		_draw_quiz()
 	elif loot_key != "":
@@ -214,12 +315,14 @@ func _draw() -> void:
 			Painter.text(self, size.x / 2.0, size.y - 168, hint, 13, C_GOLD, 4)
 
 ## Ventanita con el policía de la sala de escuchas que te habla por el pinganillo.
-func _draw_central() -> void:
+func _draw_central(y0: float) -> void:
 	var t: float = w.central["t"]
 	var msg: String = w.central["msg"]
-	var r := Rect2((size.x - 500.0) / 2.0, 64, 500, 128)
-	var a := clampf(t / 0.4, 0.0, 1.0)
-	draw_set_transform(Vector2(0, (1.0 - a) * -20.0), 0.0, Vector2.ONE)
+	var r := Rect2(14, y0, 500, 128)
+	# entra deslizándose desde la izquierda y se va por donde vino
+	var a := clampf(minf(_central_age, t) / 0.3, 0.0, 1.0)
+	var ea := 1.0 - pow(1.0 - a, 3.0)
+	draw_set_transform(Vector2((1.0 - ea) * -540.0, 0), 0.0, Vector2.ONE)
 	_panel(r)
 	# pantalla: sala de escuchas con el agente y sus auriculares
 	var s := Rect2(r.position + Vector2(12, 12), Vector2(124, 104))
@@ -382,6 +485,86 @@ func _draw_intro() -> void:
 	draw_rect(Rect2(0, 0, size.x, size.y * 0.07), Color.BLACK)
 	draw_rect(Rect2(0, size.y * 0.93, size.x, size.y * 0.07), Color.BLACK)
 	Painter.text(self, size.x - 110, size.y * 0.93 + 22, "E · saltar", 11, C_MUT, 0)
+
+## Uno o dos segundos viendo al personaje subir o bajar por la escalera, o dentro del ascensor.
+func _draw_travel() -> void:
+	var p := 1.0 - travel_t / travel_dur
+	var a := clampf(minf(p / 0.08, (1.0 - p) / 0.1), 0.0, 1.0)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.02, 0.03, a))
+	if a < 0.5:
+		return
+	var up: bool = _tr_to > _tr_from
+	var r := Rect2((size.x - 620.0) / 2.0, (size.y - 360.0) / 2.0, 620, 360)
+	_panel(r)
+	var nf: int = Hotel.floors.size()
+	var from_l := str(Hotel.floors[clampi(_tr_from, 0, nf - 1)].label)
+	var to_l := str(Hotel.floors[clampi(_tr_to, 0, nf - 1)].label)
+	var inner := Rect2(r.position + Vector2(16, 54), Vector2(588, 290))
+	if travel_kind == "stairs":
+		_txt(r.position + Vector2(20, 34), ("SUBIENDO A " if up else "BAJANDO A ") + to_l.to_upper(), 17, C_GOLD, 580.0)
+		draw_rect(inner, Color("#3b2618"))
+		for i in 12:
+			draw_rect(Rect2(inner.position.x + i * 49.0, inner.position.y, 24, inner.size.y), Color(0, 0, 0, 0.08))
+		draw_rect(Rect2(inner.position.x, inner.position.y + 86, inner.size.x, 3), Color("#c9a24b"))
+		# ocho peldaños que suben hacia la derecha, con su barandilla
+		var sw := 62.0
+		var sh := 26.0
+		var bx := inner.position.x + 44.0
+		var by := inner.end.y - 28.0
+		for i in 8:
+			var sx := bx + i * sw
+			var sy := by - (i + 1) * sh
+			draw_rect(Rect2(sx, sy, sw + 1.0, inner.end.y - sy), Color("#6b4526").darkened(0.04 * (i % 2)))
+			draw_rect(Rect2(sx, sy, sw + 1.0, 4), Color("#c9a24b"))
+			draw_rect(Rect2(sx + sw * 0.5 - 1.5, sy - 46, 3, 46), Color("#23262b"))
+		draw_line(Vector2(bx + sw * 0.5, by - sh - 46), Vector2(bx + 7.5 * sw, by - 8 * sh - 46), Color("#b8923f"), 5.0)
+		var q := p if up else 1.0 - p
+		var si := clampf(q * 8.6 - 0.3, 0.0, 7.6)
+		var fx := bx + (si + 0.5) * sw
+		var fy := by - (floorf(si) + 1.0) * sh - absf(sin(si * PI)) * 5.0
+		if _tr_outfit != null:
+			Painter.ellipse(self, fx, fy + 2, 22, 5, Color(0, 0, 0, 0.3))
+			Painter.draw_actor(self, fx, fy - 2, _tr_outfit, "right" if up else "left", anim * 12.0, false, 0.0, 2.5)
+		_txt(r.position + Vector2(20, 352), "Desde " + from_l, 11, C_MUT)
+		return
+	# ascensor: cabina de latón, aguja del indicador y puertas que se cierran y se abren
+	_txt(r.position + Vector2(20, 34), "ASCENSOR · " + from_l.to_upper() + "  →  " + to_l.to_upper(), 17, C_GOLD, 580.0)
+	draw_rect(inner, Color("#2a2018"))
+	var cab := Rect2(inner.position + Vector2(154, 70), Vector2(280, 214))
+	var shake_y := sin(anim * 38.0) * 1.5 if (p > 0.25 and p < 0.75) else 0.0
+	cab.position.y += shake_y
+	draw_rect(cab.grow(8), Color("#8f7330"))
+	draw_rect(cab, Color("#5a3b28"))
+	draw_rect(Rect2(cab.position.x, cab.position.y + 150, cab.size.x, 4), Color("#c9a24b"))
+	for i in 5:
+		draw_rect(Rect2(cab.position.x + 20 + i * 56.0, cab.position.y + 14, 16, 128), Color(0, 0, 0, 0.12))
+	draw_circle(cab.position + Vector2(140, 22), 9.0, Color("#ffe6a8"))
+	if _tr_outfit != null:
+		Painter.draw_actor(self, cab.position.x + 140, cab.end.y - 24, _tr_outfit, "down", 0.0, false, 0.0, 3.2)
+	# puertas
+	var open := 1.0 - clampf(p / 0.22, 0.0, 1.0) if p < 0.5 else clampf((p - 0.8) / 0.2, 0.0, 1.0)
+	var dw := cab.size.x / 2.0 * (1.0 - open)
+	for sd in [-1.0, 1.0]:
+		var sdf: float = sd
+		var dx := cab.position.x if sdf < 0 else cab.end.x - dw
+		draw_rect(Rect2(dx, cab.position.y, dw, cab.size.y), Color("#b8923f"))
+		if dw > 24.0:
+			draw_rect(Rect2(dx + 8, cab.position.y + 10, dw - 16, cab.size.y - 20), Color("#dcc070"), false, 2.0)
+			var fxc := dx + dw / 2.0
+			Painter.poly(self, [Vector2(fxc, cab.position.y + 40), Vector2(fxc + minf(dw * 0.3, 34.0), cab.position.y + 150), Vector2(fxc - minf(dw * 0.3, 34.0), cab.position.y + 150)], Color("#dcc070"))
+		draw_rect(Rect2(dx + (dw - 2.0 if sdf < 0 else 0.0), cab.position.y, 2, cab.size.y), Color("#3a2c14"))
+	# indicador de planta: media esfera con una marca por planta y la aguja
+	var ic := Vector2(inner.position.x + inner.size.x / 2.0, inner.position.y + 58)
+	draw_arc(ic, 44.0, PI, TAU, 24, Color("#c9a24b"), 3.0)
+	for i in nf:
+		var ta := PI + PI * (i + 0.5) / nf
+		draw_line(ic + Vector2(cos(ta), sin(ta)) * 38.0, ic + Vector2(cos(ta), sin(ta)) * 44.0, C_GOLD, 2.0)
+		Painter.text(self, ic.x + cos(ta) * 58.0, ic.y + sin(ta) * 58.0 + 4.0, str(Sim.FLOOR_SHORT[i]), 9, C_MUT, 0)
+	var mv := clampf((p - 0.22) / 0.56, 0.0, 1.0)
+	var fi := lerpf(float(_tr_from), float(_tr_to), mv * mv * (3.0 - 2.0 * mv))
+	var na := PI + PI * (fi + 0.5) / nf
+	draw_line(ic, ic + Vector2(cos(na), sin(na)) * 36.0, C_RED, 2.5)
+	draw_circle(ic, 4.0, C_GOLD)
 
 func _draw_foes() -> void:
 	if intro_t <= 0.6 or w == null or w.human == null:

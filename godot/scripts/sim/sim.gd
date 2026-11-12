@@ -131,7 +131,7 @@ static func new_world(opt: Dictionary) -> World:
 			tiles = [sp["at"]]
 		else:
 			tiles = f.room_tiles.get(home, f.tiles_pub)
-		var t0: Vector2i = sp["at"] if home == "fixed" else Rng.pick(tiles)
+		var t0: Vector2i = sp["at"] if home == "fixed" else _free_pick(f, tiles)
 		var staff_role: String = sp.get("staff", "")
 		var o: Outfit = Outfit.new_staff(staff_role) if staff_role != "" else Outfit.new_guest(Rng.rnd() < 0.4)
 		var n := new_ent(w)
@@ -210,10 +210,51 @@ static func _tile_near(f: FloorData, from: Vector2i, want: float) -> Vector2i:
 	var bd := 1e9
 	for t in f.tiles_pub:
 		var d := absf(Vector2(t.x - from.x, t.y - from.y).length() - want)
-		if d < bd:
+		if d < bd and free_at(f, (t.x + 0.5) * TS, (t.y + 0.5) * TS):
 			bd = d
 			best = t
 	return best
+
+## Una casilla de la lista que no esté ocupada por un mueble.
+static func _free_pick(f: FloorData, tiles: Array) -> Vector2i:
+	var t: Vector2i = Rng.pick(tiles)
+	for i in 16:
+		if free_at(f, (t.x + 0.5) * TS, (t.y + 0.5) * TS):
+			return t
+		t = Rng.pick(tiles)
+	return t
+
+## Nadie se queda metido dentro de un mueble o de un muro: si pasa, sale a la casilla libre más cercana.
+static func unstuck(w: World) -> void:
+	for e in w.ents:
+		if e.type == "human" or not e.alive or e.fixed or e.hidden or e.fl < 0 or e.escaped or e.away_t > 0 or e.dragged_by != 0 or e.cuffed:
+			continue
+		var f := fdat(e.fl)
+		if not solid_px(f, e.x, e.y):
+			continue
+		var tx := floori(e.x / TS)
+		var ty := floori(e.y / TS)
+		var bd := 1e9
+		var bx := -1
+		var by := -1
+		for j in range(ty - 3, ty + 4):
+			for i in range(tx - 3, tx + 4):
+				if i < 0 or j < 0 or i >= W or j >= Cfg.H:
+					continue
+				var px := (i + 0.5) * TS
+				var py := (j + 0.5) * TS
+				if not free_at(f, px, py):
+					continue
+				var d := dist(e.x, e.y, px, py)
+				if d < bd:
+					bd = d
+					bx = i
+					by = j
+		if bx >= 0:
+			e.x = (bx + 0.5) * TS
+			e.y = (by + 0.5) * TS
+			e.has_path = false
+			e.path_key = ""
 
 ## Partida de práctica: sin reloj ni consecuencias. De corredor, los cazadores no juegan y hay un
 ## encargo cerca; de cazador, los corredores son maniquíes y el del cartel espera en la planta baja.
@@ -507,10 +548,13 @@ static func refresh_tasks(w: World) -> void:
 	var d := 0
 	var t := 0
 	for e in w.ents:
-		if e.role == "runner" and e.alive:
+		if e.role == "runner":
+			# los encargos de un corredor caído no desaparecen: los heredan sus compañeros
 			for k in e.tasks:
 				if k.kind == "pick":
 					continue
+				if not e.alive and k.kind != "" and not k.done:
+					continue     # una entrega a medias se pierde con quien la llevaba
 				t += 1
 				if k.done:
 					d += 1
@@ -822,7 +866,7 @@ static func kill(w: World, killer: Ent, victim: Ent, how: String) -> void:
 	elif victim.role == "hunter":
 		wlog(w, victim.nm + " ha caído.", "hunt")
 	elif victim.role == "runner":
-		wlog(w, victim.nm + " ha sido eliminado.")
+		wlog(w, victim.nm + " ha sido eliminado. Sus encargos pendientes pasan a los compañeros (rombos huecos en el mapa).")
 	w.fx.append({"type": "blood", "fl": victim.fl, "x": victim.x, "y": victim.y, "t": 0.6})
 	if victim.dragging != null:
 		Stealth.drop(w, victim)
@@ -1007,7 +1051,7 @@ static func finish_hold(w: World, e: Ent, h: Hold) -> void:
 				wlog(w, e.nm + " completa: " + t.nm + ". Equipo " + str(w.tasks_done) + "/" + str(w.quota), "task")
 			if t.sab != "":
 				apply_sab(w, e, t)
-			if owner != null:
+			if owner != null and owner.alive:
 				Reward.check_finish(w, owner)
 		if e.type == "bot":
 			e.ai_mode = "blend"; e.ai_t = Rng.ri(Cfg.BOT_IDLE_MIN, Cfg.BOT_IDLE_MAX); e.goal = null
@@ -1325,7 +1369,7 @@ static func choose_task(w: World, e: Ent) -> Task:
 	var pool: Array = e.tasks.duplicate()
 	if Reward.all_done(e):
 		for o in w.ents:
-			if o != e and o.role == "runner" and o.alive and not o.escaped:
+			if o != e and o.role == "runner" and not o.escaped:
 				for t in o.tasks:
 					if t.kind == "":
 						pool.append(t)
@@ -1683,7 +1727,7 @@ static func perceive(w: World, dt: float) -> void:
 					if v[0].staff and staff_v == null:
 						staff_v = v[0]
 			if h.aim:
-				var aim_r := Cfg.AIM_NOTICE_RADIUS * TS * sc
+				var aim_r := Cfg.AIM_NOTICE_RADIUS * TS * sc * (0.45 if h.cover else 1.0)     # a cubierto se ve peor el arma
 				var nearest = null
 				for v in view:
 					if v[1] <= aim_r:
@@ -1939,12 +1983,13 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 				cand.call("wash", s, (s.x + 0.5) * TS, (s.y + 0.5) * TS, 50.0, "Lavar el traje", Cfg.HOLD_SINK)
 	if e.role == "runner":
 		var pool: Array = e.tasks.duplicate()
-		if Reward.all_done(e):
-			for o in w.ents:
-				if o != e and o.role == "runner" and o.alive:
-					for k2 in o.tasks:
-						if k2.kind == "":
-							pool.append(k2)
+		var mine_done := Reward.all_done(e)
+		for o in w.ents:
+			# los de un compañero vivo, cuando acabas los tuyos; los de un caído, siempre
+			if o != e and o.role == "runner" and (mine_done or not o.alive):
+				for k2 in o.tasks:
+					if k2.kind == "":
+						pool.append(k2)
 		for tk in pool:
 			if tk.fl != e.fl or not task_avail(w, tk, e):
 				continue
@@ -1953,7 +1998,7 @@ static func find_interact(w: World, e: Ent, pt: Vector2 = Vector2.INF) -> Dictio
 			var lbl: String = tk.nm
 			if not (tk in e.tasks):
 				var ow := task_owner(w, tk)
-				lbl = "Ayudar a " + (ow.nm if ow != null else "un compañero") + ": " + tk.nm
+				lbl = ("Encargo heredado de " if (ow != null and not ow.alive) else "Ayudar a ") + (ow.nm if ow != null else "un compañero") + ": " + tk.nm
 			cand.call("task", tk, (tk.x + 0.5) * TS, (tk.y + 0.5) * TS, Cfg.TASK_RANGE, lbl, tk.dur)
 	return best
 
@@ -2267,6 +2312,7 @@ static func step(w: World, dt: float, inp: Dictionary) -> void:
 		var pd := w.acc
 		w.acc = 0
 		perceive(w, pd)
+		unstuck(w)
 	if w.time >= w.limit or (w.quota > 0 and w.tasks_done >= w.quota):
 		check_win(w)
 

@@ -1,4 +1,4 @@
-# Hidden Lead (título provisional) · versión Godot (v0.13, 2D)
+# Hidden Lead (título provisional) · versión Godot (v0.14, 2D)
 
 Port de la versión web a **Godot 4.3 o superior** en GDScript. Mantiene el 2D y las reglas de la v0.3:
 encargos personales (8-10 por corredor), habitaciones con llave, forzar cerraduras, denuncias y fichado,
@@ -15,6 +15,28 @@ Controles: WASD/flechas, Shift correr, E o clic para hablar, comprar, ascensor o
 encargos y cerraduras, Q cambiar lo que llevas en la mano, clic derecho apuntar, clic izquierdo usar,
 Tab bloc de notas, M mapa, I inventario, rueda zoom, Esc pausa, F11 pantalla completa,
 R registrar muebles y cadáveres, F arrastrar cuerpos, Espacio cambiar de personaje como espectador. Ajustes (volumen, pasos, zoom, niebla, flechas) en el menú y en la pausa.
+
+## Novedades de la v0.14 (correcciones de la tercera ronda de pruebas)
+
+- **Avisos:** la presentación de la ronda ocupa toda la pantalla (antes salía encogida en una esquina). Los avisos
+  de expulsado, detenido, perro, botones y disfraz son tarjetas a la izquierda que entran y salen deslizándose,
+  igual que la ventana de la central.
+- **Expulsado o fuera de juego:** la cámara sigue a un compañero de tu bando mientras esperas (Espacio cambia).
+- **Encargos:** los de un corredor caído ya no desaparecen de la cuenta: los heredan sus compañeros (rombos
+  huecos en el mapa). Terminar solo los tuyos ya no cierra el trato.
+- **Asomarse (Q/E):** solo funciona pegado a un muro o a una esquina. A cubierto y sin asomarte, los demás ven
+  peor tu arma.
+- **Mano y arma:** el antebrazo llega hasta fuera de la pantalla; al ladearte ya no se ve cortado.
+- **Muebles en primera persona:** los muros tapan los muebles columna a columna (los muebles largos perdían
+  trozos según el ángulo), se pintan por su punto más cercano y lo que está por encima de los ojos tiene cara
+  inferior.
+- **Personajes y muebles:** nadie aparece dentro de un mueble; si alguien queda dentro, sale a la casilla libre
+  más cercana.
+- **Azotea:** la antena pasa a la esquina suroeste, fuera del paso.
+- **Escaleras:** peldaños y barandilla con volumen en primera persona, y una animación de segundo y medio del
+  personaje subiendo o bajando. El ascensor tiene la suya: puertas, cabina y aguja del indicador.
+- **Vista:** en Ajustes se elige entre vista mixta (cenital y primera persona al apuntar) y primera persona
+  permanente. En permanente, E interactúa, Q cambia de mano y el arma se levanta al apuntar.
 
 ## Novedades de la v0.13 «La central» (segunda ronda de pruebas)
 

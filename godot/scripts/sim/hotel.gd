@@ -42,7 +42,7 @@ static func load_data(path: String = "res://data/hotel.json") -> void:
 	for fd in d["floors"]:
 		var f := FloorData.new()
 		f.fi = fi
-		f.label = fd["label"]; f.sub = fd["sub"]; f.dark = float(fd["dark"]); f.sky = fd["sky"]; f.roof = fd["roof"]
+		f.label = fd["label"]; f.sub = str(fd["sub"]).replace("Letrero y antena", "Antena de radio"); f.dark = float(fd["dark"]); f.sky = fd["sky"]; f.roof = fd["roof"]
 		f.g = _bytes(fd["g"]); f.blk = _bytes(fd["blk"]); f.zone = _bytes(fd["zone"]); f.walkable = _bytes(fd["pass"])
 		for rd in fd["rooms"]:
 			var r := Room.new()
@@ -63,7 +63,8 @@ static func load_data(path: String = "res://data/hotel.json") -> void:
 						f.blk[ty * Cfg.W + tx] = 0
 						f.walkable[ty * Cfg.W + tx] = 1
 				o["k"] = "mast"
-				o["x"] = int(o["x"]) + int(int(o["w"]) / 2.0) - 1
+				# en la esquina suroeste, fuera del paso entre la puerta y el borde de la azotea
+				o["x"] = int(o["x"]) + 1
 				o["w"] = 2
 				for ty in range(int(o["y"]), int(o["y"]) + int(o["h"])):
 					for tx in range(int(o["x"]), int(o["x"]) + 2):
