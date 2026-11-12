@@ -8,6 +8,7 @@ Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asim�
 ## Jugar
 
 - **Versión Godot (v0.11, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
+- **Ejecutable para Linux (sin Godot):** `./build-linux.sh` genera `dist/hidden-lead.x86_64` y un `.tar.gz` para repartir, que lleva dentro `instalar.sh` (instala o actualiza, con icono en el menú y el escritorio). `./actualizar.sh` baja los cambios del repo y solo recompila y actualiza si hay versión nueva.
 - **Versión web (v0.3):** abre `index.html` en el navegador. No necesita servidor ni dependencias.
 
 ## Estructura

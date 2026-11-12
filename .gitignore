@@ -4,3 +4,6 @@ index_test.html
 # capturas de las pruebas de interfaz
 shots/
 node_modules/
+# compilación del ejecutable (build-linux.sh)
+.build-cache/
+dist/
