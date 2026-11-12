@@ -1,4 +1,4 @@
-# Caza en el New Yorker
+# Hidden Lead (título provisional; antes «Caza en el New Yorker»)
 
 Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asimétrico ambientado en el hotel New Yorker, 1930, art déco. De momento se juega contra bots.
 
@@ -8,8 +8,75 @@ Prototipo jugable (HTML5 Canvas, un solo archivo) de un juego multijugador asim�
 ## Jugar
 
 - **Versión Godot (v0.11, rama `godot`):** abre `godot/project.godot` con Godot 4.3+ y pulsa F5. Detalles en [`godot/README.md`](godot/README.md).
-- **Ejecutable para Linux (sin Godot):** `./build-linux.sh` genera `dist/hidden-lead.x86_64` y un `.tar.gz` para repartir, que lleva dentro `instalar.sh` (instala o actualiza, con icono en el menú y el escritorio). `./actualizar.sh` baja los cambios del repo y solo recompila y actualiza si hay versión nueva.
+- **Ejecutable para Linux (sin Godot):** mira [Instalar y actualizar](#instalar-y-actualizar).
 - **Versión web (v0.3):** abre `index.html` en el navegador. No necesita servidor ni dependencias.
+
+## Instalar y actualizar
+
+Hay dos formas, según tengas el juego ya compilado o el repositorio.
+
+### A) Tengo el paquete `hidden-lead-linux-x86_64.tar.gz` (solo quiero jugar)
+
+No hace falta Godot ni permisos de administrador. Requisitos: Linux de 64 bits (probado en Debian 13) y una
+tarjeta gráfica con OpenGL 3.3.
+
+```bash
+tar -xzf hidden-lead-linux-x86_64.tar.gz
+cd hidden-lead
+./instalar.sh
+```
+
+- **Primera vez:** instala el juego en `~/.local/share/hidden-lead/`, crea el icono «Hidden Lead» en el menú de
+  aplicaciones y un acceso directo en el escritorio.
+- **Ya tenía una versión anterior:** descarga el paquete nuevo y vuelve a ejecutar `./instalar.sh`. Detecta la
+  versión instalada y **solo la actualiza** (cambia el ejecutable); los ajustes se conservan.
+- Si ya tienes esa misma versión (o una más nueva) no toca nada. `./instalar.sh --forzar` reinstala igualmente.
+- `./instalar.sh --desinstalar` lo quita (los ajustes se quedan en `~/.local/share/godot/app_userdata/`).
+- Para jugar sin instalar: `./hidden-lead.x86_64`.
+
+### B) Tengo el repositorio (compilar yo el ejecutable)
+
+Paquetes que hacen falta en Debian 13 (el script los instala con `apt` si faltan):
+
+```bash
+sudo apt install git unzip curl libfontconfig1 libgl1
+```
+
+Compilar e instalar:
+
+```bash
+git clone https://github.com/luk77m/caza-new-yorker.git
+cd caza-new-yorker
+git checkout godot
+./build-linux.sh --install
+```
+
+- La primera vez descarga el editor de Godot y las plantillas de exportación oficiales (alrededor de 1 GB) y los
+  guarda en `.build-cache/`; las siguientes veces no vuelve a descargarlos.
+- Deja en `dist/` el ejecutable `hidden-lead.x86_64` y el paquete `hidden-lead-linux-x86_64.tar.gz` para repartir
+  (el de la opción A).
+- La versión de Godot se lee de `godot/project.godot`. Para forzar otra: `GODOT_VERSION=4.7 ./build-linux.sh`.
+- Sin `--install` solo compila. `./build-linux.sh --clean` borra las descargas y `dist/`.
+
+Actualizar más adelante:
+
+```bash
+./actualizar.sh
+```
+
+Descarga los cambios del repositorio (`git pull`) y compara la versión con la instalada: si es la misma, no hace
+nada; si hay una nueva, recompila y actualiza la instalación. Si no había nada instalado, lo instala.
+
+El número de versión sale de las etiquetas de git (`v0.11`, …): al publicar una versión nueva hay que etiquetarla
+(`git tag v0.12 && git push origin v0.12`) para que la actualización la detecte.
+
+| Qué | Dónde queda |
+|---|---|
+| Ejecutable, icono y versión instalada | `~/.local/share/hidden-lead/` |
+| Lanzador en el menú | `~/.local/share/applications/hidden-lead.desktop` |
+| Acceso directo | carpeta Escritorio del usuario |
+| Orden `hidden-lead` en la terminal | `~/.local/bin/hidden-lead` |
+| Ajustes del jugador | `~/.local/share/godot/app_userdata/Hidden Lead/` |
 
 ## Estructura
 
