@@ -45,8 +45,8 @@ sudo apt install git unzip curl libfontconfig1 libgl1
 Compilar e instalar:
 
 ```bash
-git clone https://github.com/luk77m/caza-new-yorker.git
-cd caza-new-yorker
+git clone https://github.com/luk77m/hidden-lead.git
+cd hidden-lead
 git checkout godot
 ./build-linux.sh --install
 ```
